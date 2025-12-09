@@ -1,10 +1,10 @@
-
 $srcDir    = "./dist/Dashboard/browser"
 $destDir   = "/srv/dashboard"
 $hostname  = "dashboard.heiss.lan"
 $username  = "root"
 
 # Create a session to the remote server
+Write-Output "Connecting to remote server $hostname"
 $session = New-PSSession -Hostname $hostname -Username $username
 
 # Verify target directory
@@ -26,7 +26,9 @@ Invoke-Command -Session $session -ScriptBlock {
 } -ArgumentList $destDir
 
 #  Copy the local directory to the remote server
+Write-Output "Copy bundled webapp $srcDir -> $destDir"
 Copy-Item -Path $srcDir/* -Destination $destDir -Recurse -Force -ToSession $session
 
 # Destroy session
+Write-Output "Successfully deployed"
 Remove-PSSession $session

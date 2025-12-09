@@ -25,7 +25,9 @@
               }
             ],
             "styles": [
-              "src/styles.css"
+              "src/styles.css",
+              "src/theme.scss",
+              "node_modules/material-icons/iconfont/material-icons.css"
             ]
           },
           "configurations": {
