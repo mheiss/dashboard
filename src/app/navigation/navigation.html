@@ -1,21 +1,12 @@
-<ul class="flex space-x-10 text-white">
+<ul class="flex space-x-25 text-white">
+  @for (item of dashboard.entries(); track item) {
   <li class="flex flex-col items-center">
-    <span class="material-icons text-3xl mb-1">home</span>
-    <span class="text-sm">Home</span>
+    @if(item.icon.endsWith("svg")) {
+      <mat-icon svgIcon="{{ item.icon }}" class="material-icons text-3xl mb-1" />
+    } @else{
+      <mat-icon fontIcon="{{ item.icon }}" class="material-icons text-3xl mb-1" />
+    }
+    <span class="text-sm">{{ item.title }}</span>
   </li>
-
-  <li class="flex flex-col items-center">
-    <span class="material-icons text-3xl mb-1">lightbulb</span>
-    <span class="text-sm">Lights</span>
-  </li>
-
-  <li class="flex flex-col items-center">
-    <span class="material-icons text-3xl mb-1">thermostat</span>
-    <span class="text-sm">Climate</span>
-  </li>
-
-  <li class="flex flex-col items-center">
-    <span class="material-icons text-3xl mb-1">security</span>
-    <span class="text-sm">Security</span>
-  </li>
+  }
 </ul>
