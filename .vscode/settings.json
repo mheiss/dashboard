@@ -1,7 +1,15 @@
 {
-    "cSpell.words": [
-        "EVCC",
-        "iconfont",
-        "openhab"
-    ]
+  "cSpell.words": [
+    "EVCC",
+    "Hyperlegible",
+    "iconfont",
+    "openhab",
+    "Stylesheet"
+  ],
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  }
 }

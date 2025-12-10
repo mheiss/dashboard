@@ -1,11 +1,111 @@
 @import 'tailwindcss';
+@import 'material-symbols';
+
+@theme {
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-s: 8px;
+  --spacing-m: 16px;
+  --spacing-l: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 40px;
+  --spacing-3xl: 48px;
+  --spacing-4xl: 80px;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+
+  --color-primary-50: #ebf2f7;
+  --color-primary-100: #d7e5f0;
+  --color-primary-200: #a3c3dc;
+  --color-primary-300: #679dc5;
+  --color-primary-400: #337bb1;
+  --color-primary-500: #005a9e;
+  --color-primary-600: #00487e;
+  --color-primary-700: #00365e;
+  --color-primary-800: #002b4c;
+  --color-primary-900: #002039;
+
+  --color-secondary-50: #f5f5f5;
+  --color-secondary-100: #ebebeb;
+  --color-secondary-200: #d8d8d8;
+  --color-secondary-300: #c5c5c5;
+  --color-secondary-400: #b3b3b3;
+  --color-secondary-500: #a1a1a1;
+  --color-secondary-600: #7f7f7f;
+  --color-secondary-700: #5e5e5e;
+  --color-secondary-800: #3f3f3f;
+  --color-secondary-900: #222222;
+
+  --color-success-50: #dbf2cc;
+  --color-success-100: #c3e9ab;
+  --color-success-200: #a5dd80;
+  --color-success-300: #6ac72c;
+  --color-success-400: #b3b3b3;
+  --color-success-500: #4cbc02;
+  --color-success-600: #3f9d02;
+  --color-success-700: #337d01;
+  --color-success-800: #265e01;
+  --color-success-900: #193f01;
+
+  --color-warning-50: #fbe8cc;
+  --color-warning-100: #f8d8aa;
+  --color-warning-200: #f5c580;
+  --color-warning-300: #f2b255;
+  --color-warning-400: #fdb022;
+  --color-warning-500: #eb8b00;
+  --color-warning-600: #c47400;
+  --color-warning-700: #9d5d00;
+  --color-warning-800: #4e2e00;
+  --color-warning-900: #4e2e00;
+
+  --color-error-50: #f8cccf;
+  --color-error-100: #f3aaaf;
+  --color-error-200: #ed8087;
+  --color-error-300: #e8555f;
+  --color-error-400: #e22b37;
+  --color-error-500: #dc000f;
+  --color-error-600: #b7000d;
+  --color-error-700: #93000a;
+  --color-error-800: #6e0008;
+  --color-error-900: #490005;
+}
+
+@font-face {
+  font-family: 'AtkinsonHyperlegible';
+  src: url('./app/fonts/Atkinson-Hyperlegible-Regular-102.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'AtkinsonHyperlegible';
+  src: url('./app/fonts/Atkinson-Hyperlegible-Bold-102.ttf') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AtkinsonHyperlegible';
+  src: url('./app/fonts/Atkinson-Hyperlegible-Italic-102.ttf') format('truetype');
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'AtkinsonHyperlegible';
+  src: url('./app/fonts/Atkinson-Hyperlegible-BoldItalic-102.ttf') format('truetype');
+  font-weight: bold;
+  font-style: italic;
+  font-display: swap;
+}
 
 html,
 body {
   height: 100%;
-}
-
-body {
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  font-family: AtkinsonHyperlegible, ui-sans-serif, system-ui, sans-serif;
 }
