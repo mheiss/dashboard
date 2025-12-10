@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
-import { Dashboard } from './dashboard/dashboard';
+import { RouterModule } from '@angular/router';
 import { Navigation } from './navigation/navigation';
 
 @Component({
   selector: 'app-root',
-  imports: [Navigation, Dashboard],
+  imports: [Navigation, RouterModule],
   templateUrl: './app.component.html',
 })
-export class AppComponent {
-}
+export class AppComponent {}

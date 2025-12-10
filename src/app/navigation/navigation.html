@@ -1,10 +1,10 @@
 <div class="flex justify-center space-x-4xl">
   @for (item of dashboard.entries(); track item) {
-    <button class="flex flex-row items-center p-3 hover:bg-primary-200 rounded-lg">
+    <button class="flex flex-row items-center p-3 hover:bg-primary-200 rounded-lg" [routerLink]="item.route">
       @if (item.icon.endsWith('svg')) {
         <img src="assets/{{ item.icon }}" class="mr-s w-xl h-xl" />
       } @else {
-        <span class="material-symbols-rounded mr-s text-3xl">{{ item.icon }}</span>
+        <span class="material-symbols-rounded mr-s text-4xl">{{ item.icon }}</span>
       }
       <span class="text-3xl">{{ item.title }}</span>
     </button>
