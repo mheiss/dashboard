@@ -1,12 +1,15 @@
-<div class="flex justify-center space-x-4xl text-navigation-element">
+<div class="flex justify-center space-x-6 overflow-x-auto px-6 py-3 text-navigation-element">
   @for (item of dashboard.entries(); track item) {
-    <button class="flex flex-row items-center rounded-lg p-3 hover:bg-navigation-hover hover:text-white" [routerLink]="item.route">
+    <button
+      class="flex flex-row items-center overflow-hidden rounded-lg p-3 hover:bg-navigation-hover hover:text-white"
+      [routerLink]="item.route"
+    >
       @if (item.icon.endsWith('svg')) {
         <img src="assets/{{ item.icon }}" class="h-xl w-xl" />
       } @else {
         <span class="material-symbols-rounded text-4xl!">{{ item.icon }}</span>
       }
-      <span class="ml-3 text-3xl">{{ item.title }}</span>
+      <span class="ml-3 hidden text-3xl md:inline">{{ item.title }}</span>
     </button>
   }
 </div>
