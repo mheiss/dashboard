@@ -5,6 +5,6 @@ import { Navigation } from './navigation/navigation';
 @Component({
   selector: 'app-root',
   imports: [Navigation, RouterModule],
-  templateUrl: './app.component.html',
+  templateUrl: './app.html',
 })
 export class AppComponent {}
