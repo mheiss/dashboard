@@ -4,7 +4,8 @@
     "Hyperlegible",
     "iconfont",
     "openhab",
-    "Stylesheet"
+    "Stylesheet",
+    "Wallbox"
   ],
   "files.associations": {
     "*.css": "tailwindcss"

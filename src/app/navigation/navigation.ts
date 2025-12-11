@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
+import { RouterModule } from '@angular/router';
 import { DashboardService } from '../dashboard/dashboard.service';
-import { RouterLink, RouterLinkWithHref, RouterModule } from "@angular/router";
 
 @Component({
   selector: 'app-navigation',
