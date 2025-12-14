@@ -10,5 +10,10 @@
     "changeOrigin": true,
     "secure": false,
     "ws": true
+  },
+  "/api/webrtc/*": {
+    "target": "https://dashboard.heiss.cloud",
+    "changeOrigin": true,
+    "secure": false
   }
 }
