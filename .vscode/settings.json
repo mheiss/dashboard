@@ -3,10 +3,13 @@
     "EVCC",
     "Hyperlegible",
     "iconfont",
+    "Kamera",
     "openhab",
     "partysocket",
     "Stylesheet",
-    "Wallbox"
+    "unifi",
+    "Wallbox",
+    "webrtc",
   ],
   "files.associations": {
     "*.css": "tailwindcss"

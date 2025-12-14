@@ -15,7 +15,7 @@ export function getEntries(): DashboardEntry[] {
   entries.push(createEntry('Home', 'home', 'home'));
   entries.push(createEntry('OpenHAB', 'openhab.svg', 'openhab'));
   entries.push(createEntry('Wallbox', 'evcc.svg', 'evcc'));
-  entries.push(createEntry('Security', 'security', 'security'));
+  entries.push(createEntry('Kamera', 'security', 'protect'));
   return entries;
 }
 

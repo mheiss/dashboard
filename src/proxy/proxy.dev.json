@@ -1,5 +1,11 @@
 {
-  "/ws/openhab/**": {
+  "/ws/openhab**": {
+    "target": "https://dashboard.heiss.cloud",
+    "changeOrigin": true,
+    "secure": false,
+    "ws": true
+  },
+  "/ws/webrtc**": {
     "target": "https://dashboard.heiss.cloud",
     "changeOrigin": true,
     "secure": false,

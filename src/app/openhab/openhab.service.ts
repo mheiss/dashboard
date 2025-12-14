@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { WebSocket } from 'partysocket';
 import { interval } from 'rxjs';
+import { getWebSocketUrl } from '../models/ws';
 
 const OpenHabPing = {
   type: 'WebSocketEvent',
@@ -25,7 +26,7 @@ export class OpenHABApi {
   }
 
   private createWebSocket() {
-    const ws = new WebSocket(this.getWebsocketUrl(), 'org.openhab.ws.protocol.default');
+    const ws = new WebSocket(getWebSocketUrl('/ws/openhab'), 'org.openhab.ws.protocol.default');
     ws.addEventListener('open', () => this.onOpen());
     ws.addEventListener('error', (e) => this.onError(e));
     ws.addEventListener('message', (e) => this.onMessage(e));
@@ -43,14 +44,6 @@ export class OpenHABApi {
   }
 
   private onMessage(e: MessageEvent<any>): void {
-    console.log('message:', e);
     this.message.set(e.data);
-  }
-
-  private getWebsocketUrl(): string {
-    const url = new URL(globalThis.location.href);
-    const isHttps = url.protocol === 'https:';
-    const wsProtocol = isHttps ? 'wss:' : 'ws:';
-    return wsProtocol + url.host + '/ws/openhab';
   }
 }
