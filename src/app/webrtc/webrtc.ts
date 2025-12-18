@@ -1,102 +1,142 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, ElementRef, inject, input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { signal } from '@angular/core';
 import { WebSocket } from 'partysocket';
-import { getWebSocketUrl } from '../models/ws';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { getWebSocketUrl } from '../models/webSocket';
 
-@Component({
-  selector: 'app-webrtc',
-  templateUrl: './webrtc.html',
-})
-export class WebRTC implements OnInit, OnDestroy {
-  readonly httpClient = inject(HttpClient);
-  readonly camera = input.required<string>();
+/**
+ * Health status of the stream.
+ */
+export type Status = 'offline' | 'connecting' | 'streaming' | 'stale';
 
-  @ViewChild('myVideo', { static: true })
-  myVideo!: ElementRef<HTMLVideoElement>;
+/**
+ * The video stream along with some metadata.
+ */
+export interface StreamOffer {
+  media: Observable<MediaStream | null>;
+  poster: Observable<string | null>;
+  health: Observable<Status>;
+}
 
+/**
+ * Status report of a stream.
+ */
+export interface StreamReport {
+  framesDecoded: number;
+  bytesReceived: number;
+  checkTime: number;
+}
+
+export class WebRTCStream {
+  private readonly webSocket: WebSocket;
   private peerConnection: RTCPeerConnection | null = null;
-  private webSocket: WebSocket | null = null;
 
-  poster = computed(() => {
-    return '/api/webrtc/frame.jpeg?src=' + this.camera();
-  });
+  private readonly media = new BehaviorSubject<MediaStream | null>(null);
+  private readonly poster = new BehaviorSubject<string | null>(null);
+  private readonly health = new BehaviorSubject<Status>('offline');
 
-  async ngOnInit() {
-    const webSocket = new WebSocket(getWebSocketUrl('/ws/webrtc?src=' + this.camera()));
-    const peerConnection = new RTCPeerConnection();
-
-    peerConnection.addTransceiver('video', { direction: 'recvonly' });
-    peerConnection.onicecandidate = (event) => this.onIceCandidate(webSocket, event);
-    peerConnection.onicegatheringstatechange = () => this.onIcegatheringStateChange(peerConnection);
-    peerConnection.ontrack = (ev) => this.onTrack(ev);
-
-    webSocket.binaryType = 'arraybuffer';
-    webSocket.onopen = async () => this.onWebSocketOpen(webSocket, peerConnection);
-    webSocket.onmessage = (e) => this.onWebSocketMessage(peerConnection, e);
-    webSocket.onerror = (e) => this.onWebSocketError(e);
-
-    this.peerConnection = peerConnection;
-    this.webSocket = webSocket;
+  constructor(
+    private httpClient: HttpClient,
+    private camera: string,
+  ) {
+    this.webSocket = new WebSocket(getWebSocketUrl('/ws/webrtc?src=' + camera));
+    this.webSocket.onopen = async (e) => this.onWebSocketOpen();
+    this.webSocket.onclose = async (e) => this.onWebSocketClose();
+    this.webSocket.onmessage = (e) => this.onWebSocketMessage(e);
+    this.webSocket.onerror = (e) => this.onWebSocketError(e);
+    this.webSocket.binaryType = 'arraybuffer';
   }
 
-  async onWebSocketOpen(ws: WebSocket, pc: RTCPeerConnection) {
-    const offer = await pc.createOffer();
-    await pc.setLocalDescription(offer);
-    ws.send(JSON.stringify({ type: 'webrtc/offer', value: offer.sdp }));
-    console.log('%s: Starting a new WebRTC connection.', this.camera());
+  createOrResume(): StreamOffer {
+    this.updatePoster();
+    this.resumeStream();
+    return {
+      media: this.media.asObservable(),
+      health: this.health.asObservable(),
+      poster: this.poster.asObservable(),
+    };
   }
 
-  async onWebSocketError(e: any) {
-    console.log('%s: Failed to create WebSocket connection.', this.camera(), e);
+  stop() {
+    this.webSocket.close();
   }
 
-  async onWebSocketMessage(pc: RTCPeerConnection, msg: any) {
+  private resumeStream() {
+    this.webSocket.reconnect();
+  }
+
+  private updatePoster() {
+    this.httpClient.get(`/api/webrtc/frame.jpeg?src=${this.camera}`, { responseType: 'blob' }).subscribe((blob) => {
+      const oldValue = this.poster.getValue();
+      this.poster.next(URL.createObjectURL(blob));
+      if (oldValue) {
+        URL.revokeObjectURL(oldValue);
+      }
+    });
+  }
+
+  private async onWebSocketOpen() {
+    this.peerConnection = new RTCPeerConnection({
+      iceServers: [], // LAN/VPN only, no public STUN/TURN
+    });
+    this.peerConnection.addTransceiver('video', { direction: 'recvonly' });
+    this.peerConnection.onicecandidate = (event) => this.onIceCandidate(event);
+    this.peerConnection.ontrack = (ev) => this.onTrack(ev);
+
+    const offer = await this.peerConnection.createOffer();
+    await this.peerConnection.setLocalDescription(offer);
+
+    console.log('%s: Starting a new WebRTC connection.', this.camera);
+    this.webSocket.send(JSON.stringify({ type: 'webrtc/offer', value: offer.sdp }));
+  }
+
+  private async onWebSocketClose() {
+    if (!this.peerConnection) {
+      return;
+    }
+    console.log('%s: Closing WebRTC Connection', this.camera);
+    this.peerConnection.getSenders().forEach((sender) => {
+      if (sender.track) {
+        sender.track.stop();
+      }
+    });
+    this.peerConnection.close();
+    this.peerConnection = null;
+  }
+
+  private async onWebSocketError(e: any) {
+    console.log('%s: Failed to create WebSocket.', this.camera, e);
+  }
+
+  private async onWebSocketMessage(msg: any) {
+    if (!this.peerConnection) {
+      throw new Error('Invalid WebRTC connection');
+    }
     const data = JSON.parse(msg.data);
     switch (data.type) {
       case 'webrtc/candidate':
         const candidate = new RTCIceCandidate({ candidate: data.value, sdpMid: '0' });
-        pc.addIceCandidate(candidate);
+        this.peerConnection.addIceCandidate(candidate);
         break;
       case 'webrtc/answer':
         const remoteDesc = { type: 'answer', sdp: data.value } as RTCSessionDescriptionInit;
-        pc.setRemoteDescription(remoteDesc);
-        break;
-      case 'error':
-        console.log('%s: Closing peer connection due to error event.', this.camera());
-        pc.close();
+        this.peerConnection.setRemoteDescription(remoteDesc);
         break;
     }
   }
 
-  onTrack(ev: RTCTrackEvent) {
-    this.myVideo.nativeElement.srcObject = ev.streams[0];
-    this.myVideo.nativeElement.muted = true;
-    this.myVideo.nativeElement.play();
-    console.log('%s: Got a new track, playing it.', this.camera());
+  private onTrack(ev: RTCTrackEvent) {
+    console.log('%s: Got a new track.', this.camera);
+    this.media.next(ev.streams[0]);
   }
 
-  onIceCandidate(ws: WebSocket, event: RTCPeerConnectionIceEvent) {
-    // End of candidates, no need to send it back
+  private onIceCandidate(event: RTCPeerConnectionIceEvent) {
     if (!event.candidate) {
       return;
     }
-    const candidate = event.candidate ? event.candidate.toJSON().candidate : '';
-    ws.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate }));
-    console.log('%s: Got new ICE candidate. Protocol: %s, Type: %s ', this.camera(), event.candidate.protocol, event.candidate.type);
-  }
+    const candidate = event.candidate;
 
-  onIcegatheringStateChange(pc: RTCPeerConnection) {
-    if (pc.iceGatheringState === 'complete') {
-      console.log('%s: ICE gathering complete', this.camera());
-    }
-  }
-
-  ngOnDestroy(): void {
-    if (this.peerConnection) {
-      this.peerConnection.close();
-    }
-    if (this.webSocket) {
-      this.webSocket.close();
-    }
+    console.log('%s: Got new ICE candidate. Type: %s, Protocol: %s', this.camera, candidate.type, candidate.protocol);
+    this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate.toJSON().candidate }));
   }
 }

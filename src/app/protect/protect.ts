@@ -1,11 +1,9 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { getWebSocketUrl } from '../models/ws';
-import { WebSocket } from 'partysocket';
-import { WebRTC } from '../webrtc/webrtc';
+import { Component } from '@angular/core';
+import { Video } from '../video/video';
 
 @Component({
   selector: 'app-protect',
-  imports: [WebRTC],
   templateUrl: './protect.html',
+  imports: [Video],
 })
 export class Protect {}

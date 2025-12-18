@@ -8,5 +8,5 @@ import { DashboardService } from '../models/dashboard.service';
   imports: [RouterModule],
 })
 export class Navigation {
-  protected dashboard = inject(DashboardService);
+  protected readonly dashboard = inject(DashboardService);
 }

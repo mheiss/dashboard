@@ -6,5 +6,4 @@ import { Component } from '@angular/core';
   templateUrl: './openhab.html',
 })
 export class Openhab {
-
 }
