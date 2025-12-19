@@ -25,7 +25,7 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.css", "node_modules/material-icons/iconfont/material-icons.css"]
+            "styles": ["src/styles.css"]
           },
           "configurations": {
             "production": {
