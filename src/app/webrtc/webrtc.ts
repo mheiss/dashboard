@@ -1,7 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { signal } from '@angular/core';
 import { WebSocket } from 'partysocket';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, interval, Observable, Subject, takeUntil } from 'rxjs';
 import { getWebSocketUrl } from '../models/webSocket';
 
 /**
@@ -34,6 +33,9 @@ export class WebRTCStream {
   private readonly media = new BehaviorSubject<MediaStream | null>(null);
   private readonly poster = new BehaviorSubject<string | null>(null);
   private readonly health = new BehaviorSubject<Status>('offline');
+
+  private streamReport: StreamReport = {} as StreamReport;
+  private streamMonitor = new Subject<Boolean>();
 
   constructor(
     private httpClient: HttpClient,
@@ -76,6 +78,8 @@ export class WebRTCStream {
   }
 
   private async onWebSocketOpen() {
+    this.health.next('connecting');
+
     this.peerConnection = new RTCPeerConnection({
       iceServers: [], // LAN/VPN only, no public STUN/TURN
     });
@@ -91,21 +95,22 @@ export class WebRTCStream {
   }
 
   private async onWebSocketClose() {
-    if (!this.peerConnection) {
-      return;
+    this.health.next('offline');
+    if (this.peerConnection) {
+      console.log('%s: Closing WebRTC Connection', this.camera);
+      this.peerConnection.getSenders().forEach((sender) => {
+        if (sender.track) {
+          sender.track.stop();
+        }
+      });
+      this.peerConnection.close();
+      this.peerConnection = null;
     }
-    console.log('%s: Closing WebRTC Connection', this.camera);
-    this.peerConnection.getSenders().forEach((sender) => {
-      if (sender.track) {
-        sender.track.stop();
-      }
-    });
-    this.peerConnection.close();
-    this.peerConnection = null;
   }
 
   private async onWebSocketError(e: any) {
-    console.log('%s: Failed to create WebSocket.', this.camera, e);
+    console.log('%s: Unexpected error.', this.camera, e);
+    this.webSocket.reconnect();
   }
 
   private async onWebSocketMessage(msg: any) {
@@ -116,18 +121,21 @@ export class WebRTCStream {
     switch (data.type) {
       case 'webrtc/candidate':
         const candidate = new RTCIceCandidate({ candidate: data.value, sdpMid: '0' });
-        this.peerConnection.addIceCandidate(candidate);
+        this.peerConnection?.addIceCandidate(candidate);
         break;
       case 'webrtc/answer':
         const remoteDesc = { type: 'answer', sdp: data.value } as RTCSessionDescriptionInit;
-        this.peerConnection.setRemoteDescription(remoteDesc);
+        this.peerConnection?.setRemoteDescription(remoteDesc);
         break;
     }
   }
 
   private onTrack(ev: RTCTrackEvent) {
-    console.log('%s: Got a new track.', this.camera);
-    this.media.next(ev.streams[0]);
+    console.log('%s: Playing new media track.', this.camera);
+
+    const stream = ev.streams[0];
+    this.media.next(stream);
+    this.startStreamMonitor();
   }
 
   private onIceCandidate(event: RTCPeerConnectionIceEvent) {
@@ -138,5 +146,51 @@ export class WebRTCStream {
 
     console.log('%s: Got new ICE candidate. Type: %s, Protocol: %s', this.camera, candidate.type, candidate.protocol);
     this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate.toJSON().candidate }));
+  }
+
+  private async startStreamMonitor() {
+    this.streamMonitor.next(false);
+    this.streamReport = { framesDecoded: 0, bytesReceived: 0, checkTime: Date.now() };
+    interval(1000)
+      .pipe(takeUntil(this.streamMonitor))
+      .subscribe(() => this.checkIsStreaming());
+  }
+
+  private async checkIsStreaming() {
+    const streamReport = await this.getStreamReport();
+    if (!streamReport) {
+      return;
+    }
+
+    // Mark as stale if no frames/bytes are received
+    const elapsed = streamReport.checkTime - this.streamReport.checkTime;
+    const deltaFrames = streamReport.framesDecoded - this.streamReport.framesDecoded;
+    const deltaBytes = streamReport.bytesReceived - this.streamReport.bytesReceived;
+    if (elapsed > 2000 && deltaFrames === 0 && deltaBytes === 0) {
+      this.health.next('stale');
+      return;
+    }
+    this.health.next('streaming');
+  }
+
+  /**
+   * Returns a report of the video stream.
+   */
+  private async getStreamReport(): Promise<StreamReport | null> {
+    const wsAlive = this.webSocket.readyState === WebSocket.OPEN;
+    if (!wsAlive || !this.peerConnection) {
+      return null;
+    }
+    const stats = await this.peerConnection.getStats();
+    const reports = Array.from(stats.values());
+    const videoReports = reports.filter((r) => r.type === 'inbound-rtp' && r.kind === 'video');
+    if (!videoReports || videoReports.length == 0) {
+      return null;
+    }
+    const videoReport = videoReports[0];
+    const framesDecoded = videoReport.framesDecoded;
+    const bytesReceived = videoReport.bytesReceived;
+    const checkTime = Date.now();
+    return { framesDecoded, bytesReceived, checkTime } as StreamReport;
   }
 }
