@@ -1,14 +1,24 @@
-<div class="flex h-full flex-row gap-2 bg-gray-200 p-xl">
-  <div class="h-full w-[380px] rounded-md bg-white p-4 drop-shadow-2xl overflow-auto">
-    <div class="flex h-full flex-col items-center">
+@if (layout.mobile$()) {
+  <div class="flex w-full flex-col items-center bg-gray-200 p-s">
+    <div class="drop-shadow-2x rounded-md bg-white p-4">
       @for (camera of cameras; track camera) {
-        <div>
-          <app-video [camera]="camera" (click)="pinned.set(camera)" />
-        </div>
+        <app-video [camera]="camera" [quality]="'high'" />
       }
     </div>
   </div>
-  <div class="h-full w-[65%] rounded-md bg-white p-4 drop-shadow-2xl">
-    <app-video [camera]="pinned()" [quality]="'high'" />
+} @else {
+  <div class="flex h-full flex-row gap-2 bg-gray-200 p-xl">
+    <div class="h-full w-[380px] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
+      <div class="flex h-full flex-col items-center">
+        @for (camera of cameras; track camera) {
+          <div>
+            <app-video [camera]="camera" (click)="pinned.set(camera)" />
+          </div>
+        }
+      </div>
+    </div>
+    <div class="h-full w-[calc(100%-380px-32px)] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
+      <app-video [camera]="pinned()" [quality]="'high'" />
+    </div>
   </div>
-</div>
+}
