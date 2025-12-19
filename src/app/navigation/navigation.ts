@@ -15,9 +15,9 @@ export class NavigationEntry {
 })
 export class Navigation {
   readonly elements: NavigationEntry[] = [
-    { name: 'Home', icon: 'home', path: 'Home' },
+    { name: 'Home', icon: 'home.svg', path: 'Home' },
     { name: 'OpenHAB', icon: 'openhab.svg', path: 'OpenHAB' },
     { name: 'Wallbox', icon: 'evcc.svg', path: 'EVCC' },
-    { name: 'Kamera', icon: 'security', path: 'Protect' },
+    { name: 'Kamera', icon: 'camera.svg', path: 'Protect' },
   ];
 }

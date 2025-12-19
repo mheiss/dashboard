@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import 'material-symbols';
 
 @theme {
   --spacing-xxs: 2px;
@@ -13,8 +12,8 @@
   --spacing-4xl: 80px;
 
   --color-navigation-bar: #111827;
-  --color-navigation-element: #9CA3AF;
-  --color-navigation-hover: #F59E0B;
+  --color-navigation-element: #9ca3af;
+  --color-navigation-hover: #f59e0b;
 }
 
 @font-face {

@@ -1,12 +1,8 @@
-<div class="flex justify-center space-x-6 px-6 py-3 text-navigation-element">
+<div class="flex justify-center space-x-8 text-navigation-element">
   @for (item of elements; track item) {
-    <div [routerLink]="item.path" routerLinkActive="shadow-[0_2px_0_0_#F59E0B]">
+    <div [routerLink]="item.path" class="pb-1" routerLinkActive="shadow-[0_2px_0_0_#F59E0B]">
       <button class="flex flex-row items-center rounded-lg p-2 hover:bg-navigation-hover hover:text-white">
-        @if (item.icon.endsWith('svg')) {
-          <img src="assets/{{ item.icon }}" class="h-xl w-xl" />
-        } @else {
-          <span class="material-symbols-rounded text-4xl!">{{ item.icon }}</span>
-        }
+        <img src="assets/{{ item.icon }}" class="h-xl w-xl" />
         <span class="ml-3 hidden text-3xl md:inline">{{ item.name }}</span>
       </button>
     </div>
