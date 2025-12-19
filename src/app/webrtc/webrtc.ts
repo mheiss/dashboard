@@ -15,6 +15,7 @@ export interface StreamOffer {
   media: Observable<MediaStream | null>;
   poster: Observable<string | null>;
   health: Observable<Status>;
+  stats: Observable<StreamReport>;
 }
 
 /**
@@ -33,6 +34,7 @@ export class WebRTCStream {
   private readonly media = new BehaviorSubject<MediaStream | null>(null);
   private readonly poster = new BehaviorSubject<string | null>(null);
   private readonly health = new BehaviorSubject<Status>('offline');
+  private readonly stats = new BehaviorSubject<StreamReport>({} as StreamReport);
 
   private streamReport: StreamReport = {} as StreamReport;
   private streamMonitor = new Subject<Boolean>();
@@ -56,6 +58,7 @@ export class WebRTCStream {
       media: this.media.asObservable(),
       health: this.health.asObservable(),
       poster: this.poster.asObservable(),
+      stats: this.stats.asObservable(),
     };
   }
 
@@ -161,12 +164,13 @@ export class WebRTCStream {
     if (!streamReport) {
       return;
     }
+    this.stats.next(streamReport);
 
     // Mark as stale if no frames/bytes are received
     const elapsed = streamReport.checkTime - this.streamReport.checkTime;
     const deltaFrames = streamReport.framesDecoded - this.streamReport.framesDecoded;
     const deltaBytes = streamReport.bytesReceived - this.streamReport.bytesReceived;
-    if (elapsed > 2000 && deltaFrames === 0 && deltaBytes === 0) {
+    if (elapsed > 2000 && (deltaFrames === 0 || deltaBytes === 0)) {
       this.health.next('stale');
       return;
     }

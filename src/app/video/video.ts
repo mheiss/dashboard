@@ -1,22 +1,7 @@
-import {
-  AfterViewInit,
-  Component,
-  DestroyRef,
-  ElementRef,
-  inject,
-  input,
-  OnChanges,
-  OnDestroy,
-  OnInit,
-  output,
-  signal,
-  SimpleChanges,
-  ViewChild,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, inject, input, OnChanges, signal } from '@angular/core';
+import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Status } from '../webrtc/webrtc';
 import { WebRTCService } from '../webrtc/webrtc.service';
-import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 
 @Component({
   selector: 'app-video',
@@ -29,7 +14,8 @@ export class Video implements OnChanges {
   readonly src = input.required<string>();
   readonly video = signal<MediaStream | null>(null);
   readonly poster = signal<string | null>(null);
-  readonly classList = signal<string | null>(null);
+  readonly stats = signal<string | null>(null);
+  readonly classes = signal<string | null>(null);
 
   ngOnChanges(): void {
     this.streamChanged.next();
@@ -42,7 +28,11 @@ export class Video implements OnChanges {
       this.poster.set(poster);
     });
     offer.health.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((status) => {
-      this.classList.set(this.toCssClass(status));
+      this.classes.set(this.toCssClass(status));
+    });
+    offer.stats.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((stats) => {
+      const time = new Date(stats.checkTime);
+      this.stats.set(`Time: ${time.toLocaleString()} Frames: ${stats.framesDecoded} Bytes: ${stats.bytesReceived}`);
     });
   }
 
@@ -53,7 +43,7 @@ export class Video implements OnChanges {
   }
 
   private toCssClass(health: Status) {
-    const classes = 'absolute top-2 right-2 h-1 w-1 rounded-full';
+    const classes = 'h-1 w-1 rounded-full';
     switch (health) {
       case 'connecting':
         return classes + ' bg-yellow-500';
