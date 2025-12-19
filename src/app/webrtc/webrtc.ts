@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { WebSocket } from 'partysocket';
 import { BehaviorSubject, interval, Observable, Subject, takeUntil } from 'rxjs';
-import { getWebSocketUrl } from '../models/webSocket';
+import { getWebSocketUrl } from '../utils/webSocket';
 
 /**
  * Health status of the stream.

@@ -1,27 +1,14 @@
 /**
- * A single entry in the dashboard
+ * The main navigation routes
  */
-export interface DashboardEntry {
-  title: string;
-  icon: string;
-  route: string;
-}
+export type Path = 'Home' | 'OpenHAB' | 'EVCC' | 'Protect';
 
 /**
- * All entries of the navigation bar
+ * All cameras in the system
  */
-export function getEntries(): DashboardEntry[] {
-  const entries: DashboardEntry[] = [];
-  entries.push(createEntry('Home', 'home', 'home'));
-  entries.push(createEntry('OpenHAB', 'openhab.svg', 'openhab'));
-  entries.push(createEntry('Wallbox', 'evcc.svg', 'evcc'));
-  entries.push(createEntry('Kamera', 'security', 'protect'));
-  return entries;
-}
+export type Camera = 'entry' | 'garden' | 'patio';
 
 /**
- * Creates a single new entry
+ * Supported video quality
  */
-function createEntry(title: string, icon: string, route: string): DashboardEntry {
-  return { title, icon, route };
-}
+export type StreamQuality = 'high' | 'medium';

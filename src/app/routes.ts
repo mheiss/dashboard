@@ -10,19 +10,19 @@ export const routes: Routes = [
     component: Home,
   },
   {
-    path: 'home',
+    path: 'Home',
     component: Home,
   },
   {
-    path: 'openhab',
+    path: 'OpenHAB',
     component: Openhab,
   },
   {
-    path: 'evcc',
+    path: 'EVCC',
     component: Evcc,
   },
   {
-    path: 'protect',
+    path: 'Protect',
     component: Protect,
   },
 ];

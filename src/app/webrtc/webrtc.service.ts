@@ -1,7 +1,7 @@
-import { inject, Injectable, Signal } from '@angular/core';
-import { interval } from 'rxjs';
-import { StreamOffer, WebRTCStream } from './webrtc';
 import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { Camera, StreamQuality } from '../models/dashboard.model';
+import { StreamOffer, WebRTCStream } from './webrtc';
 
 /**
  * Manages all WebRTC streams of the dashboard.
@@ -21,11 +21,12 @@ export class WebRTCService {
   /**
    * Requests to start a WebRTC stream for the given camera.
    */
-  start(cameraName: string): StreamOffer {
-    let stream = this.streams.get(cameraName);
+  start(camera: Camera, quality: StreamQuality = 'medium'): StreamOffer {
+    const streamName = this.buildStreamName(camera, quality);
+    let stream = this.streams.get(streamName);
     if (!stream) {
-      stream = new WebRTCStream(this.httpClient, cameraName);
-      this.streams.set(cameraName, stream);
+      stream = new WebRTCStream(this.httpClient, streamName);
+      this.streams.set(streamName, stream);
     }
     return stream.createOrResume();
   }
@@ -33,8 +34,9 @@ export class WebRTCService {
   /**
    * Stops the WebRTC stream for the given camera.
    */
-  stop(cameraName: string) {
-    let stream = this.streams.get(cameraName);
+  stop(camera: Camera, quality: StreamQuality = 'medium') {
+    const streamName = this.buildStreamName(camera, quality);
+    let stream = this.streams.get(streamName);
     if (stream) {
       stream.stop();
     }
@@ -49,5 +51,12 @@ export class WebRTCService {
     } else {
       this.streams.forEach((stream) => stream.createOrResume());
     }
+  }
+
+  private buildStreamName(camera: Camera, quality: StreamQuality) {
+    if (quality == 'high') {
+      return 'unifi_' + camera;
+    }
+    return 'unifi_' + camera + '_' + quality;
   }
 }

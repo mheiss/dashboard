@@ -2,6 +2,7 @@ import { Component, inject, input, OnChanges, signal } from '@angular/core';
 import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Status } from '../webrtc/webrtc';
 import { WebRTCService } from '../webrtc/webrtc.service';
+import { Camera, StreamQuality } from '../models/dashboard.model';
 
 @Component({
   selector: 'app-video',
@@ -11,7 +12,9 @@ export class Video implements OnChanges {
   private readonly webRtc = inject(WebRTCService);
   private streamChanged = new Subject<void>();
 
-  readonly src = input.required<string>();
+  readonly camera = input.required<Camera>();
+  readonly quality = input<StreamQuality>('medium');
+
   readonly video = signal<MediaStream | null>(null);
   readonly poster = signal<string | null>(null);
   readonly stats = signal<string | null>(null);
@@ -20,7 +23,7 @@ export class Video implements OnChanges {
   ngOnChanges(): void {
     this.streamChanged.next();
 
-    const offer = this.webRtc.start(this.src());
+    const offer = this.webRtc.start(this.camera(), this.quality());
     offer.media.pipe(takeUntil(this.streamChanged)).subscribe((media) => {
       this.video.set(media);
     });
@@ -39,7 +42,7 @@ export class Video implements OnChanges {
   ngOnDestroy(): void {
     this.streamChanged.next();
     this.streamChanged.complete();
-    this.webRtc.stop(this.src());
+    this.webRtc.stop(this.camera(), this.quality());
   }
 
   private toCssClass(health: Status) {

@@ -7,5 +7,5 @@ import { OpenHABApi } from '../openhab/openhab.service';
   templateUrl: './home.html',
 })
 export class Home {
-  openHabApi = inject(OpenHABApi);
+  readonly openHabApi = inject(OpenHABApi);
 }

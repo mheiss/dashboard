@@ -1,6 +1,12 @@
 import { Component, inject } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { DashboardService } from '../models/dashboard.service';
+import { ActivatedRoute, RouterModule } from '@angular/router';
+import { Path } from '../models/dashboard.model';
+
+export class NavigationEntry {
+  name: string;
+  icon: string;
+  path: Path;
+}
 
 @Component({
   selector: 'app-navigation',
@@ -8,5 +14,10 @@ import { DashboardService } from '../models/dashboard.service';
   imports: [RouterModule],
 })
 export class Navigation {
-  protected readonly dashboard = inject(DashboardService);
+  readonly elements: NavigationEntry[] = [
+    { name: 'Home', icon: 'home', path: 'Home' },
+    { name: 'OpenHAB', icon: 'openhab.svg', path: 'OpenHAB' },
+    { name: 'Wallbox', icon: 'evcc.svg', path: 'EVCC' },
+    { name: 'Kamera', icon: 'security', path: 'Protect' },
+  ];
 }

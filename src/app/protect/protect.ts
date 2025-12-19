@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, signal } from '@angular/core';
+import { Camera } from '../models/dashboard.model';
 import { Video } from '../video/video';
 
 @Component({
@@ -6,4 +7,8 @@ import { Video } from '../video/video';
   templateUrl: './protect.html',
   imports: [Video],
 })
-export class Protect {}
+export class Protect {
+  readonly cameras: Camera[] = ['entry', 'garden', 'patio'];
+
+  readonly pinned = signal<Camera>('entry');
+}

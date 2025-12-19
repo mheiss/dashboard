@@ -1,7 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { WebSocket } from 'partysocket';
 import { interval } from 'rxjs';
-import { getWebSocketUrl } from '../models/webSocket';
+import { getWebSocketUrl } from '../utils/webSocket';
 
 const OpenHabPing = {
   type: 'WebSocketEvent',

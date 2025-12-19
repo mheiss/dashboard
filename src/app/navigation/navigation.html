@@ -1,15 +1,14 @@
-<div class="flex justify-center space-x-6 overflow-x-auto px-6 py-3 text-navigation-element">
-  @for (item of dashboard.entries(); track item) {
-    <button
-      class="flex flex-row items-center overflow-hidden rounded-lg p-3 hover:bg-navigation-hover hover:text-white"
-      [routerLink]="item.route"
-    >
-      @if (item.icon.endsWith('svg')) {
-        <img src="assets/{{ item.icon }}" class="h-xl w-xl" />
-      } @else {
-        <span class="material-symbols-rounded text-4xl!">{{ item.icon }}</span>
-      }
-      <span class="ml-3 hidden text-3xl md:inline">{{ item.title }}</span>
-    </button>
+<div class="flex justify-center space-x-6 px-6 py-3 text-navigation-element">
+  @for (item of elements; track item) {
+    <div [routerLink]="item.path" routerLinkActive="shadow-[0_2px_0_0_#F59E0B]">
+      <button class="flex flex-row items-center rounded-lg p-2 hover:bg-navigation-hover hover:text-white">
+        @if (item.icon.endsWith('svg')) {
+          <img src="assets/{{ item.icon }}" class="h-xl w-xl" />
+        } @else {
+          <span class="material-symbols-rounded text-4xl!">{{ item.icon }}</span>
+        }
+        <span class="ml-3 hidden text-3xl md:inline">{{ item.name }}</span>
+      </button>
+    </div>
   }
 </div>
