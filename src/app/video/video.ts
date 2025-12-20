@@ -14,6 +14,7 @@ export class Video implements OnChanges {
 
   readonly camera = input.required<Camera>();
   readonly quality = input<StreamQuality>('medium');
+  readonly showStats = signal<boolean>(false);
 
   readonly video = signal<MediaStream | null>(null);
   readonly poster = signal<string | null>(null);

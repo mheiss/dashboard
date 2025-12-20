@@ -53,3 +53,17 @@ body {
   margin: 0;
   font-family: AtkinsonHyperlegible, ui-sans-serif, system-ui, sans-serif;
 }
+
+/**
+* Material Design CDK
+*/
+.tw-dialog-panel {
+  @apply flex items-center justify-center p-4 transition-opacity duration-200;
+}
+.tw-dialog-backdrop {
+  @apply bg-gray-900/40 backdrop-blur-md
+
+}
+.cdk-overlay-backdrop-showing.tw-dialog-backdrop {
+  @apply opacity-90;
+}

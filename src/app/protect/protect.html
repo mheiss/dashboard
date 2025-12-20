@@ -7,8 +7,8 @@
     </div>
   </div>
 } @else {
-  <div class="flex h-full flex-row gap-2 bg-gray-200 p-xl">
-    <div class="h-full w-[380px] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
+  <div class="flex h-full flex-row gap-2 bg-gray-200 p-l">
+    <div class="h-full w-[280px] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
       <div class="flex h-full flex-col items-center">
         @for (camera of cameras; track camera) {
           <div>
@@ -17,7 +17,7 @@
         }
       </div>
     </div>
-    <div class="h-full w-[calc(100%-380px-32px)] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
+    <div class="h-full w-[calc(100%-280px-32px)] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
       <app-video [camera]="pinned()" [quality]="'high'" />
     </div>
   </div>
