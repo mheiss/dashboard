@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Camera, StreamQuality } from '../models/dashboard.model';
 import { StreamOffer, WebRTCStream } from './webrtc';
+import { interval } from 'rxjs';
 
 /**
  * Manages all WebRTC streams of the dashboard.
@@ -11,8 +12,6 @@ export class WebRTCService {
   private readonly httpClient = inject(HttpClient);
   private readonly streams = new Map<string, WebRTCStream>();
   private readonly visibilityFunc = async () => this.onVisibilityChanged();
-
-  private disconnectTimeout: number | undefined = undefined;
 
   constructor() {
     document.addEventListener('visibilitychange', this.visibilityFunc);
@@ -28,7 +27,7 @@ export class WebRTCService {
       stream = new WebRTCStream(this.httpClient, streamName);
       this.streams.set(streamName, stream);
     }
-    return stream.createOrResume();
+    return stream.start();
   }
 
   /**
@@ -42,14 +41,14 @@ export class WebRTCService {
     }
   }
 
+  /**
+   * Starts / Stops the stream depending on the visibility of the document
+   */
   private async onVisibilityChanged() {
     if (document.hidden) {
-      clearTimeout(this.disconnectTimeout);
-      this.disconnectTimeout = setTimeout(() => {
-        this.streams.forEach((stream) => stream.stop());
-      }, 10_000);
+      this.streams.forEach((stream) => stream.stop());
     } else {
-      this.streams.forEach((stream) => stream.createOrResume());
+      this.streams.forEach((stream) => stream.start());
     }
   }
 

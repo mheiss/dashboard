@@ -3,6 +3,7 @@ import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Status } from '../webrtc/webrtc';
 import { WebRTCService } from '../webrtc/webrtc.service';
 import { Camera, StreamQuality } from '../models/dashboard.model';
+import { Call } from '@angular/compiler';
 
 @Component({
   selector: 'app-video',
@@ -31,12 +32,12 @@ export class Video implements OnChanges {
     offer.poster.pipe(takeUntil(this.streamChanged)).subscribe((poster) => {
       this.poster.set(poster);
     });
-    offer.health.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((status) => {
+    offer.status.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((status) => {
       this.classes.set(this.toCssClass(status));
     });
-    offer.stats.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((stats) => {
-      const time = new Date(stats.checkTime);
-      this.stats.set(`Time: ${time.toLocaleString()} Frames: ${stats.framesDecoded} Bytes: ${stats.bytesReceived}`);
+    offer.report.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((stats) => {
+      const time = new Date(stats.timestamp);
+      this.stats.set(`Time: ${time.toLocaleString()} Frames: ${stats.frames} Bytes: ${stats.bytes}`);
     });
   }
 
@@ -49,10 +50,12 @@ export class Video implements OnChanges {
   private toCssClass(health: Status) {
     const classes = 'h-1 w-1 rounded-full';
     switch (health) {
-      case 'connecting':
-        return classes + ' bg-yellow-500';
       case 'offline':
         return classes + ' bg-red-500';
+      case 'connecting':
+        return classes + ' bg-yellow-500';
+      case 'connected':
+        return classes + ' bg-blue-500';
       case 'streaming':
         return classes + ' bg-[#39FF14]';
       case 'stale':
