@@ -110,7 +110,7 @@ export class WebRTCStream {
   }
 
   private async onWebSocketClose() {
-    console.log('%s: Closing WebRTC Connection and stop streaming.', this.camera);
+    console.log('%s: Socket closed.', this.camera);
     if (this.peerConnection) {
       this.peerConnection.getSenders().forEach((sender) => {
         this.peerConnection?.removeTrack(sender);
@@ -120,13 +120,13 @@ export class WebRTCStream {
       });
       this.peerConnection.close();
       this.peerConnection = null;
+      console.log('%s: Closed WebRTC connection and stopped streaming.', this.camera);
     }
     this.status.next('offline');
   }
 
   private async onWebSocketError(e: any) {
-    console.log('%s: Unexpected error: %s', this.camera, e);
-    this.webSocket.reconnect();
+    console.log('%s: Unexpected error.', this.camera, e);
   }
 
   private async onWebSocketMessage(msg: any) {
@@ -166,8 +166,8 @@ export class WebRTCStream {
   }
 
   private async checkHealth() {
-    // Do not attempt to update the report
-    if (!this.shallStream) {
+    // We do check the health only if we are connected and shall stream
+    if (!this.shallStream || this.webSocket.readyState !== WebSocket.OPEN) {
       return;
     }
 

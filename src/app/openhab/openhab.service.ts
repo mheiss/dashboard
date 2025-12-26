@@ -39,7 +39,7 @@ export class OpenHABApi {
   }
 
   private onError(e: any): void {
-    console.log('WebSocket error occurred.', e);
+    console.log('OpenHAB: WebSocket error occurred.', e);
     this.status.set(false);
   }
 
