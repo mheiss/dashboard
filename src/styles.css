@@ -11,9 +11,11 @@
   --spacing-3xl: 48px;
   --spacing-4xl: 80px;
 
-  --color-navigation-bar: #111827;
-  --color-navigation-element: #9ca3af;
-  --color-navigation-hover: #f59e0b;
+  --color-navigation: #111827;
+  --color-secondary: #9ca3af;
+  --color-secondary-2: #d6deeb;
+  --color-primary: #f59e0b;
+  --color-primary-2: #f9b94a;
 }
 
 @font-face {
@@ -60,10 +62,11 @@ body {
 .tw-dialog-panel {
   @apply flex items-center justify-center p-4 transition-opacity duration-200;
 }
-.tw-dialog-backdrop {
-  @apply bg-gray-900/40 backdrop-blur-md
 
+.tw-dialog-backdrop {
+  @apply bg-gray-900/40 backdrop-blur-md;
 }
+
 .cdk-overlay-backdrop-showing.tw-dialog-backdrop {
   @apply opacity-90;
 }

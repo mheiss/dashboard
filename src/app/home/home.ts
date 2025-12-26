@@ -2,22 +2,17 @@ import { Dialog } from '@angular/cdk/dialog';
 import { Component, inject } from '@angular/core';
 import { OpenHABApi } from '../openhab/openhab.service';
 import { Keypad } from '../keypad/keypad';
+import { PopupService } from '../popup/popup.service';
 
 @Component({
   selector: 'app-home',
-  imports: [],
   templateUrl: './home.html',
 })
 export class Home {
-  readonly dialog = inject(Dialog);
-
+  readonly dialog = inject(PopupService);
   readonly openHabApi = inject(OpenHABApi);
 
   openKeypad() {
-    this.dialog.open<string>(Keypad, {
-      width: '250px',
-      panelClass: 'tw-dialog-panel',
-      backdropClass: 'tw-dialog-backdrop',
-    });
+    this.dialog.open(Keypad);
   }
 }
