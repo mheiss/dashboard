@@ -12,7 +12,9 @@ export class PopupService {
   public open(component: ComponentType<unknown>, data?: any) {
     this.dialog.open<string>(component, {
       data: data,
-      width: '250px',
+      width: '50%',
+      height: '80%',
+      disableClose: true,
       panelClass: 'tw-dialog-panel',
       backdropClass: 'tw-dialog-backdrop',
     });

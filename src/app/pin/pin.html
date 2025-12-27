@@ -1,0 +1,27 @@
+<app-popup title="Enter PIN">
+  <div class="flex h-[25%] items-center justify-center">
+    <div class="flex gap-10">
+      @for (value of values(); track $index) {
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-full"
+          [ngClass]="{
+            'bg-primary': value,
+            'bg-secondary': !value,
+          }"
+        ></div>
+      }
+    </div>
+  </div>
+
+  <div class="grid h-[75%] grid-cols-3 grid-rows-4 place-items-center gap-2 px-15">
+    @for (key of keys(); track key) {
+      <div
+        [ngClass]="{
+          'col-start-2': $last,
+        }"
+      >
+        <div (click)="keyPressed(key)" class="flex h-20 w-20 items-center justify-center rounded-full bg-secondary">{{ key }}</div>
+      </div>
+    }
+  </div>
+</app-popup>

@@ -1,7 +1,7 @@
 import { Dialog } from '@angular/cdk/dialog';
 import { Component, inject } from '@angular/core';
 import { OpenHABApi } from '../openhab/openhab.service';
-import { Keypad } from '../keypad/keypad';
+import { Pin } from '../pin/pin';
 import { PopupService } from '../popup/popup.service';
 
 @Component({
@@ -13,6 +13,6 @@ export class Home {
   readonly openHabApi = inject(OpenHABApi);
 
   openKeypad() {
-    this.dialog.open(Keypad);
+    this.dialog.open(Pin);
   }
 }
