@@ -7,8 +7,10 @@
     <ng-content />
   </div>
 
-  <div class="flex justify-end gap-3 rounded-b-xl bg-navigation p-4">
-    <button (click)="onCancel()" class="rounded-md bg-secondary px-4 py-2 transition hover:bg-secondary-2">Cancel</button>
-    <button (click)="onConfirm()" class="rounded-md bg-primary px-4 py-2 text-white transition hover:bg-primary-2">Confirm</button>
-  </div>
+  @if (!hideActionBar()) {
+    <div class="flex justify-end gap-3 rounded-b-xl bg-navigation p-4">
+      <button (click)="onCancel()" class="rounded-md bg-secondary px-4 py-2 transition hover:bg-secondary-2">Cancel</button>
+      <button (click)="onConfirm()" class="rounded-md bg-primary px-4 py-2 text-white transition hover:bg-primary-2">Confirm</button>
+    </div>
+  }
 </div>

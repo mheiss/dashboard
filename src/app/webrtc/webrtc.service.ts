@@ -2,7 +2,6 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Camera, StreamQuality } from '../models/dashboard.model';
 import { StreamOffer, WebRTCStream } from './webrtc';
-import { interval } from 'rxjs';
 
 /**
  * Manages all WebRTC streams of the dashboard.

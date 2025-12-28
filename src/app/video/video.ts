@@ -1,9 +1,8 @@
 import { Component, inject, input, OnChanges, signal } from '@angular/core';
 import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
+import { Camera, StreamQuality } from '../models/dashboard.model';
 import { Status } from '../webrtc/webrtc';
 import { WebRTCService } from '../webrtc/webrtc.service';
-import { Camera, StreamQuality } from '../models/dashboard.model';
-import { Call } from '@angular/compiler';
 
 @Component({
   selector: 'app-video',

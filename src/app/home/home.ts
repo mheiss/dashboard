@@ -13,6 +13,8 @@ export class Home {
   readonly openHabApi = inject(OpenHABApi);
 
   openKeypad() {
-    this.dialog.open(Pin);
+    this.dialog.open(Pin, {
+      hideActionBar: true,
+    });
   }
 }

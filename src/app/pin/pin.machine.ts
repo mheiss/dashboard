@@ -1,28 +1,49 @@
 import { assign, setup } from 'xstate';
 
-export const machine = setup({
-  types: {
-    context: {} as {
-      digits: string[];
-    },
-    events: {} as { type: 'PIN'; digit: string } | { type: 'RESPONSE'; success: boolean },
-  },
+export type Context = { digits: string[] };
+export type EnterDigitEvent = { type: 'enterDigit'; digit: string };
+export type VerifyResponseEvent = { type: 'verifyResponse'; success: boolean };
 
+export const verifyResponse = (success: boolean): VerifyResponseEvent => ({
+  type: 'verifyResponse',
+  success,
+});
+
+export const digitEvent = (digit: string): EnterDigitEvent => ({
+  type: 'enterDigit',
+  digit,
+});
+
+/**
+ * State machine to enter and verify a PIN code.
+ */
+export const pinMachine = setup({
+  types: {
+    context: {} as Context,
+    events: {} as EnterDigitEvent | VerifyResponseEvent,
+  },
   actions: {
-    doVerify: () => {
-      throw new Error('Method not implemented.');
-    },
-    clear: assign({
+    verifyAction: function () {},
+    clearAction: assign({
       digits: () => [],
     }),
-    addPin: assign({
-      digits: ({ context, event }) => (event.type === 'PIN' ? [...context.digits, event.digit].slice(0, 4) : context.digits),
+    collectAction: assign({
+      digits: ({ context, event }) => {
+        return event.type === 'enterDigit' ? [...context.digits, event.digit].slice(0, 4) : context.digits;
+      },
     }),
   },
-
   guards: {
-    has4Digits: ({ context }) => context.digits.length === 4,
-    success: ({ event }) => event.type === 'RESPONSE' && event.success === true,
+    pinLengthGuard: ({ context }) => {
+      return context.digits.length === 4;
+    },
+    pinValidGuard: ({ event }) => {
+      return event.type === 'verifyResponse' && event.success;
+    },
+  },
+  delays: {
+    verifyTimeout: 2000,
+    invalidTimeout: 2000,
   },
 }).createMachine({
   context: {
@@ -33,31 +54,31 @@ export const machine = setup({
   states: {
     idle: {
       on: {
-        PIN: {
+        enterDigit: {
+          actions: 'collectAction',
           target: 'collect',
-          actions: 'addPin',
         },
       },
     },
     collect: {
       on: {
-        PIN: {
+        enterDigit: {
+          actions: 'collectAction',
           target: 'collect',
-          actions: 'addPin',
         },
       },
       always: {
         target: 'verify',
-        guard: 'has4Digits',
+        guard: 'pinLengthGuard',
       },
     },
     verify: {
-      entry: 'doVerify',
+      entry: 'verifyAction',
       on: {
-        RESPONSE: [
+        verifyResponse: [
           {
             target: 'valid',
-            guard: 'success',
+            guard: 'pinValidGuard',
           },
           {
             target: 'invalid',
@@ -65,20 +86,22 @@ export const machine = setup({
         ],
       },
       after: {
-        2000: {
+        verifyTimeout: {
           target: 'invalid',
         },
       },
     },
     invalid: {
-      entry: 'clear',
-      always: {
-        target: 'idle',
+      exit: 'clearAction',
+      after: {
+        invalidTimeout: {
+          target: 'idle',
+        },
       },
     },
     valid: {
+      entry: 'clearAction',
       type: 'final',
-      entry: 'clear',
     },
   },
 });

@@ -70,3 +70,52 @@ body {
 .cdk-overlay-backdrop-showing.tw-dialog-backdrop {
   @apply opacity-90;
 }
+
+/**
+* Custom Animations
+*/
+@layer utilities {
+  @keyframes move-left-right-down {
+    15% {
+      transform: translateX(-40px) translateY(0);
+    }
+    30% {
+      transform: translateX(40px) translateY(0);
+    }
+    45% {
+      transform: translateX(-30px) translateY(0);
+    }
+    60% {
+      transform: translateX(30px) translateY(0);
+    }
+    75% {
+      transform: translateX(0) translateY(0);
+    }
+    100% {
+      transform: translateX(0) translateY(40px);
+      opacity: 0;
+    }
+  }
+  .animate-slide-and-fade {
+    animation: move-left-right-down 1.8s ease-in-out forwards;
+  }
+
+  @keyframes confetti-fall {
+    0% {
+      opacity: 1;
+      transform: translateY(0) rotate(0deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translateY(200px) rotate(720deg);
+    }
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 8px;
+    height: 14px;
+    opacity: 0;
+    animation: confetti-fall 1.2s ease-out forwards;
+  }
+}
