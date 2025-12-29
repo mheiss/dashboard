@@ -1,28 +1,48 @@
-import { Injectable, signal } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 import { WebSocket } from 'partysocket';
-import { interval } from 'rxjs';
+import { BehaviorSubject, interval } from 'rxjs';
 import { getWebSocketUrl } from '../utils/webSocket';
-
-const OpenHabPing = {
-  type: 'WebSocketEvent',
-  topic: 'openhab/websocket/heartbeat',
-  payload: 'PING',
-  source: 'WebSocketTestInstance',
-};
+import { PIN, SECURITY } from './openhab.items';
+import { createCommandEvent, createStringPayload, Payload, PingEvent } from './openhab.model';
 
 @Injectable({ providedIn: 'root' })
 export class OpenHABApi {
+  private readonly http = inject(HttpClient);
   private readonly ws = this.createWebSocket();
 
-  public readonly status = signal(false);
-  public readonly message = signal('');
+  /**
+   * The security status of the system.
+   * * TRUE = On / Armed
+   * * FALSE = Off / Disarmed
+   */
+  private readonly securityStatus = new BehaviorSubject<boolean>(false);
+  public readonly securityStatus$ = this.securityStatus.asObservable();
 
+  constructor() {
+    this.http.get('/api/openhab/items/' + SECURITY + '/state', { responseType: 'text' }).subscribe((v) => {
+      this.securityStatus.next(v === 'ON');
+    });
+  }
+
+  /**
+   * Starts sending PING messages to openhab in order to keep our WS connection alive
+   */
   startPingPong() {
     interval(5000).subscribe(() => {
-      if (this.status()) {
-        this.ws.send(JSON.stringify(OpenHabPing));
+      if (this.ws.readyState === WebSocket.OPEN) {
+        this.ws.send(JSON.stringify(PingEvent));
       }
     });
+  }
+
+  /**
+   * Attempts to disarm the security system using the given pin code.
+   */
+  disarmSecurity(pinCode: string) {
+    const pinPayload = createStringPayload(pinCode);
+    const message = createCommandEvent(PIN, pinPayload);
+    this.ws.send(JSON.stringify(message));
   }
 
   private createWebSocket() {
@@ -35,15 +55,24 @@ export class OpenHABApi {
 
   private onOpen(): void {
     console.log('WebSocket connection with OpenHAB established.');
-    this.status.set(true);
   }
 
   private onError(e: any): void {
     console.log('OpenHAB: WebSocket error occurred.', e);
-    this.status.set(false);
   }
 
   private onMessage(e: MessageEvent<any>): void {
-    this.message.set(e.data);
+    const event = JSON.parse(e.data);
+    if (event?.type === 'ItemStateUpdatedEvent') {
+      this.onItemUpdateEvent(event);
+    }
+  }
+
+  private onItemUpdateEvent(event: any) {
+    const topic = event.topic as string;
+    if (topic === 'openhab/items/' + SECURITY + '/stateupdated') {
+      const payload: Payload = JSON.parse(event.payload);
+      this.securityStatus.next(payload.value === 'ON' ? true : false);
+    }
   }
 }

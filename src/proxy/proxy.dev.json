@@ -5,6 +5,11 @@
     "secure": false,
     "ws": true
   },
+  "/api/openhab/**": {
+    "target": "https://dashboard.heiss.cloud",
+    "changeOrigin": true,
+    "secure": false
+  },
   "/ws/webrtc**": {
     "target": "https://dashboard.heiss.cloud",
     "changeOrigin": true,

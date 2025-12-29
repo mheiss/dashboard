@@ -1,9 +1,14 @@
-import { NgClass, NgStyle } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { DialogRef } from '@angular/cdk/dialog';
+import { NgClass } from '@angular/common';
+import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
+
 import { Popup } from '../popup/popup';
+import { confettiSequence } from '../utils/confetti';
 import { pinActor } from './pin.actor';
 import { digitEvent, verifyResponse } from './pin.machine';
-import { DialogRef } from '@angular/cdk/dialog';
+import { OpenHABApi } from '../openhab/openhab.service';
+import { pipe } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Confetti {
   x: number;
@@ -15,13 +20,14 @@ export interface Confetti {
 @Component({
   selector: 'app-pin',
   templateUrl: './pin.html',
-  imports: [Popup, NgClass, NgStyle],
+  imports: [Popup, NgClass],
 })
 export class Pin implements OnInit {
   readonly dialogRef = inject(DialogRef);
+  readonly openHab = inject(OpenHABApi);
+  readonly destroyRef = inject(DestroyRef);
 
   readonly keys = signal(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
-  readonly confetti = signal<Confetti[]>([]);
   readonly values = signal(['']);
   readonly state = signal('');
 
@@ -34,6 +40,7 @@ export class Pin implements OnInit {
   });
 
   ngOnInit(): void {
+    // Subscribe to events to update our internal data
     this.pinActor.subscribe((snapshot) => {
       this.state.set(snapshot.value);
 
@@ -43,6 +50,17 @@ export class Pin implements OnInit {
       this.values.set(uiDigits);
     });
     this.pinActor.start();
+
+    // Close the popup when the security is turned off
+    this.openHab.securityStatus$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+      if (!value && this.isVerifying()) {
+        this.pinActor.send(verifyResponse(true));
+        this.dialogRef.close();
+        confettiSequence();
+      } else {
+        this.pinActor.send(verifyResponse(false));
+      }
+    });
   }
 
   keyPressed(key: string) {
@@ -50,26 +68,7 @@ export class Pin implements OnInit {
   }
 
   private doVerifyPin(digits: string[]) {
-    const pin = digits.join('');
-    console.log('Verify called: %s', pin);
-    if (pin === '1234') {
-      this.pinActor.send(verifyResponse(true));
-      this.triggerConfetti();
-    }
-  }
-
-  private triggerConfetti() {
-    this.confetti.set(
-      Array.from({ length: 200 }).map(() => ({
-        x: Math.random() * 400,
-        y: 50 + Math.random() * -50,
-        color: `hsl(${Math.random() * 360}, 90%, 60%)`,
-        delay: Math.random() * 80,
-      })),
-    );
-    setTimeout(() => {
-      this.confetti.set([]);
-      this.dialogRef.close();
-    }, 1500);
+    const pinCode = digits.join('');
+    this.openHab.disarmSecurity(pinCode);
   }
 }

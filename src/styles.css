@@ -99,23 +99,4 @@ body {
   .animate-slide-and-fade {
     animation: move-left-right-down 1.8s ease-in-out forwards;
   }
-
-  @keyframes confetti-fall {
-    0% {
-      opacity: 1;
-      transform: translateY(0) rotate(0deg);
-    }
-    100% {
-      opacity: 0;
-      transform: translateY(200px) rotate(720deg);
-    }
-  }
-
-  .confetti-piece {
-    position: absolute;
-    width: 8px;
-    height: 14px;
-    opacity: 0;
-    animation: confetti-fall 1.2s ease-out forwards;
-  }
 }

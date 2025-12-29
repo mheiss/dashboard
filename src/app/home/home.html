@@ -1,14 +1,12 @@
 <div class="p-xl">
-  <button (click)="openKeypad()">Open</button>
+  <button (click)="openKeypad()">Open PIN</button>
 </div>
 
 <div class="flex flex-row space-x-6 px-6 py-3">
   <div>
-    <p>Connection:</p>
-    <p>Message:</p>
+    <p>Security Status:</p>
   </div>
   <div>
-    <p>{{ openHabApi.status() }}</p>
-    <p>{{ openHabApi.message() }}</p>
+    <p>{{ openHabApi.securityStatus$ | async }}</p>
   </div>
 </div>

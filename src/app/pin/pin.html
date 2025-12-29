@@ -1,29 +1,18 @@
 <app-popup title="PIN Code Eingeben">
   <div class="flex h-[25%] items-center justify-center">
-    @if (isValid()) {
-      <div class="relative h-full w-full">
-        @for (c of confetti(); track $index) {
-          <div
-            class="confetti-piece"
-            [ngStyle]="{ left: c.x + 'px', top: c.y + 'px', background: c.color, animationDelay: c.delay + 'ms' }"
-          ></div>
-        }
-      </div>
-    } @else {
-      <div class="flex gap-10">
-        @for (value of values(); track $index) {
-          <div
-            class="flex h-10 w-10 items-center justify-center rounded-full"
-            [ngClass]="{
-              'bg-primary': value,
-              'bg-primary opacity-50': value && isVerifying(),
-              'bg-secondary': !value,
-              'animate-slide-and-fade bg-red-500': value && isInvalid(),
-            }"
-          ></div>
-        }
-      </div>
-    }
+    <div class="flex gap-10">
+      @for (value of values(); track $index) {
+        <div
+          class="flex h-10 w-10 items-center justify-center rounded-full"
+          [ngClass]="{
+            'bg-primary': value,
+            'bg-primary opacity-50': value && isVerifying(),
+            'bg-secondary': !value,
+            'animate-slide-and-fade bg-red-500': value && isInvalid(),
+          }"
+        ></div>
+      }
+    </div>
   </div>
 
   <div class="grid h-[75%] cursor-default grid-cols-3 grid-rows-4 place-items-center gap-2 px-15 select-none">
