@@ -1,23 +1,5 @@
 @import 'tailwindcss';
 
-@theme {
-  --spacing-xxs: 2px;
-  --spacing-xs: 4px;
-  --spacing-s: 8px;
-  --spacing-m: 16px;
-  --spacing-l: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 40px;
-  --spacing-3xl: 48px;
-  --spacing-4xl: 80px;
-
-  --color-navigation: #111827;
-  --color-secondary: #9ca3af;
-  --color-secondary-2: #d6deeb;
-  --color-primary: #f59e0b;
-  --color-primary-2: #f9b94a;
-}
-
 @font-face {
   font-family: 'AtkinsonHyperlegible';
   src: url('./fonts/Atkinson-Hyperlegible-Regular-102.ttf') format('truetype');
@@ -59,15 +41,15 @@ body {
 /**
 * Material Design CDK
 */
-.tw-dialog-panel {
+.app-dialog-panel {
   @apply flex items-center justify-center p-4 transition-opacity duration-200;
 }
 
-.tw-dialog-backdrop {
+.app-dialog-backdrop {
   @apply bg-gray-900/40 backdrop-blur-md;
 }
 
-.cdk-overlay-backdrop-showing.tw-dialog-backdrop {
+.cdk-overlay-backdrop-showing.app-dialog-backdrop {
   @apply opacity-90;
 }
 

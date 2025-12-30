@@ -1,7 +1,9 @@
 import { assign, setup } from 'xstate';
 
 export type Context = { digits: string[] };
+export type InputEvents = EnterDigitEvent | RemoveDigitEvent;
 export type EnterDigitEvent = { type: 'enterDigit'; digit: string };
+export type RemoveDigitEvent = { type: 'removeDigit' };
 export type VerifyResponseEvent = { type: 'verifyResponse'; success: boolean };
 
 export const verifyResponse = (success: boolean): VerifyResponseEvent => ({
@@ -9,9 +11,13 @@ export const verifyResponse = (success: boolean): VerifyResponseEvent => ({
   success,
 });
 
-export const digitEvent = (digit: string): EnterDigitEvent => ({
+export const keyEvent = (digit: string): EnterDigitEvent => ({
   type: 'enterDigit',
   digit,
+});
+
+export const backspaceEvent = (): RemoveDigitEvent => ({
+  type: 'removeDigit',
 });
 
 /**
@@ -20,7 +26,7 @@ export const digitEvent = (digit: string): EnterDigitEvent => ({
 export const pinMachine = setup({
   types: {
     context: {} as Context,
-    events: {} as EnterDigitEvent | VerifyResponseEvent,
+    events: {} as InputEvents | VerifyResponseEvent,
   },
   actions: {
     verifyAction: function () {},
@@ -30,6 +36,11 @@ export const pinMachine = setup({
     collectAction: assign({
       digits: ({ context, event }) => {
         return event.type === 'enterDigit' ? [...context.digits, event.digit].slice(0, 4) : context.digits;
+      },
+    }),
+    removeAction: assign({
+      digits: ({ context, event }) => {
+        return event.type === 'removeDigit' ? [...context.digits.slice(0, context.digits.length - 1)].slice(0, 4) : context.digits;
       },
     }),
   },
@@ -64,6 +75,10 @@ export const pinMachine = setup({
       on: {
         enterDigit: {
           actions: 'collectAction',
+          target: 'collect',
+        },
+        removeDigit: {
+          actions: 'removeAction',
           target: 'collect',
         },
       },

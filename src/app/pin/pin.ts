@@ -1,20 +1,19 @@
 import { DialogRef } from '@angular/cdk/dialog';
 import { NgClass } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { OpenHABApi } from '../openhab/openhab.service';
 import { Popup } from '../popup/popup';
 import { confettiSequence } from '../utils/confetti';
 import { pinActor } from './pin.actor';
-import { digitEvent, verifyResponse } from './pin.machine';
-import { OpenHABApi } from '../openhab/openhab.service';
-import { pipe } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { backspaceEvent, InputEvents, keyEvent, verifyResponse } from './pin.machine';
 
-export interface Confetti {
-  x: number;
-  y: number;
-  color: string;
-  delay: number;
+export class Key {
+  text?: string;
+  icon?: string;
+  position?: string;
+  event: InputEvents;
 }
 
 @Component({
@@ -27,27 +26,23 @@ export class Pin implements OnInit {
   readonly openHab = inject(OpenHABApi);
   readonly destroyRef = inject(DestroyRef);
 
-  readonly keys = signal(['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']);
+  readonly keys = signal(createKeys());
   readonly values = signal(['']);
-  readonly state = signal('');
-
-  readonly isValid = computed(() => this.state() === 'valid');
-  readonly isInvalid = computed(() => this.state() === 'invalid');
-  readonly isVerifying = computed(() => this.state() === 'verify');
 
   readonly pinActor = pinActor({
     verifyAction: (digits) => this.doVerifyPin(digits),
   });
 
+  readonly pinActorState = signal('idle');
+  readonly isValid = computed(() => this.pinActorState() === 'valid');
+  readonly isInvalid = computed(() => this.pinActorState() === 'invalid');
+  readonly isVerifying = computed(() => this.pinActorState() === 'verify');
+
   ngOnInit(): void {
     // Subscribe to events to update our internal data
     this.pinActor.subscribe((snapshot) => {
-      this.state.set(snapshot.value);
-
-      // Fill missing digits with nulls for rendering
-      const digits = snapshot.context.digits;
-      const uiDigits = digits.concat(Array(4 - digits.length).fill(null));
-      this.values.set(uiDigits);
+      this.pinActorState.set(snapshot.value);
+      this.values.set(fillMissingDigits(snapshot.context.digits));
     });
     this.pinActor.start();
 
@@ -63,12 +58,38 @@ export class Pin implements OnInit {
     });
   }
 
-  keyPressed(key: string) {
-    this.pinActor.send(digitEvent(key));
+  keyPressed(key: Key) {
+    this.pinActor.send(key.event);
   }
 
   private doVerifyPin(digits: string[]) {
     const pinCode = digits.join('');
     this.openHab.disarmSecurity(pinCode);
   }
+}
+
+/**
+ * Creates the keys of the PIN Code widget
+ */
+function createKeys(): Key[] {
+  return [
+    { text: '1', event: keyEvent('1') },
+    { text: '2', event: keyEvent('2') },
+    { text: '3', event: keyEvent('3') },
+    { text: '4', event: keyEvent('4') },
+    { text: '5', event: keyEvent('5') },
+    { text: '6', event: keyEvent('6') },
+    { text: '7', event: keyEvent('7') },
+    { text: '8', event: keyEvent('8') },
+    { text: '9', event: keyEvent('9') },
+    { text: '0', event: keyEvent('0'), position: 'col-start-2' },
+    { icon: 'backspace', event: backspaceEvent(), position: 'col-start-3' },
+  ];
+}
+
+/**
+ * Fills missing digits with nulls. Required for rendering.
+ */
+function fillMissingDigits(digits: string[]) {
+  return digits.concat(Array(4 - digits.length).fill(null));
 }

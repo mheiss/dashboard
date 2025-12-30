@@ -1,5 +1,6 @@
 {
   "cSpell.words": [
+    "evcc",
     "EVCC",
     "heiss",
     "Hyperlegible",
@@ -9,6 +10,7 @@
     "partysocket",
     "stateupdated",
     "Stylesheet",
+    "tailwindcss",
     "unifi",
     "Wallbox",
     "webrtc"
@@ -18,5 +20,6 @@
   },
   "editor.quickSuggestions": {
     "strings": "on"
-  }
+  },
+  "cSpell.language": "en,de-at"
 }

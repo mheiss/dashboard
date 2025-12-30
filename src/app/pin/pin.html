@@ -1,28 +1,30 @@
 <app-popup title="PIN Code Eingeben">
-  <div class="flex h-[25%] items-center justify-center">
+  <div class="mt-8 flex h-[25%] items-center justify-center">
     <div class="flex gap-10">
       @for (value of values(); track $index) {
         <div
           class="flex h-10 w-10 items-center justify-center rounded-full"
           [ngClass]="{
-            'bg-primary': value,
-            'bg-primary opacity-50': value && isVerifying(),
-            'bg-secondary': !value,
-            'animate-slide-and-fade bg-red-500': value && isInvalid(),
+            'bg-amber-500': value,
+            'bg-amber-500 opacity-50': value && isVerifying(),
+            'bg-stone-300': !value,
+            'animate-slide-and-fade bg-rose-700': value && isInvalid(),
           }"
         ></div>
       }
     </div>
   </div>
 
-  <div class="grid h-[75%] cursor-default grid-cols-3 grid-rows-4 place-items-center gap-2 px-15 select-none">
+  <div class="mt-10 grid h-[75%] cursor-default grid-cols-3 grid-rows-4 place-items-center gap-2 px-15 select-none">
     @for (key of keys(); track key) {
-      <div
-        [ngClass]="{
-          'col-start-2': $last,
-        }"
-      >
-        <div (click)="keyPressed(key)" class="flex h-20 w-20 items-center justify-center rounded-full bg-secondary">{{ key }}</div>
+      <div [ngClass]="key.position">
+        <div (click)="keyPressed(key)" class="flex h-20 w-20 items-center justify-center rounded-full bg-stone-300">
+          @if (key.icon) {
+            <img src="assets/{{ key.icon }}.svg" class="h-7 w-7" />
+          } @else {
+            {{ key.text }}
+          }
+        </div>
       </div>
     }
   </div>
