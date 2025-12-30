@@ -1,7 +1,7 @@
-$srcDir    = "./dist/Dashboard/browser"
-$destDir   = "/srv/dashboard"
-$hostname  = "dashboard.heiss.lan"
-$username  = "root"
+$srcDir = "./dist/Dashboard/browser"
+$destDir = "/srv/dashboard"
+$hostname = "dashboard.heiss.lan"
+$username = "root"
 
 # Create a session to the remote server
 Write-Output "Connecting to remote server $hostname"
@@ -9,26 +9,32 @@ $session = New-PSSession -Hostname $hostname -Username $username
 
 # Verify target directory
 $exists = Invoke-Command -Session $session -ScriptBlock {
-    param($destDir)
-    Test-Path $destDir
+  param($destDir)
+  Test-Path $destDir
 } -ArgumentList $destDir
 
 if (-not $exists) {
-    Write-Error "Remote directory '$destDir' does not exist on $hostname. Aborting deployment."
-    Remove-PSSession $session
-    return
+  Write-Error "Remote directory '$destDir' does not exist on $hostname. Aborting deployment."
+  Remove-PSSession $session
+  return
 }
 
 # Remove contents of the remote directory, but keep the directory itself
 Invoke-Command -Session $session -ScriptBlock {
-    param($destDir)
-    Get-ChildItem -Path $destDir -Recurse -Force | Remove-Item -Recurse -Force
+  param($destDir)
+  Get-ChildItem -Path $destDir -Recurse -Force | Remove-Item -Recurse -Force
 } -ArgumentList $destDir
 
 #  Copy the local directory to the remote server
-Write-Output "Copy bundled webapp $srcDir -> $destDir"
+Write-Output "Copy bundled webapp to $destDir"
 Copy-Item -Path $srcDir/* -Destination $destDir -Recurse -Force -ToSession $session
 
+# Calculate statistics
+$srcFiles = Get-ChildItem -Path $srcDir -Recurse
+$srcFilesCount = $srcFiles.Length;
+$srcSizeBytes = ($srcFiles | Measure-Object -Property Length -Sum).Sum
+$srcSizeFormatted = "{0:N2} KB" -f ($srcSizeBytes / 1KB)
+
 # Destroy session
-Write-Output "Successfully deployed"
+Write-Output "Successfully deployed webapp. #Files: $srcFilesCount; Size: $srcSizeFormatted."
 Remove-PSSession $session
