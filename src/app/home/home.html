@@ -1,12 +1,23 @@
-<div class="p-xl">
-  <button (click)="openKeypad()">Open PIN</button>
-</div>
+<div class="flex h-full items-center justify-center bg-stone-200 p-4">
+  <div class="text-center">
+    <div class="mb-6 text-stone-700"></div>
 
-<div class="flex flex-row space-x-6 px-6 py-3">
-  <div>
-    <p>Security Status:</p>
-  </div>
-  <div>
-    <p>{{ openHabApi.securityStatus$ | async }}</p>
+    <div class="flex items-center justify-center gap-16 text-stone-200">
+      <div (click)="openKeypad()" class="rounded-md bg-stone-900 p-3 text-center w-full">
+        <div class="flex justify-center">
+          <img class="size-40 rounded-md shadow-xl" src="/assets/home1.svg" />
+        </div>
+        <div class="justify-center pt-2">Zuhause-Modus aktivieren</div>
+      </div>
+
+      <div class="rounded-md bg-stone-900 p-3 text-center w-full">
+        <div class="flex justify-center">
+          <img class="size-40 rounded-md shadow-xl" src="/assets/leave.svg" />
+        </div>
+        <div class="pt-3">Abwesenheitsmodus aktivieren</div>
+      </div>
+    </div>
+
+    <div class="mt-6 text-gray-700"></div>
   </div>
 </div>

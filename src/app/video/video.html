@@ -1,5 +1,5 @@
 <div class="relative inline-block">
-  <video class="h-full bg-black rounded-lg" [srcObject]="video()" [poster]="poster()" muted autoplay></video>
+  <video class="aspect-3/2 h-full rounded-lg bg-black" [srcObject]="video()" [poster]="poster()" muted autoplay></video>
   <div class="absolute top-2 right-2" (click)="showStats.set(!showStats())">
     <div [classList]="classes()"></div>
   </div>

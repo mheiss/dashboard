@@ -57,28 +57,22 @@ body {
 * Custom Animations
 */
 @layer utilities {
-  @keyframes move-left-right-down {
-    15% {
-      transform: translateX(-40px) translateY(0);
+  @keyframes left-right {
+    from {
+      transform: translateX(-25px);
     }
-    30% {
-      transform: translateX(40px) translateY(0);
+    to {
+      transform: translateX(25px);
     }
-    45% {
-      transform: translateX(-30px) translateY(0);
-    }
-    60% {
-      transform: translateX(30px) translateY(0);
-    }
-    75% {
-      transform: translateX(0) translateY(0);
-    }
-    100% {
-      transform: translateX(0) translateY(40px);
+  }
+  @keyframes fade-out {
+    to {
       opacity: 0;
     }
   }
   .animate-slide-and-fade {
-    animation: move-left-right-down 1.8s ease-in-out forwards;
+    animation:
+      left-right 0.1s ease-in-out alternate 8,
+      fade-out 1s linear forwards;
   }
 }

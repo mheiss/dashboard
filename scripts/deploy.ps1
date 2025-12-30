@@ -36,5 +36,5 @@ $srcSizeBytes = ($srcFiles | Measure-Object -Property Length -Sum).Sum
 $srcSizeFormatted = "{0:N2} KB" -f ($srcSizeBytes / 1KB)
 
 # Destroy session
-Write-Output "Successfully deployed webapp. #Files: $srcFilesCount; Size: $srcSizeFormatted."
+Write-Output "Successfully deployed webapp. #Files: $srcFilesCount / Size: $srcSizeFormatted."
 Remove-PSSession $session
