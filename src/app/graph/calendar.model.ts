@@ -1,12 +1,7 @@
 import { HttpClient } from '@angular/common/http';
-import { config } from '../../config';
 import { Calendar, CalendarGroup, Event } from '@microsoft/microsoft-graph-types';
 import { map, Observable } from 'rxjs';
-
-/**
- * The BASE Graph URL for the current authenticated user.
- */
-export const MY_GRAPH = `${config.graphUrl}/me`;
+import { MY_GRAPH, GraphListResponse } from './graph.model';
 
 /**
  * Types of calendars to display.

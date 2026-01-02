@@ -10,7 +10,7 @@ export const config = {
       authority: 'https://login.microsoftonline.com/consumers',
     },
     authRequest: {
-      scope: ['User.Read', 'Calendars.Read'],
+      scope: ['User.Read', 'Calendars.Read', 'Files.Read'],
     },
   },
 };

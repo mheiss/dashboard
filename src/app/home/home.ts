@@ -1,23 +1,26 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval, timer } from 'rxjs';
+import { sortByStartDate } from '../graph/calendar.model';
 import { CalendarService } from '../graph/calendar.service';
+import { ImageService } from '../graph/image.service';
 import { OpenHABService } from '../openhab/openhab.service';
 import { Pin } from '../pin/pin';
 import { PopupService } from '../popup/popup.service';
 import { Calendar } from './calendar/calendar';
-import { sortByStartDate } from '../graph/calendar.model';
+import { GalleryComponent } from './gallery/gallery';
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.html',
-  imports: [DatePipe, Calendar],
+  imports: [DatePipe, Calendar, GalleryComponent],
 })
 export class Home {
   readonly dialog = inject(PopupService);
   readonly openHabService = inject(OpenHABService);
   readonly calendarService = inject(CalendarService);
+  readonly imageService = inject(ImageService);
 
   readonly allDayEvents = computed(() => {
     return this.calendarService.events().filter((e) => e.isAllDay);
@@ -45,6 +48,7 @@ export class Home {
     timer(0, oncePerHour)
       .pipe(takeUntilDestroyed())
       .subscribe(() => {
+        this.imageService.refreshImages();
         this.calendarService.refreshEvents();
       });
   }
