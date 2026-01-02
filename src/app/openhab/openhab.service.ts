@@ -7,7 +7,7 @@ import { PIN, SECURITY } from './openhab.items';
 import { createCommandEvent, createStringPayload, Payload, PingEvent } from './openhab.model';
 
 @Injectable({ providedIn: 'root' })
-export class OpenHABApi {
+export class OpenHABService {
   private readonly http = inject(HttpClient);
   private readonly ws = this.createWebSocket();
 

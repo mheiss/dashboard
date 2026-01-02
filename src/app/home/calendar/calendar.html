@@ -1,0 +1,62 @@
+<div class="space-y-6">
+  <!-- All-day events -->
+  @if (allDayEvents().length > 0) {
+    <section>
+      <h2 class="mb-2 text-sm font-semibold text-gray-500">Ganztägig</h2>
+
+      <div class="flex flex-col gap-2">
+        @for (event of allDayEvents(); track event.id) {
+          <div
+            class="rounded-md border px-3 py-2 text-stone-800 shadow-sm"
+            [ngClass]="{
+              'border-emerald-600 bg-emerald-500': event.myType === 'Familie',
+              'border-fuchsia-600 bg-fuchsia-500': event.myType === 'Sarah',
+            }"
+          >
+            <div class="font-medium">{{ event.subject }}</div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <section>
+    <h2 class="mb-2 text-sm font-semibold text-gray-500">Heute</h2>
+
+    <div class="relative pl-4">
+      @for (event of timedEvents(); track event.id) {
+        <div class="relative mb-6">
+          <div
+            class="rounded-md border p-3 shadow-sm"
+            [ngClass]="{
+              'border-emerald-600 bg-emerald-500': event.myType === 'Familie',
+              'border-fuchsia-600 bg-fuchsia-500': event.myType === 'Sarah',
+            }"
+          >
+            <div class="flex items-center justify-between">
+              <div class="font-medium text-stone-900">
+                {{ event.subject }}
+              </div>
+              <div class="text-xs text-stone-700">
+                {{ event.start?.dateTime | date: 'HH:mm' }} –
+                {{ event.end?.dateTime | date: 'HH:mm' }}
+              </div>
+            </div>
+
+            @if (event.location?.displayName) {
+              <div class="mt-1 text-xs text-stone-700">
+                {{ event.location?.displayName }}
+              </div>
+            }
+            <div class="mt-1 text-xs text-stone-700">
+              {{ event.myType }}
+            </div>
+          </div>
+        </div>
+      }
+      @if (timedEvents().length === 0) {
+        <div class="relative mb-6">Keine Einträge.</div>
+      }
+    </div>
+  </section>
+</div>

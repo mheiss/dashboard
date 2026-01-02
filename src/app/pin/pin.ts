@@ -3,7 +3,7 @@ import { NgClass } from '@angular/common';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { OpenHABApi } from '../openhab/openhab.service';
+import { OpenHABService } from '../openhab/openhab.service';
 import { Popup } from '../popup/popup';
 import { confettiSequence } from '../utils/confetti';
 import { pinActor } from './pin.actor';
@@ -23,7 +23,7 @@ export class Key {
 })
 export class Pin implements OnInit {
   readonly dialogRef = inject(DialogRef);
-  readonly openHab = inject(OpenHABApi);
+  readonly openHab = inject(OpenHABService);
   readonly destroyRef = inject(DestroyRef);
 
   readonly keys = signal(createKeys());

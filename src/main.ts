@@ -1,20 +1,37 @@
+import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
+import { ApplicationConfig, importProvidersFrom, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { routes } from './app/routes';
+import { MsalBroadcastService, MsalGuard, MsalInterceptor, MsalModule, MsalService } from '@azure/msal-angular';
+import { PublicClientApplication } from '@azure/msal-browser';
 import { AppComponent } from './app/app';
-import { provideHttpClient, withFetch } from '@angular/common/http';
-import { OpenHABApi } from './app/openhab/openhab.service';
+import { AUTH_CONFIG, GUARD_CONFIG, INTERCEPTOR_CONFIG } from './app/graph/msal.config';
+import { OpenHABService } from './app/openhab/openhab.service';
+import { routes } from './app/routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(() => {
-      const api = inject(OpenHABApi);
+      const msal = inject(MsalService);
+      msal.handleRedirectObservable().subscribe();
+
+      const api = inject(OpenHABService);
       api.startPingPong();
+
+      return msal.initialize();
     }),
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withFetch()),
+    provideHttpClient(withInterceptorsFromDi(), withFetch()),
+    importProvidersFrom(MsalModule.forRoot(new PublicClientApplication(AUTH_CONFIG), GUARD_CONFIG, INTERCEPTOR_CONFIG)),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: MsalInterceptor,
+      multi: true,
+    },
+    MsalService,
+    MsalGuard,
+    MsalBroadcastService,
   ],
 };
 
