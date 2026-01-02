@@ -23,4 +23,9 @@ export const routes: Routes = [
     path: 'Protect',
     component: Protect,
   },
+  {
+    path: '**',
+    redirectTo: '/Home',
+    pathMatch: 'full',
+  },
 ];
