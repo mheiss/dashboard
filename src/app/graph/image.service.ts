@@ -1,22 +1,23 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { getImages, getNextImages, ItemWithThumbnail } from './image.model';
+import { getImages, getNextImages, getThumbnail, ItemWithThumbnail } from './image.model';
+import { DriveItem } from '@microsoft/microsoft-graph-types';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
   private readonly httpClient = inject(HttpClient);
-  private readonly pageSize = 100;
 
   readonly images = signal<ItemWithThumbnail[]>([]);
-  readonly loading = signal(false);
   readonly nextLink = signal<string | null>(null);
+  readonly loading = signal(false);
+
+  private readonly pageSize = 25;
 
   /**
    * Loads and displays the most recent images.
    */
   refreshImages() {
-    this.images.set([]);
     this.nextLink.set(null);
     this.loadMore();
   }
@@ -29,23 +30,49 @@ export class ImageService {
       return;
     }
     this.loading.set(true);
-    const response = await firstValueFrom(this.doLoadImages());
+    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-    // Filter out anything that is not an image and get the thumbnail
-    const images = response.value.filter((item) => item.file?.mimeType?.startsWith('image/'));
-    const withThumbnails = images.map((item) => {
-      let thumbnail = undefined;
-      if (item.thumbnails && item.thumbnails[0].medium) {
-        thumbnail = item.thumbnails[0].medium;
-      }
-      return { item: item, thumb: thumbnail } as ItemWithThumbnail;
-    });
+    // Fetch until we have enough images
+    let newItems: DriveItem[] = [];
+    while (newItems.length < this.pageSize && (this.nextLink() || this.images().length === 0)) {
+      const response = await firstValueFrom(this.doLoadImages());
 
-    // Store the link for the next run
-    if (withThumbnails) {
-      this.images.update((old) => [...old, ...withThumbnails]);
+      const images = response.value.filter((item) => item.file?.mimeType?.startsWith('image/'));
+      const filteredByDate = images.filter((image) => {
+        if (image.photo?.takenDateTime) {
+          const takenAt = new Date(image.photo?.takenDateTime).getTime();
+          return takenAt >= twoWeeksAgo.getTime();
+        }
+        return false;
+      });
+      newItems = newItems.concat(filteredByDate);
+      console.log('Loaded %s images. Matching:', images.length, filteredByDate.length);
+      this.nextLink.set(response['@odata.nextLink'] ?? null);
     }
-    this.nextLink.set(response['@odata.nextLink'] ?? null);
+    console.log('Finished fetching images.');
+    console.log('Images: ', newItems.length);
+    console.log('HasMore: ', this.nextLink());
+
+    // Fetch thumbnails for the new elements
+    const withThumbnails: ItemWithThumbnail[] = [];
+    for (const item of newItems) {
+      const thumbnail = await firstValueFrom(getThumbnail(this.httpClient, item));
+      withThumbnails.push({ item: item, thumb: thumbnail });
+    }
+    this.images.update((old) => {
+      const merged = [...old, ...withThumbnails];
+      const unique = Array.from(new Map(merged.map((i) => [i.item.id, i])).values());
+      unique.sort((a, b) => {
+        if (a.item.photo?.takenDateTime && b.item.photo?.takenDateTime) {
+          const aTaken = new Date(a.item.photo.takenDateTime);
+          const bTaken = new Date(b.item.photo.takenDateTime);
+          return bTaken.getTime() - aTaken.getTime();
+        }
+        return 0;
+      });
+      return unique;
+    });
+    console.log('Creating thumbnails done.');
     this.loading.set(false);
   }
 
@@ -54,6 +81,6 @@ export class ImageService {
     if (nextLink) {
       return getNextImages(this.httpClient, nextLink);
     }
-    return getImages(this.httpClient, this.pageSize);
+    return getImages(this.httpClient, this.pageSize + 1);
   }
 }
