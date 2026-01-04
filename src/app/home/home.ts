@@ -22,17 +22,6 @@ export class Home {
   readonly calendarService = inject(CalendarService);
   readonly imageService = inject(ImageService);
 
-  readonly allDayEvents = computed(() => {
-    return this.calendarService.events().filter((e) => e.isAllDay);
-  });
-
-  readonly timedEvents = computed(() => {
-    return this.calendarService
-      .events()
-      .filter((e) => !e.isAllDay)
-      .sort(sortByStartDate);
-  });
-
   now = signal(new Date());
   greeting = signal('');
 

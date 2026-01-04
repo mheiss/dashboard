@@ -39,7 +39,7 @@ export const next24Hours = (): DateRange => {
   start.setHours(start.getHours() - 4, 0, 0);
 
   const end = new Date();
-  end.setHours(end.getHours() + 24, 59, 59);
+  end.setHours(end.getHours() + 72, 59, 59);
 
   return { start, end };
 };

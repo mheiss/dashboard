@@ -1,4 +1,4 @@
-<div class="h-[65vh] overflow-y-auto p-2" (infiniteScroll)="loadMore.emit()">
+<div class="h-full overflow-y-auto p-2" (infiniteScroll)="loadMore.emit()">
   @if (images().length === 0) {
     <div class="text-gray-500">Lade Bilder...</div>
   }

@@ -9,7 +9,7 @@ import {
   getCalendarGroups,
   MyCalendar,
   MyEvent,
-  next24Hours,
+  next24Hours as next72Hours,
 } from './calendar.model';
 
 @Injectable({ providedIn: 'root' })
@@ -21,11 +21,6 @@ export class CalendarService {
    * All calendar events
    */
   readonly events = signal<MyEvent[]>([]);
-
-  /**
-   * All events that are full-day
-   */
-  readonly allDayEvents = signal<MyEvent[]>([]);
 
   /** Refreshes the calendar events */
   async refreshEvents() {
@@ -42,7 +37,7 @@ export class CalendarService {
     }
 
     // Now loop through all calendars and fetch the events
-    const range = next24Hours();
+    const range = next72Hours();
     for (const myCalendar of myCalendars) {
       const events = await this.getCalendarEvents(myCalendar, range);
 

@@ -8,10 +8,15 @@ import { AppComponent } from './app/app';
 import { AUTH_CONFIG, GUARD_CONFIG, INTERCEPTOR_CONFIG } from './app/graph/msal.config';
 import { OpenHABService } from './app/openhab/openhab.service';
 import { routes } from './app/routes';
+import { LOCALE_ID } from '@angular/core';
+import localeDeAt from '@angular/common/locales/de-AT';
+import { registerLocaleData } from '@angular/common';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(() => {
+      registerLocaleData(localeDeAt);
+
       const msal = inject(MsalService);
       msal.handleRedirectObservable().subscribe();
 
@@ -28,6 +33,10 @@ export const appConfig: ApplicationConfig = {
       provide: HTTP_INTERCEPTORS,
       useClass: MsalInterceptor,
       multi: true,
+    },
+    {
+      provide: LOCALE_ID,
+      useValue: 'de-AT',
     },
     MsalService,
     MsalGuard,

@@ -1,62 +1,79 @@
-<div class="space-y-6">
-  <!-- All-day events -->
-  @if (allDayEvents().length > 0) {
-    <section>
-      <h2 class="mb-2 text-sm font-semibold text-gray-500">Ganztägig</h2>
+<div class="h-full overflow-y-scroll">
+  <div class="grid h-full min-h-0 grid-cols-[45px_repeat(3,minmax(0,1fr))] grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900">
+    <!-- Row 1: Date headers -->
+    <div class="sticky top-0 z-20 border-r bg-gray-50 px-2 py-1 text-xs"></div>
+    @for (day of days(); track $index) {
+      <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
+        <div class="text-2xl font-bold text-amber-500">
+          {{ day | date: 'dd' }}
+        </div>
+        <div class="text-xs text-stone-500">
+          {{ day | date: 'EEEE' }}
+        </div>
+      </div>
+    }
 
-      <div class="flex flex-col gap-2">
+    <!-- All-day events -->
+    <div class="sticky top-16 z-20 border-r bg-gray-50 px-2 py-1 text-xs"></div>
+    @for (day of days(); track $index) {
+      <div class="sticky top-16 z-20 border-r bg-gray-50 px-1 py-1">
         @for (event of allDayEvents(); track event.id) {
           <div
-            class="rounded-md border px-3 py-2 text-stone-800 shadow-sm"
+            class="truncate rounded border border-blue-300 bg-blue-100 px-2 py-1 text-xs text-stone-900"
             [ngClass]="{
               'border-emerald-600 bg-emerald-300': event.myType === 'Familie',
               'border-fuchsia-600 bg-fuchsia-300': event.myType === 'Sarah',
             }"
           >
-            <div class="font-medium">{{ event.subject }}</div>
+            {{ event.subject }}
           </div>
         }
       </div>
-    </section>
-  }
+    }
 
-  <section>
-    <h2 class="mb-2 text-sm font-semibold text-gray-500">Heute</h2>
-
-    <div class="relative pl-4">
-      @for (event of timedEvents(); track event.id) {
-        <div class="relative mb-6">
-          <div
-            class="rounded-md border-l-8 p-3 shadow-sm"
-            [ngClass]="{
-              'border-emerald-600 bg-emerald-300': event.myType === 'Familie',
-              'border-fuchsia-600 bg-fuchsia-300': event.myType === 'Sarah',
-            }"
-          >
-            <div class="flex items-center justify-between">
-              <div class="font-medium text-stone-900">
-                {{ event.subject }}
-              </div>
-              <div class="text-xs text-stone-700">
-                {{ event.start?.dateTime | date: 'HH:mm' }} –
-                {{ event.end?.dateTime | date: 'HH:mm' }}
+    <!-- Row 3: Scrollable hours -->
+    <div class="col-span-4 min-h-0 border-t-4 border-stone-300">
+      <div class="grid min-h-full grid-cols-[45px_repeat(3,minmax(0,1fr))]">
+        <!-- Time labels -->
+        <div class="border-r bg-white">
+          @for (h of hoursOfDay; track h) {
+            <div class="relative h-12 border-b">
+              <div class="absolute top-4 left-4 text-xs text-gray-500">
+                {{ h | number: '2.0' }}
               </div>
             </div>
+          }
+        </div>
 
-            @if (event.location?.displayName) {
-              <div class="mt-1 text-xs text-stone-700">
-                {{ event.location?.displayName }}
-              </div>
-            }
-            <div class="mt-1 text-xs text-stone-700">
-              {{ event.myType }}
+        <!-- Day columns -->
+        @for (dayEvents of positionedEvents(); track $index) {
+          <div class="relative border-r bg-white">
+            <!-- Hour grid -->
+            <div class="pointer-events-none absolute inset-0">
+              @for (h of hoursOfDay; track h) {
+                <div class="h-12 border-b"></div>
+              }
+            </div>
+
+            <!-- Events -->
+            <div class="relative h-full">
+              @for (item of dayEvents; track item.ev.id) {
+                <div
+                  class="absolute right-1 left-1 overflow-hidden rounded border border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
+                  [style.top.%]="item.top"
+                  [style.height.%]="item.height"
+                  [ngClass]="{
+                    'border-emerald-600 bg-emerald-300': item.ev.myType === 'Familie',
+                    'border-fuchsia-600 bg-fuchsia-300': item.ev.myType === 'Sarah',
+                  }"
+                >
+                  {{ item.ev.subject }}
+                </div>
+              }
             </div>
           </div>
-        </div>
-      }
-      @if (timedEvents().length === 0) {
-        <div class="relative mb-6">Keine Einträge.</div>
-      }
+        }
+      </div>
     </div>
-  </section>
+  </div>
 </div>
