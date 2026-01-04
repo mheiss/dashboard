@@ -1,0 +1,45 @@
+<div class="relative grid min-h-full grid-cols-[45px_repeat(3,minmax(0,1fr))]">
+  <div #now class="absolute right-0 left-[45px] z-15 h-1 bg-amber-500">
+    <div class="absolute -top-1 -left-2 h-4 w-4 rounded-full bg-amber-600"></div>
+  </div>
+
+  <!-- Time labels -->
+  <div class="border-r bg-white">
+    @for (h of hoursOfDay; track h) {
+      <div class="relative h-12 border-b">
+        <div class="absolute top-4 left-4 text-xs text-gray-500">
+          {{ h | number: '2.0' }}
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Day columns -->
+  @for (dayEvents of positionedEvents(); track $index) {
+    <div class="relative border-r bg-white">
+      <!-- Hour grid -->
+      <div class="pointer-events-none absolute inset-0">
+        @for (h of hoursOfDay; track h) {
+          <div class="h-12 border-b"></div>
+        }
+      </div>
+
+      <!-- Events -->
+      <div class="relative h-full">
+        @for (item of dayEvents; track item.ev.id) {
+          <div
+            class="absolute right-1 left-1 overflow-hidden rounded border border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
+            [style.top.%]="item.top"
+            [style.height.%]="item.height"
+            [ngClass]="{
+              'border-emerald-600 bg-emerald-300': item.ev.myType === 'Familie',
+              'border-fuchsia-600 bg-fuchsia-300': item.ev.myType === 'Sarah',
+            }"
+          >
+            {{ item.ev.subject }}
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

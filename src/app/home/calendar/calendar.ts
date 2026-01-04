@@ -1,30 +1,29 @@
-import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { AfterViewInit, Component, computed, ElementRef, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 import { MyEvent } from '../../graph/calendar.model';
 import { graphToDate } from '../../graph/graph.model';
+import { arrayRange } from '../../utils/array';
+import { HourView } from './hour-view/hour-view';
 
 @Component({
   selector: 'app-calendar',
   templateUrl: './calendar.html',
-  imports: [NgClass, DatePipe, DecimalPipe],
+  imports: [NgClass, DatePipe, HourView],
 })
 export class Calendar implements AfterViewInit {
   readonly events = input.required<MyEvent[]>();
   readonly startDate = input.required<Date>();
 
-  readonly hoursOfDay: number[] = Array.from({ length: 24 }, (_, i) => i);
-
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('container');
-  readonly nowMarker = viewChild.required<ElementRef<HTMLDivElement>>('now');
 
   /**
    * The days to display in the calendar.
    */
   readonly days = computed(() => {
     const start = this.startDate();
-    return Array.from({ length: 3 }, (_, i) => {
+    return arrayRange(0, 2).map((i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return d;
@@ -56,36 +55,15 @@ export class Calendar implements AfterViewInit {
     });
   });
 
-  /**
-   * Signal that provides the event and the position where it shall appear.
-   * Indexed by the day.
-   */
-  readonly positionedEvents = computed(() =>
-    this.eventsByDay().map((dayEvents) =>
-      dayEvents.map((ev) => {
-        const start = graphToDate(ev.start);
-        const end = graphToDate(ev.end);
-
-        const startMinutes = start.getHours() * 60 + start.getMinutes();
-        const endMinutes = end.getHours() * 60 + end.getMinutes();
-
-        const top = (startMinutes / (24 * 60)) * 100;
-        const height = ((endMinutes - startMinutes) / (24 * 60)) * 100;
-
-        return { ev, top, height };
-      }),
-    ),
-  );
-
   constructor() {
     const oncePerMinute = 1000 * 60;
     interval(oncePerMinute)
       .pipe(takeUntilDestroyed())
-      .subscribe(() => this.updateMarkersAndPosition());
+      .subscribe(() => this.updateScrollContainer());
   }
 
   ngAfterViewInit(): void {
-    this.updateMarkersAndPosition();
+    this.updateScrollContainer();
   }
 
   isToday(date: Date) {
@@ -93,13 +71,9 @@ export class Calendar implements AfterViewInit {
     return date.getDay() == now.getDay();
   }
 
-  updateMarkersAndPosition() {
+  updateScrollContainer() {
     const now = new Date();
     const scrollTop = (now.getHours() - 4) * 100;
     this.scrollContainer().nativeElement.scrollTop = scrollTop;
-
-    const startMinutes = now.getHours() * 60 + now.getMinutes();
-    const markerTop = (startMinutes / (24 * 60)) * 100;
-    this.nowMarker().nativeElement.style.top = markerTop + '%';
   }
 }
