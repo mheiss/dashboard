@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import {
   CalendarType,
@@ -11,6 +11,7 @@ import {
   MyEvent,
   next24Hours as next72Hours,
 } from './calendar.model';
+import { graphToDate } from './graph.model';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
@@ -21,6 +22,11 @@ export class CalendarService {
    * All calendar events
    */
   readonly events = signal<MyEvent[]>([]);
+
+  /**
+   * The start date
+   */
+  readonly startDate = signal<Date>(new Date());
 
   /** Refreshes the calendar events */
   async refreshEvents() {
@@ -46,6 +52,9 @@ export class CalendarService {
         return filtered.concat(events);
       });
     }
+
+    // Update the reference value
+    this.startDate.set(new Date());
   }
 
   /**

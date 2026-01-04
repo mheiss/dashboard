@@ -1,10 +1,16 @@
-<div class="h-full overflow-y-scroll">
+<div #container class="h-full overflow-y-scroll">
   <div class="grid h-full min-h-0 grid-cols-[45px_repeat(3,minmax(0,1fr))] grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900">
     <!-- Row 1: Date headers -->
     <div class="sticky top-0 z-20 border-r bg-gray-50 px-2 py-1 text-xs"></div>
     @for (day of days(); track $index) {
       <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
-        <div class="text-2xl font-bold text-amber-500">
+        <div
+          class="text-2xl font-bold"
+          [ngClass]="{
+            'text-amber-600': isToday(day),
+            'text-stone-500': !isToday(day),
+          }"
+        >
           {{ day | date: 'dd' }}
         </div>
         <div class="text-xs text-stone-500">
@@ -31,9 +37,13 @@
       </div>
     }
 
-    <!-- Row 3: Scrollable hours -->
+    <!-- Scrollable hours -->
     <div class="col-span-4 min-h-0 border-t-4 border-stone-300">
-      <div class="grid min-h-full grid-cols-[45px_repeat(3,minmax(0,1fr))]">
+      <div class="relative grid min-h-full grid-cols-[45px_repeat(3,minmax(0,1fr))]">
+        <div #now class="absolute right-0 left-[45px] z-15 h-1 bg-amber-500">
+          <div class="absolute -top-1 -left-2 h-4 w-4 rounded-full bg-amber-600"></div>
+        </div>
+
         <!-- Time labels -->
         <div class="border-r bg-white">
           @for (h of hoursOfDay; track h) {

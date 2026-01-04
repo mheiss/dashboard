@@ -1,5 +1,7 @@
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { Component, computed, input, signal } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, input, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval } from 'rxjs';
 import { MyEvent } from '../../graph/calendar.model';
 import { graphToDate } from '../../graph/graph.model';
 
@@ -8,13 +10,18 @@ import { graphToDate } from '../../graph/graph.model';
   templateUrl: './calendar.html',
   imports: [NgClass, DatePipe, DecimalPipe],
 })
-export class Calendar {
+export class Calendar implements AfterViewInit {
   readonly events = input.required<MyEvent[]>();
+  readonly startDate = input.required<Date>();
 
   readonly hoursOfDay: number[] = Array.from({ length: 24 }, (_, i) => i);
 
-  readonly startDate = signal<Date>(new Date());
+  readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('container');
+  readonly nowMarker = viewChild.required<ElementRef<HTMLDivElement>>('now');
 
+  /**
+   * The days to display in the calendar.
+   */
   readonly days = computed(() => {
     const start = this.startDate();
     return Array.from({ length: 3 }, (_, i) => {
@@ -27,7 +34,10 @@ export class Calendar {
   // All-day events
   readonly allDayEvents = computed(() => this.events().filter((ev) => ev.isAllDay));
 
-  // Events grouped by day
+  /**
+   * Signal that provides the events for a given day.
+   * Indexed by the day.
+   */
   readonly eventsByDay = computed(() => {
     const days = this.days();
     const events = this.events();
@@ -46,7 +56,10 @@ export class Calendar {
     });
   });
 
-  // Positioning helpers (percentage-based)
+  /**
+   * Signal that provides the event and the position where it shall appear.
+   * Indexed by the day.
+   */
   readonly positionedEvents = computed(() =>
     this.eventsByDay().map((dayEvents) =>
       dayEvents.map((ev) => {
@@ -63,4 +76,30 @@ export class Calendar {
       }),
     ),
   );
+
+  constructor() {
+    const oncePerMinute = 1000 * 60;
+    interval(oncePerMinute)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.updateMarkersAndPosition());
+  }
+
+  ngAfterViewInit(): void {
+    this.updateMarkersAndPosition();
+  }
+
+  isToday(date: Date) {
+    const now = new Date();
+    return date.getDay() == now.getDay();
+  }
+
+  updateMarkersAndPosition() {
+    const now = new Date();
+    const scrollTop = (now.getHours() - 4) * 100;
+    this.scrollContainer().nativeElement.scrollTop = scrollTop;
+
+    const startMinutes = now.getHours() * 60 + now.getMinutes();
+    const markerTop = (startMinutes / (24 * 60)) * 100;
+    this.nowMarker().nativeElement.style.top = markerTop + '%';
+  }
 }

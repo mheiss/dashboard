@@ -1,8 +1,6 @@
-import { DatePipe } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { interval, timer } from 'rxjs';
-import { sortByStartDate } from '../graph/calendar.model';
+import { timer } from 'rxjs';
 import { CalendarService } from '../graph/calendar.service';
 import { ImageService } from '../graph/image.service';
 import { OpenHABService } from '../openhab/openhab.service';
@@ -14,7 +12,7 @@ import { GalleryComponent } from './gallery/gallery';
 @Component({
   selector: 'app-home',
   templateUrl: './home.html',
-  imports: [DatePipe, Calendar, GalleryComponent],
+  imports: [Calendar, GalleryComponent],
 })
 export class Home {
   readonly dialog = inject(PopupService);
@@ -22,17 +20,7 @@ export class Home {
   readonly calendarService = inject(CalendarService);
   readonly imageService = inject(ImageService);
 
-  now = signal(new Date());
-  greeting = signal('');
-
   constructor() {
-    interval(1000)
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => {
-        this.now.set(new Date());
-        this.updateGreeting();
-      });
-
     const oncePerHour = 60 * 60 * 1000;
     timer(0, oncePerHour)
       .pipe(takeUntilDestroyed())
@@ -40,17 +28,6 @@ export class Home {
         this.imageService.refreshImages();
         this.calendarService.refreshEvents();
       });
-  }
-
-  updateGreeting() {
-    const hour = this.now().getHours();
-    if (hour < 12) {
-      this.greeting.set('Guten Morgen!');
-    } else if (hour < 18) {
-      this.greeting.set('Hallo!');
-    } else {
-      this.greeting.set('Guten Abend!');
-    }
   }
 
   openKeypad() {
