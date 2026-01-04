@@ -1,0 +1,51 @@
+{
+  "name": "Dashboard",
+  "short_name": "Dashboard",
+  "icons": [
+    {
+      "purpose": "maskable",
+      "sizes": "48x48",
+      "src": "/favicons/android-chrome-x48.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "72x72",
+      "src": "/favicons/android-chrome-x72.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "96x96",
+      "src": "/favicons/android-chrome-x96.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "128x128",
+      "src": "/favicons/android-chrome-x128.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "192x192",
+      "src": "/favicons/android-chrome-x192.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "384x384",
+      "src": "/favicons/android-chrome-x384.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "maskable",
+      "sizes": "512x512",
+      "src": "/favicons/android-chrome-x512.png",
+      "type": "image/png"
+    }
+  ],
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000"
+}
