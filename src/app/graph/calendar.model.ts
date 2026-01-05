@@ -9,6 +9,11 @@ import { MY_GRAPH, GraphListResponse } from './graph.model';
 export type CalendarType = 'Familie' | 'Sarah' | 'Lena';
 
 /**
+ * Display type
+ */
+export type CalendarView = 'Day' | 'Agenda';
+
+/**
  * Associates the type and the group with a calendar.
  */
 export interface MyCalendar extends Calendar {

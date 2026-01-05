@@ -12,7 +12,15 @@
     }"
   >
     <!-- Row 1: Date headers -->
-    <div class="sticky top-0 z-20 border-r bg-gray-50 px-2 py-1 text-xs"></div>
+    <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
+      <button class="rounded border border-stone-700 bg-stone-100" (click)="switchView()">
+        @if (view() === 'Agenda') {
+          <img src="assets/view_agenda.svg" class="h-8 w-8" />
+        } @else if (view() === 'Day') {
+          <img src="assets/view_day.svg" class="h-8 w-8" />
+        }
+      </button>
+    </div>
     @for (event of events(); track $index) {
       <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
         <div
@@ -62,7 +70,11 @@
         'col-span-8': events().length === 7,
       }"
     >
-      <app-hour-view [events]="events()" />
+      @if (view() === 'Agenda') {
+        <app-day-view [events]="events()" />
+      } @else {
+        <app-agenda-view [events]="events()" />
+      }
     </div>
   </div>
 </div>

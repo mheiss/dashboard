@@ -1,19 +1,19 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { AfterViewInit, Component, computed, ElementRef, input, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
-import { EventView, MyEvent } from '../../graph/calendar.model';
-import { graphToDate } from '../../graph/graph.model';
-import { arrayRange } from '../../utils/array';
-import { HourView } from './hour-view/hour-view';
+import { CalendarView, EventView } from '../../graph/calendar.model';
+import { AgendaView } from './agenda-view/agenda-view';
+import { DayView } from './day-view/day-view';
 
 @Component({
   selector: 'app-calendar',
   templateUrl: './calendar.html',
-  imports: [NgClass, DatePipe, HourView],
+  imports: [NgClass, DatePipe, DayView, AgendaView],
 })
 export class Calendar implements AfterViewInit {
   readonly events = input.required<EventView[]>();
+  readonly view = signal<CalendarView>('Agenda');
 
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('container');
 
@@ -26,6 +26,18 @@ export class Calendar implements AfterViewInit {
 
   ngAfterViewInit(): void {
     this.updateScrollContainer();
+  }
+
+  switchView() {
+    this.view.update((view) => {
+      if (view === 'Agenda') {
+        return 'Day';
+      }
+      if (view === 'Day') {
+        return 'Agenda';
+      }
+      return view;
+    });
   }
 
   isToday(date: Date) {
