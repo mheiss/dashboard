@@ -1,17 +1,18 @@
+import { AsyncPipe } from '@angular/common';
 import { Component, input, output } from '@angular/core';
-import { ItemWithThumbnail } from '../../ms-graph/image.model';
+import { ImageWithThumbnail } from '../../ms-graph/image.model';
 import { InfiniteScrollDirective } from './scroll.directive';
 
 @Component({
   selector: 'app-gallery',
   templateUrl: './gallery.html',
-  imports: [InfiniteScrollDirective],
+  imports: [InfiniteScrollDirective, AsyncPipe],
 })
 export class GalleryComponent {
   /**
    * The images to display by the component
    */
-  readonly images = input.required<ItemWithThumbnail[]>();
+  readonly images = input.required<ImageWithThumbnail[]>();
 
   /**
    * Event that will be triggered when more images shall be loaded.

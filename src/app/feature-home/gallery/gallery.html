@@ -3,9 +3,9 @@
     <div class="text-gray-500">Lade Bilder...</div>
   }
   <div class="grid grid-cols-4 gap-1 p-2">
-    @for (p of images(); track p.item.id) {
+    @for (image of images(); track image.id) {
       <div class="aspect-square overflow-hidden rounded bg-gray-100">
-        <img class="h-full w-full object-cover" [src]="p.thumb?.url" [alt]="p.item.name" />
+        <img class="h-full w-full object-cover" [src]="image.thumbnail$ | async" [alt]="image.item.name" />
       </div>
     }
   </div>

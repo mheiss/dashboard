@@ -5,11 +5,7 @@ import { interval } from 'rxjs';
 import { CalendarView, EventView, getPercentageOfDay, isCalendarView } from '../../ms-graph/calendar.model';
 import { AgendaView } from './agenda-view/agenda-view';
 import { DayView } from './day-view/day-view';
-
-/**
- * Key used to store the current view
- */
-const VIEW_KEY = 'app.dashboard.calendar.view';
+import { getCalendarView, saveCalendarView } from '../../ms-graph/database';
 
 @Component({
   selector: 'app-calendar',
@@ -28,14 +24,14 @@ export class Calendar implements AfterViewInit {
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.updateScrollContainer());
 
-    const storedView = localStorage.getItem(VIEW_KEY);
-    if (isCalendarView(storedView)) {
-      this.view.set(storedView);
-    }
+    const storedView = getCalendarView().then((view) => {
+      if (isCalendarView(storedView)) {
+        this.view.set(storedView);
+      }
+    });
 
     effect(() => {
-      const viewValue = this.view();
-      localStorage.setItem(VIEW_KEY, viewValue);
+      saveCalendarView(this.view());
     });
   }
 

@@ -4,24 +4,29 @@ import { map, Observable } from 'rxjs';
 import { GraphListResponse, MY_GRAPH } from './graph.model';
 
 /**
- * A drive item with a thumbnail
+ * The image stored in the local database
  */
-export interface ItemWithThumbnail {
+export interface DriveImage {
+  id: string;
+  takenAt: number;
   item: DriveItem;
-  thumb: Thumbnail | null;
+  thumbnailUrl?: string;
+}
+
+/**
+ * A drive image with a thumbnail
+ */
+export interface ImageWithThumbnail extends DriveImage {
+  thumbnail$: Observable<string | null>;
 }
 
 /**
  * List all images in the camera backup folder.
  */
-export const getImages = (client: HttpClient, pageSize: number): Observable<GraphListResponse<DriveItem[]>> => {
-  const endpoint = `drive/special/cameraroll/children`;
+export const getImages = (client: HttpClient): Observable<GraphListResponse<DriveItem[]>> => {
+  const endpoint = `drive/special/cameraroll/delta`;
 
-  const params = new URLSearchParams();
-  params.append('$top', pageSize.toString());
-  params.append('$orderby', 'lastModifiedDateTime desc');
-
-  const url = `${MY_GRAPH}/${endpoint}?${params.toString()}`;
+  const url = `${MY_GRAPH}/${endpoint}`;
   return client.get<GraphListResponse<DriveItem[]>>(url);
 };
 
@@ -43,8 +48,8 @@ export const getThumbnail = (client: HttpClient, item: DriveItem): Observable<Th
     map((response) => {
       const sets = response.value;
       const set = sets[0];
-      if (set.medium) {
-        return set.medium;
+      if (set.large) {
+        return set.large;
       }
       return null;
     }),

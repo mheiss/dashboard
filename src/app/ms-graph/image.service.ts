@@ -1,86 +1,89 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import { getImages, getNextImages, getThumbnail, ItemWithThumbnail } from './image.model';
-import { DriveItem } from '@microsoft/microsoft-graph-types';
+import { defer, firstValueFrom, map, of, tap } from 'rxjs';
+import { getDeltaLink, loadImages, saveDeltaLink, saveImage } from './database';
+import { DriveImage, getImages, getNextImages, getThumbnail, ImageWithThumbnail } from './image.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
   private readonly httpClient = inject(HttpClient);
 
-  readonly images = signal<ItemWithThumbnail[]>([]);
-  readonly nextLink = signal<string | null>(null);
   readonly loading = signal(false);
+  readonly images = signal<ImageWithThumbnail[]>([]);
+  nextKey: IDBValidKey | null;
 
-  private readonly pageSize = 25;
+  /**
+   * Initializes the service and loads the missing images.
+   */
+  async refreshImages() {
+    const deltaLink = await getDeltaLink();
+    let response$ = deltaLink ? getNextImages(this.httpClient, deltaLink) : getImages(this.httpClient);
+
+    let loading = true;
+    while (loading) {
+      let response = await firstValueFrom(response$);
+      for (const item of response.value) {
+        if (!item.id || !item.file || !item.photo || !item.photo.takenDateTime) {
+          continue;
+        }
+
+        const takenAt = new Date(item.photo.takenDateTime).getTime();
+        const image: DriveImage = { id: item.id, takenAt: takenAt, item: item };
+        await saveImage(image);
+      }
+
+      // Continue loading as long as we have a next link
+      const nextLink = response['@odata.nextLink'];
+      if (nextLink) {
+        response$ = getNextImages(this.httpClient, nextLink);
+        continue;
+      }
+
+      // Stop loading and remember the delta link
+      loading = false;
+      const deltaLink = response['@deltaLink'];
+      if (deltaLink) {
+        saveDeltaLink(deltaLink);
+      }
+    }
+  }
 
   /**
    * Loads and displays the most recent images.
    */
-  refreshImages() {
-    this.nextLink.set(null);
-    this.loadMore();
-  }
-
-  /**
-   * Loads the next bunch of images.
-   */
-  async loadMore() {
+  loadMore() {
     if (this.loading()) {
       return;
     }
     this.loading.set(true);
-    const twoWeeksAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-    // Fetch until we have enough images
-    let newItems: DriveItem[] = [];
-    while (newItems.length < this.pageSize && (this.nextLink() || this.images().length === 0)) {
-      const response = await firstValueFrom(this.doLoadImages());
+    const top100 = loadImages(this.nextKey);
+    top100.then((response) => {
+      this.nextKey = response.lastKey;
 
-      const images = response.value.filter((item) => item.file?.mimeType?.startsWith('image/'));
-      const filteredByDate = images.filter((image) => {
-        if (image.photo?.takenDateTime) {
-          const takenAt = new Date(image.photo?.takenDateTime).getTime();
-          return takenAt >= twoWeeksAgo.getTime();
+      const withThumbnails: ImageWithThumbnail[] = [];
+      for (const image of response.items) {
+        const withThumbnail = image as ImageWithThumbnail;
+        if (image.thumbnailUrl) {
+          withThumbnail.thumbnail$ = of(image.thumbnailUrl);
+        } else {
+          withThumbnail.thumbnail$ = defer(() =>
+            getThumbnail(this.httpClient, image).pipe(
+              tap((t) => {
+                if (t?.url) {
+                  image.thumbnailUrl = t?.url!;
+                  saveImage(image);
+                }
+              }),
+              map((t) => t?.url!),
+            ),
+          );
         }
-        return false;
-      });
-      newItems = newItems.concat(filteredByDate);
-      console.log('Loaded %s images. Matching:', images.length, filteredByDate.length);
-      this.nextLink.set(response['@odata.nextLink'] ?? null);
-    }
-    console.log('Finished fetching images.');
-    console.log('Images: ', newItems.length);
-    console.log('HasMore: ', this.nextLink());
+        withThumbnails.push(withThumbnail);
+      }
 
-    // Fetch thumbnails for the new elements
-    const withThumbnails: ItemWithThumbnail[] = [];
-    for (const item of newItems) {
-      const thumbnail = await firstValueFrom(getThumbnail(this.httpClient, item));
-      withThumbnails.push({ item: item, thumb: thumbnail });
-    }
-    this.images.update((old) => {
-      const merged = [...old, ...withThumbnails];
-      const unique = Array.from(new Map(merged.map((i) => [i.item.id, i])).values());
-      unique.sort((a, b) => {
-        if (a.item.photo?.takenDateTime && b.item.photo?.takenDateTime) {
-          const aTaken = new Date(a.item.photo.takenDateTime);
-          const bTaken = new Date(b.item.photo.takenDateTime);
-          return bTaken.getTime() - aTaken.getTime();
-        }
-        return 0;
-      });
-      return unique;
+      this.images.set(withThumbnails);
+      this.loading.set(false);
     });
-    console.log('Creating thumbnails done.');
-    this.loading.set(false);
-  }
-
-  doLoadImages() {
-    const nextLink = this.nextLink();
-    if (nextLink) {
-      return getNextImages(this.httpClient, nextLink);
-    }
-    return getImages(this.httpClient, this.pageSize + 1);
   }
 }

@@ -17,6 +17,7 @@ export const MY_QUERY = `${config.graphUrl}/search/query`;
 export interface GraphListResponse<T> {
   value: T;
   '@odata.nextLink'?: string;
+  '@deltaLink'?: string;
 }
 
 /**
