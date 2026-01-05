@@ -2,7 +2,7 @@ import { DecimalPipe, NgClass } from '@angular/common';
 import { AfterViewInit, Component, computed, ElementRef, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
-import { MyEvent } from '../../../graph/calendar.model';
+import { EventView, MyEvent } from '../../../graph/calendar.model';
 import { graphToDate } from '../../../graph/graph.model';
 import { arrayRange } from '../../../utils/array';
 
@@ -12,7 +12,7 @@ import { arrayRange } from '../../../utils/array';
   imports: [NgClass, DecimalPipe],
 })
 export class HourView implements AfterViewInit {
-  readonly eventsByDay = input.required<MyEvent[][]>();
+  readonly events = input.required<EventView[]>();
   readonly hoursOfDay: number[] = arrayRange(0, 23);
 
   readonly nowMarker = viewChild.required<ElementRef<HTMLDivElement>>('now');
@@ -22,10 +22,10 @@ export class HourView implements AfterViewInit {
    * Indexed by the day.
    */
   readonly positionedEvents = computed(() =>
-    this.eventsByDay().map((dayEvents) =>
-      dayEvents.map((ev) => {
-        const start = graphToDate(ev.start);
-        const end = graphToDate(ev.end);
+    this.events().map((eventView) => {
+      return eventView.events.map((event) => {
+        const start = graphToDate(event.start);
+        const end = graphToDate(event.end);
 
         const startMinutes = start.getHours() * 60 + start.getMinutes();
         const endMinutes = end.getHours() * 60 + end.getMinutes();
@@ -33,9 +33,9 @@ export class HourView implements AfterViewInit {
         const top = (startMinutes / (24 * 60)) * 100;
         const height = ((endMinutes - startMinutes) / (24 * 60)) * 100;
 
-        return { ev, top, height };
-      }),
-    ),
+        return { event, top, height };
+      });
+    }),
   );
 
   constructor() {

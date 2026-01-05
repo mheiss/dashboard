@@ -4,14 +4,16 @@ import { firstValueFrom } from 'rxjs';
 import {
   CalendarType,
   DateRange,
+  EventView,
   getCalendarEvents,
   getCalendarGroupCalendars,
   getCalendarGroups,
   MyCalendar,
   MyEvent,
-  next24Hours as next72Hours,
+  nextDays,
 } from './calendar.model';
 import { graphToDate } from './graph.model';
+import { arrayRange } from '../utils/array';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
@@ -19,18 +21,26 @@ export class CalendarService {
   private readonly calendars: CalendarType[] = ['Familie', 'Sarah', 'Lena'];
 
   /**
-   * All calendar events
+   * The number of days to display
    */
-  readonly events = signal<MyEvent[]>([]);
+  readonly numberOfDays = signal<number>(3);
 
   /**
-   * The start date
+   * All calendar events
    */
-  readonly startDate = signal<Date>(new Date());
+  readonly events = signal<EventView[]>([]);
 
   /** Refreshes the calendar events */
   async refreshEvents() {
     const groups = await firstValueFrom(getCalendarGroups(this.httpClient));
+
+    const startDate = new Date();
+    const days = arrayRange(0, this.numberOfDays() - 1).map((i) => {
+      const d = new Date(startDate);
+      d.setHours(23, 59, 59);
+      d.setDate(startDate.getDate() + i);
+      return d;
+    });
 
     // Loop through all calendars in all groups to find the desired ones
     let myCalendars: MyCalendar[] = [];
@@ -43,18 +53,58 @@ export class CalendarService {
     }
 
     // Now loop through all calendars and fetch the events
-    const range = next72Hours();
+    const range = nextDays(this.numberOfDays());
     for (const myCalendar of myCalendars) {
       const events = await this.getCalendarEvents(myCalendar, range);
 
-      this.events.update((entries) => {
-        const filtered = entries.filter((entry) => entry.myType !== myCalendar.myType);
-        return filtered.concat(events);
+      // Replace existing events
+      this.events.update((views) => {
+        // Remove all events are before the start date
+        views = views.filter((view) => view.day >= startDate);
+
+        // create an entry for each day that we shall display
+        for (const day of days) {
+          const exists = views.find((e) => e.day === day);
+          if (!exists) {
+            views.push({ day: day, allDay: [], events: [] });
+          }
+        }
+
+        // Replace events of the calendar that we queried
+        for (const view of views) {
+          view.allDay = view.allDay.filter((entry) => entry.myType !== myCalendar.myType);
+          view.events = view.events.filter((entry) => entry.myType !== myCalendar.myType);
+        }
+        // Append events
+        for (const event of events) {
+          for (const view of views) {
+            // Add all-day events to each slot
+            if (event.isAllDay) {
+              const dayEnd = view.day;
+              dayEnd.setHours(23, 59, 59);
+
+              const start = graphToDate(event.start);
+              const end = graphToDate(event.end);
+              if (start <= dayEnd && dayEnd <= end) {
+                view.allDay.push(event);
+              }
+            } else {
+              const dayStart = new Date(view.day);
+              dayStart.setHours(0, 0, 0, 0);
+
+              const dayEnd = new Date(view.day);
+              dayEnd.setHours(23, 59, 59);
+
+              const start = graphToDate(event.start);
+              if (start >= dayStart && start <= dayEnd) {
+                view.events.push(event);
+              }
+            }
+          }
+        }
+        return views;
       });
     }
-
-    // Update the reference value
-    this.startDate.set(new Date());
   }
 
   /**

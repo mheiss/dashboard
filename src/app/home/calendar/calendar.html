@@ -1,34 +1,46 @@
 <div #container class="h-full overflow-y-scroll">
-  <div class="grid h-full min-h-0 grid-cols-[45px_repeat(3,minmax(0,1fr))] grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900">
+  <div
+    class="grid h-full min-h-0 grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900"
+    [ngClass]="{
+      'grid-cols-[45px_repeat(1,minmax(0,1fr))]': events().length === 1,
+      'grid-cols-[45px_repeat(2,minmax(0,1fr))]': events().length === 2,
+      'grid-cols-[45px_repeat(3,minmax(0,1fr))]': events().length === 3,
+      'grid-cols-[45px_repeat(4,minmax(0,1fr))]': events().length === 4,
+      'grid-cols-[45px_repeat(5,minmax(0,1fr))]': events().length === 5,
+      'grid-cols-[45px_repeat(6,minmax(0,1fr))]': events().length === 6,
+      'grid-cols-[45px_repeat(7,minmax(0,1fr))]': events().length === 7,
+    }"
+  >
     <!-- Row 1: Date headers -->
     <div class="sticky top-0 z-20 border-r bg-gray-50 px-2 py-1 text-xs"></div>
-    @for (day of days(); track $index) {
+    @for (event of events(); track $index) {
       <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
         <div
           class="text-2xl font-bold"
           [ngClass]="{
-            'text-amber-600': isToday(day),
-            'text-stone-500': !isToday(day),
+            'text-amber-600': isToday(event.day),
+            'text-stone-500': !isToday(event.day),
           }"
         >
-          {{ day | date: 'dd' }}
+          {{ event.day | date: 'dd' }}
         </div>
         <div class="text-xs text-stone-500">
-          {{ day | date: 'EEEE' }}
+          {{ event.day | date: 'EEEE' }}
         </div>
       </div>
     }
 
     <!-- All-day events -->
     <div class="sticky top-16 z-20 border-r bg-gray-50 px-2 py-1 text-xs"></div>
-    @for (day of days(); track $index) {
+    @for (event of events(); track $index) {
       <div class="sticky top-16 z-20 border-r bg-gray-50 px-1 py-1">
-        @for (event of allDayEvents(); track event.id) {
+        @for (event of event.allDay; track event.id) {
           <div
-            class="truncate rounded border border-blue-300 bg-blue-100 px-2 py-1 text-xs text-stone-900"
+            class="rounded border border-blue-300 bg-blue-100 px-2 py-1 text-xs wrap-break-word text-stone-900"
             [ngClass]="{
               'border-emerald-600 bg-emerald-300': event.myType === 'Familie',
               'border-fuchsia-600 bg-fuchsia-300': event.myType === 'Sarah',
+              'border-sky-600 bg-sky-300': event.myType === 'Lena',
             }"
           >
             {{ event.subject }}
@@ -38,8 +50,19 @@
     }
 
     <!-- Events -->
-    <div class="col-span-4 min-h-0 border-t-4 border-stone-300">
-      <app-hour-view [eventsByDay]="eventsByDay()" />
+    <div
+      class="min-h-0 border-t-4 border-stone-300"
+      [ngClass]="{
+        'col-span-2': events().length === 1,
+        'col-span-3': events().length === 2,
+        'col-span-4': events().length === 3,
+        'col-span-5': events().length === 4,
+        'col-span-6': events().length === 5,
+        'col-span-7': events().length === 6,
+        'col-span-8': events().length === 7,
+      }"
+    >
+      <app-hour-view [events]="events()" />
     </div>
   </div>
 </div>

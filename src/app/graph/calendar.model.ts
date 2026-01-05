@@ -32,14 +32,24 @@ export interface DateRange {
 }
 
 /**
- * Creates a new range for the next 24 hours
+ * Events indexed by a given day.
  */
-export const next24Hours = (): DateRange => {
+export interface EventView {
+  day: Date;
+  allDay: MyEvent[];
+  events: MyEvent[];
+}
+
+/**
+ * Creates a new range for the next days
+ */
+export const nextDays = (days: number): DateRange => {
   const start = new Date();
-  start.setHours(start.getHours() - 4, 0, 0);
+  start.setHours(0, 0, 0);
 
   const end = new Date();
-  end.setHours(end.getHours() + 72, 59, 59);
+  end.setHours(23, 59, 59);
+  end.setHours(end.getHours() + days * 24);
 
   return { start, end };
 };

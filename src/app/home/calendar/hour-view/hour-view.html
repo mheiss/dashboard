@@ -1,4 +1,15 @@
-<div class="relative grid min-h-full grid-cols-[45px_repeat(3,minmax(0,1fr))]">
+<div
+  class="relative grid min-h-full"
+  [ngClass]="{
+    'grid-cols-[45px_repeat(1,minmax(0,1fr))]': events().length === 1,
+    'grid-cols-[45px_repeat(2,minmax(0,1fr))]': events().length === 2,
+    'grid-cols-[45px_repeat(3,minmax(0,1fr))]': events().length === 3,
+    'grid-cols-[45px_repeat(4,minmax(0,1fr))]': events().length === 4,
+    'grid-cols-[45px_repeat(5,minmax(0,1fr))]': events().length === 5,
+    'grid-cols-[45px_repeat(6,minmax(0,1fr))]': events().length === 6,
+    'grid-cols-[45px_repeat(7,minmax(0,1fr))]': events().length === 7,
+  }"
+>
   <div #now class="absolute right-0 left-[45px] z-15 h-1 bg-amber-500">
     <div class="absolute -top-1 -left-2 h-4 w-4 rounded-full bg-amber-600"></div>
   </div>
@@ -26,17 +37,18 @@
 
       <!-- Events -->
       <div class="relative h-full">
-        @for (item of dayEvents; track item.ev.id) {
+        @for (item of dayEvents; track item.event.id) {
           <div
             class="absolute right-1 left-1 overflow-hidden rounded border border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
             [style.top.%]="item.top"
             [style.height.%]="item.height"
             [ngClass]="{
-              'border-emerald-600 bg-emerald-300': item.ev.myType === 'Familie',
-              'border-fuchsia-600 bg-fuchsia-300': item.ev.myType === 'Sarah',
+              'border-emerald-600 bg-emerald-300': item.event.myType === 'Familie',
+              'border-fuchsia-600 bg-fuchsia-300': item.event.myType === 'Sarah',
+              'border-sky-600 bg-sky-300': item.event.myType === 'Sarah',
             }"
           >
-            {{ item.ev.subject }}
+            {{ item.event.subject }}
           </div>
         }
       </div>
