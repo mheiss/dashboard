@@ -1,12 +1,12 @@
 import { openDB } from 'idb';
 import { CalendarView } from '../ms-graph/calendar.model';
-import { DriveImage, ImageWithThumbnail } from './image.model';
+import { DriveImage } from './image.model';
 
 export const db = await openDB('Dashboard', 1, {
   upgrade(db) {
     // Store for images
     const images = db.createObjectStore('images', { keyPath: 'id' });
-    images.createIndex('takenDateTime', 'takenDateTime');
+    images.createIndex('takenAt', 'takenAt');
 
     // Store for metadata (delta link, version, etc.)
     db.createObjectStore('metadata', { keyPath: 'key' });
@@ -18,7 +18,7 @@ export const db = await openDB('Dashboard', 1, {
  */
 export async function loadImages(lastKey: IDBValidKey | null) {
   const tx = db.transaction('images', 'readonly');
-  const index = tx.store.index('takenDateTime');
+  const index = tx.store.index('takenAt');
 
   let cursor;
   if (lastKey === undefined || lastKey === null) {

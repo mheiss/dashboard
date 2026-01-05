@@ -41,11 +41,16 @@ export class ImageService {
 
       // Stop loading and remember the delta link
       loading = false;
-      const deltaLink = response['@deltaLink'];
+      const deltaLink = response['@odata.deltaLink'];
       if (deltaLink) {
         saveDeltaLink(deltaLink);
       }
     }
+
+    // Update images when done
+    this.nextKey = null;
+    this.images.set([]);
+    this.loadMore();
   }
 
   /**
@@ -57,8 +62,8 @@ export class ImageService {
     }
     this.loading.set(true);
 
-    const top100 = loadImages(this.nextKey);
-    top100.then((response) => {
+    const nextImages = loadImages(this.nextKey);
+    nextImages.then((response) => {
       this.nextKey = response.lastKey;
 
       const withThumbnails: ImageWithThumbnail[] = [];
@@ -82,7 +87,9 @@ export class ImageService {
         withThumbnails.push(withThumbnail);
       }
 
-      this.images.set(withThumbnails);
+      this.images.update((images) => {
+        return images.concat(withThumbnails);
+      });
       this.loading.set(false);
     });
   }
