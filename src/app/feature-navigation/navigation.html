@@ -1,0 +1,10 @@
+<div class="flex justify-center space-x-8 text-stone-300">
+  @for (item of elements; track item) {
+    <div [routerLink]="item.path" class="pb-1" routerLinkActive="shadow-[0_2px_0_0_#F59E0B]">
+      <button class="flex flex-row items-center rounded-lg p-2 hover:bg-amber-600 hover:text-white">
+        <img src="assets/{{ item.icon }}" class="h-7 w-7" />
+        <span class="ml-3 hidden text-3xl md:inline">{{ item.name }}</span>
+      </button>
+    </div>
+  }
+</div>

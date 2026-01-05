@@ -1,9 +1,9 @@
 import { Routes } from '@angular/router';
-import { Openhab } from './openhab/openhab';
-import { Evcc } from './evcc/evcc';
-import { Home } from './home/home';
-import { Protect } from './protect/protect';
 import { MsalGuard } from '@azure/msal-angular';
+import { Evcc } from './feature-evcc/evcc';
+import { Home } from './feature-home/home';
+import { Openhab } from './feature-openhab/openhab';
+import { Protect } from './feature-protect/protect';
 
 export const routes: Routes = [
   {
