@@ -74,3 +74,11 @@ export function graphToDate(timeWithZone: NullableOption<DateTimeTimeZone> | und
   // Create a temporary date in local timezone
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
 }
+
+/**
+ * Returns if the year,month and day is the same.
+ * The time is ignored when comparing.
+ */
+export function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDay() == b.getDay();
+}

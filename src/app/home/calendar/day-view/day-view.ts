@@ -1,5 +1,5 @@
 import { DecimalPipe, NgClass } from '@angular/common';
-import { AfterViewInit, Component, computed, ElementRef, input, viewChild } from '@angular/core';
+import { AfterViewInit, Component, computed, ElementRef, input, OnInit, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 import { EventView } from '../../../graph/calendar.model';
@@ -11,7 +11,7 @@ import { arrayRange } from '../../../utils/array';
   templateUrl: './day-view.html',
   imports: [NgClass, DecimalPipe],
 })
-export class DayView implements AfterViewInit {
+export class DayView implements OnInit {
   readonly events = input.required<EventView[]>();
   readonly hoursOfDay: number[] = arrayRange(0, 23);
 
@@ -48,8 +48,8 @@ export class DayView implements AfterViewInit {
       .subscribe(() => this.updateMarker());
   }
 
-  ngAfterViewInit(): void {
-    this.updateMarker();
+  ngOnInit(): void {
+    setTimeout(() => this.updateMarker(), 0);
   }
 
   updateMarker() {

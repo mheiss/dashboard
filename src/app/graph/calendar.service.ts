@@ -8,17 +8,17 @@ import {
   getCalendarEvents,
   getCalendarGroupCalendars,
   getCalendarGroups,
+  isCalendarType,
   MyCalendar,
   MyEvent,
   nextDays,
 } from './calendar.model';
-import { graphToDate } from './graph.model';
+import { graphToDate, isSameDay } from './graph.model';
 import { arrayRange } from '../utils/array';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
   private readonly httpClient = inject(HttpClient);
-  private readonly calendars: CalendarType[] = ['Familie', 'Sarah', 'Lena'];
 
   /**
    * The number of days to display
@@ -64,7 +64,7 @@ export class CalendarService {
 
         // create an entry for each day that we shall display
         for (const day of days) {
-          const exists = views.find((e) => e.day === day);
+          const exists = views.find((e) => isSameDay(e.day, day));
           if (!exists) {
             views.push({ day: day, allDay: [], events: [] });
           }
@@ -80,7 +80,7 @@ export class CalendarService {
           for (const view of views) {
             // Add all-day events to each slot
             if (event.isAllDay) {
-              const dayEnd = view.day;
+              const dayEnd = new Date(view.day);
               dayEnd.setHours(23, 59, 59);
 
               const start = graphToDate(event.start);
@@ -118,12 +118,11 @@ export class CalendarService {
         continue;
       }
       const calendarName = calendar.name;
-      const calendarType = calendarName as CalendarType;
-      if (calendarName && !this.calendars.includes(calendarType)) {
+      if (!isCalendarType(calendarName)) {
         continue;
       }
       const myCalendar = calendar as MyCalendar;
-      myCalendar.myType = calendarType;
+      myCalendar.myType = calendarName;
       myCalendar.myGroupId = groupId;
       result.push(myCalendar);
     }

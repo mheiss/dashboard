@@ -7,11 +7,17 @@ import { MY_GRAPH, GraphListResponse } from './graph.model';
  * Types of calendars to display.
  */
 export type CalendarType = 'Familie' | 'Sarah' | 'Lena';
+export function isCalendarType(type: any): type is CalendarType {
+  return ['Familie', 'Sarah', 'Lena'].indexOf(type) !== -1;
+}
 
 /**
  * Display type
  */
 export type CalendarView = 'Day' | 'Agenda';
+export function isCalendarView(view: any): view is CalendarView {
+  return ['Day', 'Agenda'].indexOf(view) !== -1;
+}
 
 /**
  * Associates the type and the group with a calendar.

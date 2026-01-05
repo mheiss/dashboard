@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { Camera } from '../models/dashboard.model';
+import { Camera, isCamera } from '../models/dashboard.model';
 import { Video } from '../video/video';
 import { LayoutService } from '../utils/layout.service';
 import { ActivatedRoute } from '@angular/router';
@@ -19,9 +19,9 @@ export class Protect {
 
   constructor() {
     this.activatedRoute.queryParamMap.pipe(takeUntilDestroyed()).subscribe((map) => {
-      const cameraParam = map.get('camera');
-      if (cameraParam && this.cameras.includes(cameraParam as Camera)) {
-        this.pinned.set(cameraParam as Camera);
+      const param = map.get('camera');
+      if (isCamera(param)) {
+        this.pinned.set(param);
       }
     });
   }
