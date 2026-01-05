@@ -49,6 +49,13 @@ export async function saveImage(image: DriveImage) {
 }
 
 /**
+ * Removes the given item in the local database
+ */
+export async function removeImage(id: string) {
+  await db.delete('images', id);
+}
+
+/**
  * Stores the delta link to get new image
  */
 export async function saveDeltaLink(deltaLink: string) {

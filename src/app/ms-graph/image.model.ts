@@ -8,15 +8,16 @@ import { GraphListResponse, MY_GRAPH } from './graph.model';
  */
 export interface DriveImage {
   id: string;
+  name: string;
   takenAt: number;
-  item: DriveItem;
   thumbnailUrl?: string;
 }
 
 /**
  * A drive image with a thumbnail
  */
-export interface ImageWithThumbnail extends DriveImage {
+export interface ImageWithThumbnail {
+  image: DriveImage;
   thumbnail$: Observable<string | null>;
 }
 
