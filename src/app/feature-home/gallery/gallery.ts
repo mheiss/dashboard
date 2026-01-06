@@ -1,16 +1,16 @@
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { AsyncPipe } from '@angular/common';
 import { AfterViewInit, Component, computed, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
-import { ImageWithThumbnail } from '../../ms-graph/image.model';
+import { DriveImageExt } from '../../ms-graph/image.model';
 import { PopupService } from '../../popup/popup.service';
-import { RevokeOnDestroyDirective } from './destroy.directive';
+import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
 import { DetailViewerData } from './gallery.model';
 
 @Component({
   selector: 'app-gallery',
   templateUrl: './gallery.html',
-  imports: [ScrollingModule, RevokeOnDestroyDirective, AsyncPipe],
+  imports: [ScrollingModule, AsyncPipe, BlobSrcDirective],
 })
 export class GalleryComponent implements OnInit, AfterViewInit {
   readonly dialog = inject(PopupService);
@@ -22,7 +22,7 @@ export class GalleryComponent implements OnInit, AfterViewInit {
   /**
    * The images to display by the component
    */
-  readonly images = input.required<ImageWithThumbnail[]>();
+  readonly images = input.required<DriveImageExt[]>();
 
   /**
    * The total number of images
@@ -55,7 +55,7 @@ export class GalleryComponent implements OnInit, AfterViewInit {
   readonly rows = computed(() => {
     const cols = this.columns();
     const items = this.images();
-    const result: ImageWithThumbnail[][] = [];
+    const result: DriveImageExt[][] = [];
     for (let i = 0; i < items.length; i += cols) {
       result.push(items.slice(i, i + cols));
     }
@@ -77,7 +77,7 @@ export class GalleryComponent implements OnInit, AfterViewInit {
     observer.observe(scrollViewport);
   }
 
-  openDetailView(image: ImageWithThumbnail) {
+  openDetailView(image: DriveImageExt) {
     this.dialog.open(DetailViewerComponent, {
       data: {
         image: image,

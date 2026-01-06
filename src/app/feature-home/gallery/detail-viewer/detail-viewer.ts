@@ -2,17 +2,18 @@ import { DIALOG_DATA } from '@angular/cdk/dialog';
 import { AsyncPipe, DatePipe } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
-import { ImageWithThumbnail } from '../../../ms-graph/image.model';
+import { DriveImageExt } from '../../../ms-graph/image.model';
 import { DetailViewerData } from '../gallery.model';
+import { BlobSrcDirective } from '../blob.directive';
 
 @Component({
   selector: 'app-detail-viewer',
   templateUrl: './detail-viewer.html',
-  imports: [AsyncPipe, DatePipe],
+  imports: [AsyncPipe, DatePipe, BlobSrcDirective],
 })
 export class DetailViewerComponent implements OnInit {
   readonly data: DetailViewerData = inject(DIALOG_DATA).data;
-  readonly image = signal<ImageWithThumbnail>(this.data.image);
+  readonly image = signal<DriveImageExt>(this.data.image);
   readonly images = this.data.images;
 
   readonly imageElement = viewChild.required<ElementRef<HTMLImageElement>>('imageElement');

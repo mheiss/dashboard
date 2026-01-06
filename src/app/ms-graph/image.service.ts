@@ -2,14 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, map, of, tap } from 'rxjs';
 import { getDeltaLink, getImageCount, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
-import { DriveImage, getImages, getNextImages, getThumbnail, ImageWithThumbnail } from './image.model';
+import { DriveImage, getImages, getNextImages, getThumbnailBlob, DriveImageExt, getImageBlob } from './image.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
   private readonly httpClient = inject(HttpClient);
 
   readonly loading = signal(false);
-  readonly images = signal<ImageWithThumbnail[]>([]);
+  readonly images = signal<DriveImageExt[]>([]);
   readonly imageCount = signal(0);
 
   nextKey: IDBValidKey | null;
@@ -75,13 +75,14 @@ export class ImageService {
     nextImages.then((response) => {
       this.nextKey = response.lastKey;
 
-      const withThumbnails: ImageWithThumbnail[] = [];
+      const imageExts: DriveImageExt[] = [];
       for (const image of response.items) {
         const thumbnail$ = this.getThumbnail(image);
-        withThumbnails.push({ image: image, thumbnail$: thumbnail$ });
+        const original$ = getImageBlob(this.httpClient, image);
+        imageExts.push({ image, thumbnail$, original$ });
       }
       this.images.update((images) => {
-        return images.concat(withThumbnails);
+        return images.concat(imageExts);
       });
       this.loading.set(false);
     });
@@ -89,15 +90,14 @@ export class ImageService {
 
   getThumbnail(image: DriveImage) {
     if (image.thumbnailBlob) {
-      return of(URL.createObjectURL(image.thumbnailBlob));
+      return of(image.thumbnailBlob);
     }
-    return getThumbnail(this.httpClient, image).pipe(
+    return getThumbnailBlob(this.httpClient, image).pipe(
       tap((blob) => {
         image.thumbnailBlob = blob;
         image.lastModifiedAt = new Date().getTime();
         saveImage(image);
       }),
-      map((blob) => URL.createObjectURL(blob)),
     );
   }
 }

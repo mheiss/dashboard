@@ -1,12 +1,12 @@
 import { Signal } from '@angular/core';
-import { ImageWithThumbnail } from '../../ms-graph/image.model';
+import { DriveImageExt } from '../../ms-graph/image.model';
 
 /**
  * Data for the detail viewer.
  */
 export interface DetailViewerData {
-  image: ImageWithThumbnail;
-  images: Signal<ImageWithThumbnail[]>;
+  image: DriveImageExt;
+  images: Signal<DriveImageExt[]>;
   imageCount: number;
   loadMore: () => void;
 }

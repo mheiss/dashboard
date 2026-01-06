@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
-import { DriveItem, Thumbnail, ThumbnailSet } from '@microsoft/microsoft-graph-types';
-import { map, Observable } from 'rxjs';
+import { DriveItem } from '@microsoft/microsoft-graph-types';
+import { Observable } from 'rxjs';
 import { GraphListResponse, MY_GRAPH } from './graph.model';
 
 /**
@@ -15,11 +15,12 @@ export interface DriveImage {
 }
 
 /**
- * A drive image with a thumbnail
+ * A drive image with a thumbnail and the original size
  */
-export interface ImageWithThumbnail {
+export interface DriveImageExt {
   image: DriveImage;
-  thumbnail$: Observable<string | null>;
+  original$: Observable<Blob | null>;
+  thumbnail$: Observable<Blob | null>;
 }
 
 /**
@@ -40,10 +41,22 @@ export const getNextImages = (client: HttpClient, nextLink: string) => {
 };
 
 /**
- * Returns the thumbnail for a given item.
+ * Returns the thumbnail of a given item.
  */
-export const getThumbnail = (client: HttpClient, item: DriveItem): Observable<any> => {
+export const getThumbnailBlob = (client: HttpClient, item: DriveItem): Observable<any> => {
   const endpoint = `drive/items/${item.id}/thumbnails/0/large/content`;
+
+  const url = `${MY_GRAPH}/${endpoint}`;
+  return client.get(url, {
+    responseType: 'blob',
+  });
+};
+
+/**
+ * Returns the original size of a given item.
+ */
+export const getImageBlob = (client: HttpClient, item: DriveItem): Observable<any> => {
+  const endpoint = `drive/items/${item.id}/content`;
 
   const url = `${MY_GRAPH}/${endpoint}`;
   return client.get(url, {
