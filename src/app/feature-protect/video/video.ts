@@ -1,19 +1,19 @@
-import { Component, inject, input, OnChanges, signal } from '@angular/core';
+import { Component, ElementRef, inject, input, OnChanges, OnInit, signal, viewChild } from '@angular/core';
 import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Camera, StreamQuality } from '../protect.model';
 import { Status } from '../webrtc/webrtc';
 import { WebRTCService } from '../webrtc/webrtc.service';
+import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 
 @Component({
   selector: 'app-video',
   templateUrl: './video.html',
 })
-export class Video implements OnChanges {
+export class Video implements OnInit, OnChanges {
   private readonly webRtc = inject(WebRTCService);
-  private streamChanged = new Subject<void>();
-
   readonly camera = input.required<Camera>();
-  readonly quality = input<StreamQuality>('medium');
+  readonly zoom = input<boolean>(true);
+  readonly quality = input<StreamQuality>('high');
   readonly showStats = signal<boolean>(false);
 
   readonly video = signal<MediaStream | null>(null);
@@ -21,8 +21,22 @@ export class Video implements OnChanges {
   readonly stats = signal<string | null>(null);
   readonly classes = signal<string | null>(null);
 
+  readonly imageElement = viewChild.required<ElementRef<HTMLImageElement>>('videoElement');
+  private streamChanged = new Subject<void>();
+  panzoom: PanzoomObject;
+
+  ngOnInit(): void {
+    if (this.zoom()) {
+      this.panzoom = Panzoom(this.imageElement().nativeElement, {
+        maxScale: 5,
+        minScale: 1,
+      });
+    }
+  }
+
   ngOnChanges(): void {
     this.streamChanged.next();
+    this.panzoom?.reset();
 
     const offer = this.webRtc.start(this.camera(), this.quality());
     offer.media.pipe(takeUntil(this.streamChanged)).subscribe((media) => {
