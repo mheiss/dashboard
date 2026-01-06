@@ -32,9 +32,9 @@ function migrateToLatest(db: IDBPDatabase<any>, oldVersion: number) {
 }
 
 /**
- * Loads the top 100 newest images
+ * Loads the next images sorted by 'takenAt' timestamp
  */
-export async function loadImages(lastKey: IDBValidKey | null) {
+export async function loadImages(count: number, lastKey: IDBValidKey | null) {
   const tx = db.transaction('images', 'readonly');
   const index = tx.store.index('takenAt');
 
@@ -46,7 +46,7 @@ export async function loadImages(lastKey: IDBValidKey | null) {
   }
 
   const results: DriveImage[] = [];
-  while (cursor && results.length < 100) {
+  while (cursor && results.length < count) {
     results.push(cursor.value);
     cursor = await cursor.continue();
   }

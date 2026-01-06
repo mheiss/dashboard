@@ -64,7 +64,7 @@ export class ImageService {
     }
     this.loading.set(true);
 
-    const nextImages = loadImages(this.nextKey);
+    const nextImages = loadImages(25, this.nextKey);
     nextImages.then((response) => {
       this.nextKey = response.lastKey;
 

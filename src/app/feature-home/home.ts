@@ -32,7 +32,7 @@ export class Home {
 
   openKeypad() {
     this.dialog.open(Pin, {
-      hideActionBar: true,
+      disableClose: true,
     });
   }
 }

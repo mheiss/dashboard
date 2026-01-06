@@ -2,15 +2,7 @@
   <div class="p-3">
     <h2 class="text-xl font-semibold">{{ title() }}</h2>
   </div>
-
   <div class="mb-6 h-full flex-1 px-3">
     <ng-content />
   </div>
-
-  @if (!hideActionBar()) {
-    <div class="flex justify-end gap-3 rounded-b-xl bg-stone-900 p-4">
-      <button (click)="onCancel()" class="rounded-md bg-stone-300 px-4 py-2 transition hover:bg-stone-400">Cancel</button>
-      <button (click)="onConfirm()" class="rounded-md bg-amber-500 px-4 py-2 text-white transition hover:bg-amber-600">Confirm</button>
-    </div>
-  }
 </div>

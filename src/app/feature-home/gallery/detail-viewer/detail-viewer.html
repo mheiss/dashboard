@@ -1,0 +1,15 @@
+<div class="flex flex-1 cursor-default items-center justify-center overflow-hidden bg-stone-200">
+  <div class="flex w-16 shrink-0 items-center justify-center text-2xl text-amber-500">
+    @if (data.hasPrevious()) {
+      <div (click)="data.onPrevious()" class="border border-stone-400 bg-stone-300 p-4">&lt;</div>
+    }
+  </div>
+  <div class="rounded-1 flex h-[85vh] w-full items-center justify-center overflow-hidden p-4">
+    <img class="max-h-full max-w-full object-contain" [alt]="data.image()?.image?.name" [src]="data.image()?.thumbnail$ | async" />
+  </div>
+  <div class="flex w-16 shrink-0 items-center justify-center text-2xl text-amber-500">
+    @if (data.hasNext()) {
+      <div (click)="data.onNext()" class="border border-stone-400 bg-stone-300 p-4">&gt;</div>
+    }
+  </div>
+</div>

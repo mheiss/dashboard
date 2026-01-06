@@ -1,12 +1,24 @@
-<div class="h-full overflow-y-auto p-2" (infiniteScroll)="loadMore.emit()">
-  @if (images().length === 0) {
-    <div class="text-gray-500">Lade Bilder...</div>
+@if (images().length === 0) {
+  <div class="text-gray-500">Lade Bilder...</div>
+}
+<cdk-virtual-scroll-viewport
+  #gallery
+  class="h-full w-full overflow-auto p-2"
+  [itemSize]="columnWidth + gap"
+  (scrolledIndexChange)="loadMore.emit()"
+>
+  @for (row of rows(); track $index) {
+    <div class="grid gap-2" [style.gridTemplateColumns]="'repeat(3, 1fr)'">
+      @for (withThumbnail of row; track withThumbnail.image.id) {
+        <div class="aspect-square overflow-hidden rounded bg-gray-100" (click)="openDetailView(withThumbnail)">
+          <img
+            class="h-full w-full object-cover"
+            [alt]="withThumbnail.image.name"
+            [src]="withThumbnail.thumbnail$ | async"
+            [revokeOnDestroy]="withThumbnail.thumbnail$ | async"
+          />
+        </div>
+      }
+    </div>
   }
-  <div class="grid grid-cols-4 gap-1 p-2">
-    @for (withThumbnail of images(); track withThumbnail.image.id) {
-      <div class="aspect-square overflow-hidden rounded bg-gray-100">
-        <img class="h-full w-full object-cover" [src]="withThumbnail.thumbnail$ | async" [alt]="withThumbnail.image.name" />
-      </div>
-    }
-  </div>
-</div>
+</cdk-virtual-scroll-viewport>
