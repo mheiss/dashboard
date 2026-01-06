@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { defer, firstValueFrom, map, of, tap } from 'rxjs';
+import { firstValueFrom, map, of, tap } from 'rxjs';
 import { getDeltaLink, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
 import { DriveImage, getImages, getNextImages, getThumbnail, ImageWithThumbnail } from './image.model';
 
@@ -13,7 +13,7 @@ export class ImageService {
   nextKey: IDBValidKey | null;
 
   /**
-   * Initializes the service and loads the missing images.
+   * Synchronizes the local cache with the remote service.
    */
   async refreshImages() {
     const deltaLink = await getDeltaLink();
@@ -25,10 +25,9 @@ export class ImageService {
       for (const item of response.value) {
         if (item.id && item.name && item.photo && item.photo.takenDateTime) {
           const takenAt = new Date(item.photo.takenDateTime).getTime();
-          const image: DriveImage = { id: item.id, name: item.name, takenAt: takenAt };
-          await saveImage(image);
+          const modified = item.lastModifiedDateTime ? new Date(item.lastModifiedDateTime) : new Date();
+          await saveImage({ id: item.id, name: item.name, takenAt: takenAt, lastModifiedAt: modified.getTime() });
         }
-
         if (item.id && item.deleted) {
           await removeImage(item.id);
           continue;
@@ -71,16 +70,9 @@ export class ImageService {
 
       const withThumbnails: ImageWithThumbnail[] = [];
       for (const image of response.items) {
-        let withThumbnail: ImageWithThumbnail;
-        if (image.thumbnailUrl) {
-          withThumbnail = { image: image, thumbnail$: of(image.thumbnailUrl) };
-        } else {
-          const thumbnail$ = this.createAndSaveThumbnail(image);
-          withThumbnail = { image: image, thumbnail$ };
-        }
-        withThumbnails.push(withThumbnail);
+        const thumbnail$ = this.getThumbnail(image);
+        withThumbnails.push({ image: image, thumbnail$: thumbnail$ });
       }
-
       this.images.update((images) => {
         return images.concat(withThumbnails);
       });
@@ -88,17 +80,17 @@ export class ImageService {
     });
   }
 
-  createAndSaveThumbnail(image: DriveImage) {
-    return defer(() =>
-      getThumbnail(this.httpClient, image).pipe(
-        tap((t) => {
-          if (t?.url) {
-            image.thumbnailUrl = t?.url!;
-            saveImage(image);
-          }
-        }),
-        map((t) => t?.url!),
-      ),
+  getThumbnail(image: DriveImage) {
+    if (image.thumbnailBlob) {
+      return of(URL.createObjectURL(image.thumbnailBlob));
+    }
+    return getThumbnail(this.httpClient, image).pipe(
+      tap((blob) => {
+        image.thumbnailBlob = blob;
+        image.lastModifiedAt = new Date().getTime();
+        saveImage(image);
+      }),
+      map((blob) => URL.createObjectURL(blob)),
     );
   }
 }

@@ -10,7 +10,8 @@ export interface DriveImage {
   id: string;
   name: string;
   takenAt: number;
-  thumbnailUrl?: string;
+  lastModifiedAt: number;
+  thumbnailBlob?: Blob;
 }
 
 /**
@@ -41,18 +42,11 @@ export const getNextImages = (client: HttpClient, nextLink: string) => {
 /**
  * Returns the thumbnail for a given item.
  */
-export const getThumbnail = (client: HttpClient, item: DriveItem): Observable<Thumbnail | null> => {
-  const endpoint = `drive/items/${item.id}/thumbnails`;
+export const getThumbnail = (client: HttpClient, item: DriveItem): Observable<any> => {
+  const endpoint = `drive/items/${item.id}/thumbnails/0/large/content`;
 
   const url = `${MY_GRAPH}/${endpoint}`;
-  return client.get<GraphListResponse<ThumbnailSet[]>>(url).pipe(
-    map((response) => {
-      const sets = response.value;
-      const set = sets[0];
-      if (set.large) {
-        return set.large;
-      }
-      return null;
-    }),
-  );
+  return client.get(url, {
+    responseType: 'blob',
+  });
 };

@@ -1,9 +1,12 @@
-import { openDB } from 'idb';
+import { IDBPDatabase, openDB } from 'idb';
+import { from, Observable } from 'rxjs';
 import { CalendarView } from '../ms-graph/calendar.model';
 import { DriveImage } from './image.model';
 
-export const db = await openDB('Dashboard', 1, {
-  upgrade(db) {
+const db = await openDB('Dashboard', 2, {
+  upgrade(db, oldVersion) {
+    migrateToLatest(db, oldVersion);
+
     // Store for images
     const images = db.createObjectStore('images', { keyPath: 'id' });
     images.createIndex('takenAt', 'takenAt');
@@ -12,6 +15,21 @@ export const db = await openDB('Dashboard', 1, {
     db.createObjectStore('metadata', { keyPath: 'key' });
   },
 });
+
+/**
+ * Migrates the database if possible or drops it
+ */
+function migrateToLatest(db: IDBPDatabase<any>, oldVersion: number) {
+  // Schema change: URL to blob -> Drop
+  if (oldVersion < 2) {
+    if (db.objectStoreNames.contains('images')) {
+      db.deleteObjectStore('images');
+    }
+    if (db.objectStoreNames.contains('metadata')) {
+      db.deleteObjectStore('metadata');
+    }
+  }
+}
 
 /**
  * Loads the top 100 newest images
@@ -46,6 +64,13 @@ export async function loadImages(lastKey: IDBValidKey | null) {
  */
 export async function saveImage(image: DriveImage) {
   await db.put('images', image);
+}
+
+/**
+ * Stores the given item in the local database
+ */
+export function getImage(image: DriveImage) {
+  return from(db.get('images', image.id)) as Observable<DriveImage | undefined>;
 }
 
 /**
