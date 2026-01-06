@@ -60,6 +60,16 @@ export async function loadImages(count: number, lastKey: IDBValidKey | null) {
 }
 
 /**
+ * Returns the total number of stored images
+ */
+export async function getImageCount(): Promise<number> {
+  const tx = db.transaction('images', 'readonly');
+  const store = tx.store;
+  const request = store.count();
+  return request;
+}
+
+/**
  * Stores the given item in the local database
  */
 export async function saveImage(image: DriveImage) {

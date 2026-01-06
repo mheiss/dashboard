@@ -53,6 +53,11 @@ body {
   @apply opacity-90;
 }
 
+.cdk-overlay-pane:focus {
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.4);
+}
+
 /**
 * Custom Animations and Styles
 */

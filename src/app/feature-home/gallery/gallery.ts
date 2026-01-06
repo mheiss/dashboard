@@ -25,9 +25,9 @@ export class GalleryComponent implements OnInit, AfterViewInit {
   readonly images = input.required<ImageWithThumbnail[]>();
 
   /**
-   * Image shown in the detail popup
+   * The total number of images
    */
-  readonly detailImage = signal<ImageWithThumbnail | null>(null);
+  readonly imageCount = input.required<number>();
 
   /**
    * Event that will be triggered when more images shall be loaded.
@@ -65,6 +65,7 @@ export class GalleryComponent implements OnInit, AfterViewInit {
   ngOnInit() {
     this.loadMore.emit();
   }
+
   ngAfterViewInit() {
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -77,41 +78,13 @@ export class GalleryComponent implements OnInit, AfterViewInit {
   }
 
   openDetailView(image: ImageWithThumbnail) {
-    const data: DetailViewerData = {
-      image: this.detailImage,
-      hasNext: () => {
-        const images = this.images();
-        const image = this.detailImage();
-        return images.indexOf(image!) <= images.length;
-      },
-      hasPrevious: () => {
-        const images = this.images();
-        const image = this.detailImage();
-        return images.indexOf(image!) > 0;
-      },
-      onNext: () => {
-        const images = this.images();
-        const image = this.detailImage();
-
-        const index = images.indexOf(image!);
-        if (data.hasNext()) {
-          this.detailImage.set(images[index + 1]);
-        }
-      },
-      onPrevious: () => {
-        const images = this.images();
-        const image = this.detailImage();
-
-        const index = images.indexOf(image!);
-        if (data.hasPrevious()) {
-          this.detailImage.set(images[index - 1]);
-        }
-      },
-    };
-    this.detailImage.set(image);
-
     this.dialog.open(DetailViewerComponent, {
-      data: data,
+      data: {
+        image: image,
+        imageCount: this.imageCount(),
+        images: this.images,
+        loadMore: () => this.loadMore.emit(),
+      } as DetailViewerData,
       disableClose: false,
       width: '85%',
     });

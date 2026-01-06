@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, map, of, tap } from 'rxjs';
-import { getDeltaLink, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
+import { getDeltaLink, getImageCount, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
 import { DriveImage, getImages, getNextImages, getThumbnail, ImageWithThumbnail } from './image.model';
 
 @Injectable({ providedIn: 'root' })
@@ -10,6 +10,8 @@ export class ImageService {
 
   readonly loading = signal(false);
   readonly images = signal<ImageWithThumbnail[]>([]);
+  readonly imageCount = signal(0);
+
   nextKey: IDBValidKey | null;
 
   /**
@@ -48,6 +50,11 @@ export class ImageService {
         saveDeltaLink(deltaLink);
       }
     }
+
+    // Provide image counter
+    getImageCount().then((count) => {
+      this.imageCount.set(count);
+    });
 
     // Update images when done
     this.nextKey = null;
