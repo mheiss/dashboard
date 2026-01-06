@@ -8,7 +8,7 @@
       }
     </div>
     <div class="rounded-1 flex h-[85vh] w-full items-center justify-center overflow-hidden p-4">
-      <img #imageElement class="max-h-full max-w-full object-contain" [blobSrc]="image().thumbnail$ | async" [alt]="imageName()" />
+      <img #imageElement class="max-h-full max-w-full object-contain" [blobSrc]="imageBlob()" [alt]="imageName()" />
     </div>
     <div class="flex items-center justify-center pr-8">
       @if (hasNext()) {
@@ -19,8 +19,14 @@
     </div>
   </div>
   <div class="grid h-8 grid-cols-3 items-center bg-stone-800 px-4 text-stone-300 drop-shadow-lg">
-    <div class="justify-self-start text-stone-500">{{ imageName() }}</div>
-    <div class="justify-self-center text-stone-300">Bild {{ images().indexOf(image()) + 1 }} / {{ data.imageCount }}</div>
-    <div class="justify-self-end text-stone-500">{{ imageTakenAt() | date: 'dd.MM.yyyy HH:mm' }}</div>
+    <div class="justify-self-start text-stone-500" [ngClass]="originalLoaded() ? 'not-italic' : 'italic'">
+      <span>{{ imageName() }}</span>
+    </div>
+    <div class="justify-self-center text-stone-300">
+      <span>Bild {{ images().indexOf(image()) + 1 }} / {{ data.imageCount }}</span>
+    </div>
+    <div class="justify-self-end text-stone-500">
+      <span>{{ imageTakenAt() | date: 'dd.MM.yyyy HH:mm' }}</span>
+    </div>
   </div>
 </div>
