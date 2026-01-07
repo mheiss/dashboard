@@ -1,8 +1,9 @@
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { AsyncPipe } from '@angular/common';
-import { AfterViewInit, Component, computed, inject, input, OnInit, output, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, input, OnInit, output, viewChild } from '@angular/core';
 import { DriveImageExt } from '../../ms-graph/image.model';
 import { PopupService } from '../../popup/popup.service';
+import { LayoutService } from '../../utils/layout.service';
 import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
 import { DetailViewerData } from './gallery.model';
@@ -12,12 +13,11 @@ import { DetailViewerData } from './gallery.model';
   templateUrl: './gallery.html',
   imports: [ScrollingModule, AsyncPipe, BlobSrcDirective],
 })
-export class GalleryComponent implements OnInit, AfterViewInit {
+export class GalleryComponent implements OnInit {
   readonly dialog = inject(PopupService);
+  readonly layout = inject(LayoutService);
 
   readonly gallery = viewChild.required<CdkVirtualScrollViewport>('gallery');
-  readonly columnWidth = 220;
-  readonly gap = 8;
 
   /**
    * The images to display by the component
@@ -35,18 +35,13 @@ export class GalleryComponent implements OnInit, AfterViewInit {
   readonly loadMore = output();
 
   /**
-   * Signal with the viewport width
-   */
-  readonly viewportWidth = signal(0);
-
-  /**
    * Computes the number of columns depending on the viewport size
    */
   readonly columns = computed(() => {
-    const width = this.viewportWidth();
-    if (width === 0) return 1;
-
-    return Math.max(1, Math.floor(width / (this.columnWidth + this.gap)));
+    if (this.layout.mobile$()) {
+      return 1;
+    }
+    return 3;
   });
 
   /**
@@ -64,17 +59,6 @@ export class GalleryComponent implements OnInit, AfterViewInit {
 
   ngOnInit() {
     this.loadMore.emit();
-  }
-
-  ngAfterViewInit() {
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        this.viewportWidth.set(entry.contentRect.width);
-      }
-    });
-
-    const scrollViewport = this.gallery().elementRef.nativeElement;
-    observer.observe(scrollViewport);
   }
 
   openDetailView(image: DriveImageExt) {
