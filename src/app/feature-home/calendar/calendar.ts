@@ -1,18 +1,18 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { AfterViewInit, Component, effect, ElementRef, input, signal, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 import { CalendarView, EventView, getPercentageOfDay, isCalendarView } from '../../ms-graph/calendar.model';
+import { getCalendarView, saveCalendarView } from '../../ms-graph/database';
 import { AgendaView } from './agenda-view/agenda-view';
 import { DayView } from './day-view/day-view';
-import { getCalendarView, saveCalendarView } from '../../ms-graph/database';
 
 @Component({
   selector: 'app-calendar',
   templateUrl: './calendar.html',
   imports: [NgClass, DatePipe, DayView, AgendaView],
 })
-export class Calendar implements AfterViewInit {
+export class Calendar {
   readonly events = input.required<EventView[]>();
   readonly view = signal<CalendarView>('Agenda');
 
@@ -32,11 +32,8 @@ export class Calendar implements AfterViewInit {
 
     effect(() => {
       saveCalendarView(this.view());
+      setTimeout(() => this.updateScrollContainer(), 0);
     });
-  }
-
-  ngAfterViewInit(): void {
-    this.updateScrollContainer();
   }
 
   switchView() {
