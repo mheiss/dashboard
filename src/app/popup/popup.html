@@ -1,8 +1,19 @@
-<div class="flex h-full min-h-[250px] w-full flex-col rounded-xl bg-white">
-  <div class="p-3">
-    <h2 class="text-xl font-semibold">{{ title() }}</h2>
+<div class="flex h-full min-h-[250px] w-full flex-col rounded-xl bg-stone-800">
+  <div class="grid h-8 grid-cols-2 items-center px-4 text-stone-300 drop-shadow-lg">
+    <div class="justify-self-start text-stone-500">
+      @if (title()) {
+      <h2 class="text-xl font-semibold">{{ title() }}</h2>
+      }
+    </div>
+    <div class="justify-self-end">
+      @if (!data.disableClose) {
+      <button (click)="close()" class="flex items-center">
+        <img class="h-6 w-6" src="./assets/close.svg" />
+      </button>
+      }
+    </div>
   </div>
-  <div class="mb-6 h-full flex-1 px-3">
+  <div class="h-full w-full">
     <ng-content />
   </div>
 </div>

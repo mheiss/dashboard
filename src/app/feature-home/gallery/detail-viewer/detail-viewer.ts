@@ -2,16 +2,16 @@ import { DIALOG_DATA } from '@angular/cdk/dialog';
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
+import { delay, first } from 'rxjs';
 import { DriveImageExt } from '../../../ms-graph/image.model';
+import { Popup } from '../../../popup/popup';
 import { BlobSrcDirective } from '../blob.directive';
 import { DetailViewerData } from '../gallery.model';
-import { delay, first, Subscription } from 'rxjs';
-import { toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-detail-viewer',
   templateUrl: './detail-viewer.html',
-  imports: [NgClass, DatePipe, BlobSrcDirective],
+  imports: [NgClass, DatePipe, BlobSrcDirective, Popup],
 })
 export class DetailViewerComponent implements OnInit {
   readonly data: DetailViewerData = inject(DIALOG_DATA).data;

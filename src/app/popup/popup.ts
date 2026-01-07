@@ -1,5 +1,6 @@
-import { DialogModule } from '@angular/cdk/dialog';
-import { Component, input } from '@angular/core';
+import { DIALOG_DATA, DialogModule, DialogRef } from '@angular/cdk/dialog';
+import { Component, inject, input } from '@angular/core';
+import { DialogOptions } from './popup.service';
 
 @Component({
   selector: 'app-popup',
@@ -7,5 +8,11 @@ import { Component, input } from '@angular/core';
   imports: [DialogModule],
 })
 export class Popup {
-  readonly title = input.required<string>();
+  readonly data = inject(DIALOG_DATA) as DialogOptions;
+  readonly popupRef = inject(DialogRef);
+  readonly title = input<string>();
+
+  close() {
+    this.popupRef.close();
+  }
 }
