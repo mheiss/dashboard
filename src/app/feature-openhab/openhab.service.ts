@@ -46,7 +46,7 @@ export class OpenHABService {
       }
     });
     // Switch to the camera views when the doorbell rings
-    this.security.value$.subscribe((value) => {
+    this.doorbell.value$.subscribe((value) => {
       if (!value) {
         return;
       }
