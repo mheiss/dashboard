@@ -3,8 +3,8 @@
     <div
       [routerLink]="item.path"
       class="pb-1"
-      (mouseover)="item.mouseOver()"
-      (mouseleave)="item.mouseLeave()"
+      (mouseover)="item.hover.set(true)"
+      (mouseleave)="item.hover.set(false)"
       [ngClass]="{
         'shadow-2xs shadow-amber-500': activePath() === item.path,
       }"

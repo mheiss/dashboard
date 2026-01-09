@@ -26,7 +26,6 @@ export class Navigation {
     effect(() => {
       for (const element of this.elements) {
         element.active.set(element.path === this.activePath());
-        element.
       }
     });
   }

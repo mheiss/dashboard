@@ -27,17 +27,9 @@ export class NavigationEntry {
     });
   }
 
-  icon = signal<string>('');
-  active = signal<boolean>(false);
-  hover = signal<boolean>(false);
-
-  mouseOver() {
-    this.hover.set(true);
-  }
-
-  mouseLeave() {
-    this.hover.set(false);
-  }
+  readonly icon = signal<string>('');
+  readonly active = signal<boolean>(false);
+  readonly hover = signal<boolean>(false);
 }
 
 /**
