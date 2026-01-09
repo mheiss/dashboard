@@ -1,48 +1,59 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { WebSocket } from 'partysocket';
-import { BehaviorSubject, interval } from 'rxjs';
+import { interval } from 'rxjs';
 import { getWebSocketUrl } from '../utils/webSocket';
-import { PIN, SECURITY } from './openhab.items';
-import { createCommandEvent, createStringPayload, Payload, PingEvent } from './openhab.model';
+import { DoorbellItem, OpenHabItem, PinItem, SecurityItem } from './openhab.items';
+import { Payload, PingEvent } from './openhab.model';
 
 @Injectable({ providedIn: 'root' })
 export class OpenHABService {
   private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
   private readonly ws = this.createWebSocket();
+  private readonly items: OpenHabItem<any>[] = [];
 
   /**
-   * The security status of the system.
-   * * TRUE = On / Armed
-   * * FALSE = Off / Disarmed
+   * The item which holds the activation status of the security.
+   *
+   * * ON == Armed
+   * * OFF == Disarmed
    */
-  private readonly securityStatus = new BehaviorSubject<boolean>(false);
-  public readonly securityStatus$ = this.securityStatus.asObservable();
-
-  constructor() {
-    this.http.get('/api/openhab/items/' + SECURITY + '/state', { responseType: 'text' }).subscribe((v) => {
-      this.securityStatus.next(v === 'ON');
-    });
-  }
+  readonly security = new SecurityItem(this.ws, this.http, this.items);
 
   /**
-   * Starts sending PING messages to openhab in order to keep our WS connection alive
+   * The item which accepts the security PIN. If the PIN is correct then the
+   * security system will be turned off / disarmed.
    */
-  startPingPong() {
+  readonly pin = new PinItem(this.ws, this.http, this.items);
+
+  /**
+   * The doorbell item.
+   */
+  readonly doorbell = new DoorbellItem(this.ws, this.http, this.items);
+
+  /**
+   * Initializes the communication between the dashboard and openHAB
+   */
+  init() {
+    // Starts sending PING messages to openhab in order to keep our WS connection alive
     interval(5000).subscribe(() => {
       if (this.ws.readyState === WebSocket.OPEN) {
         this.ws.send(JSON.stringify(PingEvent));
       }
     });
-  }
-
-  /**
-   * Attempts to disarm the security system using the given pin code.
-   */
-  disarmSecurity(pinCode: string) {
-    const pinPayload = createStringPayload(pinCode);
-    const message = createCommandEvent(PIN, pinPayload);
-    this.ws.send(JSON.stringify(message));
+    // Switch to the camera views when the doorbell rings
+    this.security.value$.subscribe((value) => {
+      if (!value) {
+        return;
+      }
+      this.router.navigate(['/protect'], {
+        queryParams: {
+          camera: 'entry',
+        },
+      });
+    });
   }
 
   private createWebSocket() {
@@ -70,9 +81,11 @@ export class OpenHABService {
 
   private onItemUpdateEvent(event: any) {
     const topic = event.topic as string;
-    if (topic === 'openhab/items/' + SECURITY + '/stateupdated') {
-      const payload: Payload = JSON.parse(event.payload);
-      this.securityStatus.next(payload.value === 'ON' ? true : false);
+    for (const item of this.items) {
+      if (topic === item.topicName()) {
+        const payload: Payload = JSON.parse(event.payload);
+        item.onWebSocketMessage(payload.value);
+      }
     }
   }
 }

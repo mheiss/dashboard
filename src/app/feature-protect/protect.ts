@@ -1,6 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
 import { Camera, isCamera } from './protect.model';
@@ -12,12 +12,21 @@ import { Camera, isCamera } from './protect.model';
 })
 export class Protect {
   readonly layout = inject(LayoutService);
+  readonly router = inject(Router);
   readonly activatedRoute = inject(ActivatedRoute);
 
   readonly cameras: Camera[] = ['entry', 'garden', 'patio'];
   readonly pinned = signal<Camera>('entry');
 
   constructor() {
+    effect(() => {
+      this.router.navigate([], {
+        queryParams: {
+          camera: this.pinned(),
+        },
+      });
+    });
+
     this.activatedRoute.queryParamMap.pipe(takeUntilDestroyed()).subscribe((map) => {
       const param = map.get('camera');
       if (isCamera(param)) {

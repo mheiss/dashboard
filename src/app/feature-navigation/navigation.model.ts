@@ -1,10 +1,8 @@
 /**
- * The main navigation routes
+ * A main navigation route
  */
-export type Path = 'Home' | 'OpenHAB' | 'EVCC' | 'Protect';
-
 export class NavigationEntry {
   name: string;
   icon: string;
-  path: Path;
+  path: string;
 }

@@ -59,3 +59,13 @@ export const createStringPayload = (value: string): Payload => ({
   type: 'String',
   value: value,
 });
+
+/**
+ * Converts ON or OFF to a boolean value
+ */
+export const onOffConverter = (value: string): boolean => value === 'ON';
+
+/**
+ * No-Op converter that does nothing
+ */
+export const stringConverter = (value: string): string => value;

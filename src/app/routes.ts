@@ -7,25 +7,25 @@ import { Protect } from './feature-protect/protect';
 
 export const routes: Routes = [
   {
-    path: 'Home',
+    path: 'home',
     component: Home,
     canActivate: [MsalGuard],
   },
   {
-    path: 'OpenHAB',
+    path: 'openhab',
     component: Openhab,
   },
   {
-    path: 'EVCC',
+    path: 'evcc',
     component: Evcc,
   },
   {
-    path: 'Protect',
+    path: 'protect',
     component: Protect,
   },
   {
     path: '**',
-    redirectTo: '/Home',
+    redirectTo: '/home',
     pathMatch: 'full',
   },
 ];

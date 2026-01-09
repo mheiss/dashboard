@@ -21,7 +21,7 @@ export const appConfig: ApplicationConfig = {
       msal.handleRedirectObservable().subscribe();
 
       const api = inject(OpenHABService);
-      api.startPingPong();
+      api.init();
 
       return msal.initialize();
     }),

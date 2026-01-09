@@ -7,14 +7,8 @@ import { OpenHABService } from '../../feature-openhab/openhab.service';
 import { Popup } from '../../popup/popup';
 import { confettiSequence } from '../../utils/confetti';
 import { pinActor } from './pin.actor';
-import { backspaceEvent, InputEvents, keyEvent, verifyResponse } from './pin.machine';
-
-export class Key {
-  text?: string;
-  icon?: string;
-  position?: string;
-  event: InputEvents;
-}
+import { backspaceEvent, keyEvent, verifyResponse } from './pin.machine';
+import { Key } from './pin.model';
 
 @Component({
   selector: 'app-pin',
@@ -47,7 +41,7 @@ export class Pin implements OnInit {
     this.pinActor.start();
 
     // Close the popup when the security is turned off
-    this.openHab.securityStatus$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+    this.openHab.security.value$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
       if (!value && this.isVerifying()) {
         this.pinActor.send(verifyResponse(true));
         this.dialogRef.close();
@@ -64,7 +58,7 @@ export class Pin implements OnInit {
 
   private doVerifyPin(digits: string[]) {
     const pinCode = digits.join('');
-    this.openHab.disarmSecurity(pinCode);
+    this.openHab.pin.sendPinCode(pinCode);
   }
 }
 

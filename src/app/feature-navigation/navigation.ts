@@ -9,9 +9,9 @@ import { NavigationEntry } from './navigation.model';
 })
 export class Navigation {
   readonly elements: NavigationEntry[] = [
-    { name: 'Home', icon: 'home.svg', path: 'Home' },
-    { name: 'OpenHAB', icon: 'openhab.svg', path: 'OpenHAB' },
-    { name: 'Wallbox', icon: 'evcc.svg', path: 'EVCC' },
-    { name: 'Kamera', icon: 'camera.svg', path: 'Protect' },
+    { name: 'Home', icon: 'home.svg', path: '/home' },
+    { name: 'OpenHAB', icon: 'openhab.svg', path: '/openhab' },
+    { name: 'Wallbox', icon: 'evcc.svg', path: '/evcc' },
+    { name: 'Kamera', icon: 'camera.svg', path: '/protect' },
   ];
 }
