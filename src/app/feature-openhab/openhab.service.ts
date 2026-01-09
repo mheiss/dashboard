@@ -6,10 +6,12 @@ import { interval } from 'rxjs';
 import { getWebSocketUrl } from '../utils/webSocket';
 import { DoorbellItem, OpenHabItem, PinItem, SecurityItem } from './openhab.items';
 import { Payload, PingEvent } from './openhab.model';
+import { FullyService } from './fully.service';
 
 @Injectable({ providedIn: 'root' })
 export class OpenHABService {
   private readonly http = inject(HttpClient);
+  private readonly fully = inject(FullyService);
   private readonly router = inject(Router);
   private readonly ws = this.createWebSocket();
   private readonly items: OpenHabItem<any>[] = [];
@@ -48,6 +50,7 @@ export class OpenHABService {
       if (!value) {
         return;
       }
+      this.fully.turnScreenOn();
       this.router.navigate(['/protect'], {
         queryParams: {
           camera: 'entry',
