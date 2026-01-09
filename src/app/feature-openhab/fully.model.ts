@@ -4,7 +4,7 @@
  * See https://www.fully-kiosk.com/en/#websiteintegration
  */
 export interface Fully {
-  turnScreenOn(): string;
+  turnScreenOn(): void;
 }
 
 declare global {

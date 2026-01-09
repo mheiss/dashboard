@@ -31,7 +31,8 @@ export class Navigation {
   }
 
   update(tree: UrlTree) {
-    const segments = tree.root.children['primary'].segments.map((s) => s.path);
-    this.activePath.set(segments.length ? '/' + segments[0] : '');
+    const primary = tree.root.children['primary'];
+    const segments = primary?.segments.map((s) => s.path);
+    this.activePath.set(segments?.length ? '/' + segments[0] : '');
   }
 }

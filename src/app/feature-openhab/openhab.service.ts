@@ -68,7 +68,7 @@ export class OpenHABService {
   }
 
   private onOpen(): void {
-    console.log('WebSocket connection with OpenHAB established.');
+    console.log('OpenHAB: Connected via WebSocket.');
   }
 
   private onError(e: any): void {

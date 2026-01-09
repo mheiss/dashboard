@@ -20,8 +20,12 @@ export const appConfig: ApplicationConfig = {
       const msal = inject(MsalService);
       msal.handleRedirectObservable().subscribe();
 
-      const api = inject(OpenHABService);
-      api.init();
+      console.log('----------------------------------------');
+      console.log('Application starting....');
+      console.log('----------------------------------------');
+
+      const openHab = inject(OpenHABService);
+      openHab.init();
 
       return msal.initialize();
     }),
