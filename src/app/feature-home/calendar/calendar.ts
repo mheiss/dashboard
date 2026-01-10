@@ -57,7 +57,7 @@ export class Calendar {
     const div = this.scrollContainer().nativeElement;
     const totalHeight = div.scrollHeight;
 
-    const scrollTo = (totalHeight * getPercentageOfDay()) / 100.0;
+    const scrollTo = (totalHeight * (getPercentageOfDay()-10)) / 100.0;
     div.scrollTop = scrollTo;
   }
 }

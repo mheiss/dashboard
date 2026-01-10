@@ -62,9 +62,7 @@ body {
 * Custom Animations and Styles
 */
 @layer utilities {
-  .scrollbar-gutter-stable {
-    scrollbar-gutter: stable;
-  }
+
   @keyframes left-right {
     from {
       transform: translateX(-25px);
