@@ -1,5 +1,6 @@
 <div class="h-full flex flex-col min-h-0">
-  <div class="grid grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900 scroll-m-2 mr-[15px]" [ngClass]="{
+  <div class="grid grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900 scroll-m-2"
+    [style.margin-right.px]="layout.scrollbarSize()" [ngClass]="{
       'grid-cols-[45px_repeat(1,minmax(0,1fr))]': events().length === 1,
       'grid-cols-[45px_repeat(2,minmax(0,1fr))]': events().length === 2,
       'grid-cols-[45px_repeat(3,minmax(0,1fr))]': events().length === 3,

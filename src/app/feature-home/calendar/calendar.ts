@@ -1,11 +1,12 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, effect, ElementRef, input, signal, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 import { CalendarView, EventView, getPercentageOfDay, isCalendarView } from '../../ms-graph/calendar.model';
 import { getCalendarView, saveCalendarView } from '../../ms-graph/database';
 import { AgendaView } from './agenda-view/agenda-view';
 import { DayView } from './day-view/day-view';
+import { LayoutService } from '../../utils/layout.service';
 
 @Component({
   selector: 'app-calendar',
@@ -13,6 +14,8 @@ import { DayView } from './day-view/day-view';
   imports: [NgClass, DatePipe, DayView, AgendaView],
 })
 export class Calendar {
+  readonly layout = inject(LayoutService);
+
   readonly events = input.required<EventView[]>();
   readonly view = signal<CalendarView>('Agenda');
 
@@ -57,7 +60,7 @@ export class Calendar {
     const div = this.scrollContainer().nativeElement;
     const totalHeight = div.scrollHeight;
 
-    const scrollTo = (totalHeight * (getPercentageOfDay()-10)) / 100.0;
+    const scrollTo = (totalHeight * (getPercentageOfDay() - 10)) / 100.0;
     div.scrollTop = scrollTo;
   }
 }

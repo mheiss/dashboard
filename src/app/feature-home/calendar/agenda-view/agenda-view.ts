@@ -1,7 +1,8 @@
+import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { EventView } from '../../../ms-graph/calendar.model';
-import { DatePipe, NgClass } from '@angular/common';
 import { graphToDate } from '../../../ms-graph/graph.model';
+import { AgendaEvent } from './aganda-view.model';
 
 @Component({
   selector: 'app-agenda-view',
@@ -15,18 +16,21 @@ export class AgendaView {
    * Signal that provides the event in the local date time.
    * Indexed by the day.
    */
-  readonly agendaEvents = computed(() =>
-    this.events().map((eventView) => {
-      return eventView.events.map((event) => {
+  readonly agendaEvents = computed(() => {
+    return this.events().map((eventView) => {
+      const now = new Date();
+      const eventsByDay = eventView.events.map((event) => {
         const id = event.id;
         const subject = event.subject;
         const myType = event.myType;
 
         const start = graphToDate(event.start);
         const end = graphToDate(event.end);
+        const past = now > end;
 
-        return { id, subject, myType, start, end };
+        return { id, subject, myType, start, end, past } as AgendaEvent;
       });
-    }),
-  );
+      return eventsByDay.sort((a, b) => a.start.getTime() - b.start.getTime());
+    });
+  });
 }
