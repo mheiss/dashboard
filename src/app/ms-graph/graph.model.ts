@@ -1,15 +1,10 @@
-import { DateTimeTimeZone, DriveItem, NullableOption } from '@microsoft/microsoft-graph-types';
+import { DateTimeTimeZone, NullableOption } from '@microsoft/microsoft-graph-types';
 import { config } from '../../config';
 
 /**
  * The BASE endpoint for the current authenticated user.
  */
 export const MY_GRAPH = `${config.graphUrl}/me`;
-
-/**
- * The QUERY endpoint
- */
-export const MY_QUERY = `${config.graphUrl}/search/query`;
 
 /**
  * Basic result type returned by the GRAPH API.
@@ -36,12 +31,4 @@ export function graphToDate(timeWithZone: NullableOption<DateTimeTimeZone> | und
 
   // Create a temporary date in local timezone
   return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
-}
-
-/**
- * Returns if the year,month and day is the same.
- * The time is ignored when comparing.
- */
-export function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDay() == b.getDay();
 }

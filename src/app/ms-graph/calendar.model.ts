@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Calendar, CalendarGroup, Event } from '@microsoft/microsoft-graph-types';
 import { map, Observable } from 'rxjs';
-import { MY_GRAPH, GraphListResponse } from './graph.model';
+import { GraphListResponse, MY_GRAPH } from './graph.model';
 
 /**
  * Types of calendars to display.

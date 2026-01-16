@@ -1,10 +1,10 @@
 import { DecimalPipe, NgClass } from '@angular/common';
-import { AfterViewInit, Component, computed, ElementRef, input, OnInit, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, input, OnInit, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
-import { EventView, getPercentageOfDay } from '../../../ms-graph/calendar.model';
-import { graphToDate } from '../../../ms-graph/graph.model';
+import { EventView, getPercentageOfDay, sortByStartDate } from '../../../ms-graph/calendar.model';
 import { arrayRange } from '../../../utils/array';
+import { alignPosition, convert } from './day-view.model';
 
 @Component({
   selector: 'app-day-view',
@@ -19,27 +19,15 @@ export class DayView implements OnInit {
 
   /**
    * Signal that provides the event and the position where it shall appear.
-   * Indexed by the day.
+   * Index of the array represents a day.
    */
-  readonly positionedEvents = computed(() =>
-    this.events().map((eventView) => {
-      return eventView.events.map((event) => {
-        const id = event.id;
-        const subject = event.subject;
-        const myType = event.myType;
-        const start = graphToDate(event.start);
-        const end = graphToDate(event.end);
-
-        const startMinutes = start.getHours() * 60 + start.getMinutes();
-        const endMinutes = end.getHours() * 60 + end.getMinutes();
-
-        const top = (startMinutes / (24 * 60)) * 100;
-        const height = ((endMinutes - startMinutes) / (24 * 60)) * 100;
-
-        return { id, subject, myType, top, height };
-      });
-    }),
-  );
+  readonly positionedEvents = computed(() => {
+    return this.events().map((view) => {
+      const sortedAndMapped = view.events.sort(sortByStartDate).map(convert);
+      alignPosition(sortedAndMapped);
+      return sortedAndMapped;
+    });
+  });
 
   constructor() {
     const oncePerMinute = 1000 * 60;

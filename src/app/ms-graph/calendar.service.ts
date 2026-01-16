@@ -1,8 +1,9 @@
 import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { arrayRange } from '../utils/array';
+import { isSameDay } from '../utils/date';
 import {
-  CalendarType,
   DateRange,
   EventView,
   getCalendarEvents,
@@ -13,8 +14,7 @@ import {
   MyEvent,
   nextDays,
 } from './calendar.model';
-import { graphToDate, isSameDay } from './graph.model';
-import { arrayRange } from '../utils/array';
+import { graphToDate } from './graph.model';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
