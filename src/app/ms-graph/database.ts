@@ -13,9 +13,13 @@ const db = await openDB('Dashboard', 3, {
       db.deleteObjectStore('metadata');
     }
 
+    // Store for images
     const images = db.createObjectStore('images', { keyPath: 'id' });
     images.createIndex('takenAt', 'takenAt.date');
     images.createIndex('takenAtMonthDay', ['takenAt.month', 'takenAt.day'], { unique: false });
+
+    // Store for metadata (delta link, version, etc.)
+    db.createObjectStore('metadata', { keyPath: 'key' });
   },
 });
 

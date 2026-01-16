@@ -29,7 +29,7 @@ export class DetailViewerComponent implements OnInit {
   });
 
   imageTakenAt = computed(() => {
-    return new Date(this.image().image.takenAt);
+    return new Date(this.image().image.takenAt.date);
   });
 
   constructor() {

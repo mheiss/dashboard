@@ -28,7 +28,7 @@ export class ImageService {
       if (response.value.length === 0) {
         console.log('Images are in sync. Nothing do do.');
       } else {
-        console.log('Processing %s changes.', response.value);
+        console.log('Processing %s changes.', response.value.length);
       }
 
       for (const item of response.value) {
@@ -102,8 +102,13 @@ export class ImageService {
     }
     return getThumbnailBlob(this.httpClient, image).pipe(
       tap((blob) => {
+        const now = new Date();
         image.thumbnailBlob = blob;
-        image.lastModifiedAt = new Date().getTime();
+        image.lastModifiedAt = {
+          date: now.getTime(),
+          day: now.getDay(),
+          month: now.getMonth(),
+        };
         saveImage(image);
       }),
     );
