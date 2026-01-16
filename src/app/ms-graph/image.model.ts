@@ -9,10 +9,45 @@ import { GraphListResponse, MY_GRAPH } from './graph.model';
 export interface DriveImage {
   id: string;
   name: string;
-  takenAt: number;
-  lastModifiedAt: number;
+  takenAt: {
+    date: number;
+    day: number;
+    month: number;
+  };
+  lastModifiedAt: {
+    date: number;
+    day: number;
+    month: number;
+  };
   thumbnailBlob?: Blob;
 }
+
+/**
+ * Creates a new drive image out of the given drive item
+ */
+export const ofDriveItem = (item: DriveItem): DriveImage | null => {
+  if (!item.id || !item.photo) {
+    return null;
+  }
+  const id = item.id;
+  const name = item.name ? item.name : id;
+  const modified = item.lastModifiedDateTime ? new Date(item.lastModifiedDateTime) : new Date();
+  const takenAt = item.photo.takenDateTime ? new Date(item.photo.takenDateTime) : modified;
+  return {
+    id,
+    name,
+    takenAt: {
+      date: takenAt.getTime(),
+      day: takenAt.getDay(),
+      month: takenAt.getMonth(),
+    },
+    lastModifiedAt: {
+      date: modified.getTime(),
+      day: modified.getDay(),
+      month: modified.getMonth(),
+    },
+  };
+};
 
 /**
  * A drive image with a thumbnail and the original size

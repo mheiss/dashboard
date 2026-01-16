@@ -21,44 +21,6 @@ export interface GraphListResponse<T> {
 }
 
 /**
- * Basic result type returned by the QUERY API.
- *
- * For each 'request' entry a single response is created.
- *
- * "requests": [
- *    { ... },
- *    { ... }
- *  ]
- *
- * So in the above use-case we would get two response entries.
- */
-export interface GraphSearchResponse {
-  value: SearchResponseEntry[];
-}
-
-/**
- * A response that corresponds to a search request
- */
-export interface SearchResponseEntry {
-  hitsContainers: SearchHitsContainer[];
-}
-
-/**
- * A container storing results per entity type.
- * Samples: driveItem, message
- */
-export interface SearchHitsContainer {
-  hits: SearchHit[];
-}
-
-/**
- * Represents a single search hit
- */
-export interface SearchHit {
-  resource: DriveItem;
-}
-
-/**
  * Converts a DateTimeTimeZone object to the local timezone.
  * Assumes that the API always returns UTC.
  */

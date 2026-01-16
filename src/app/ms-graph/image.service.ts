@@ -1,8 +1,8 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom, map, of, tap } from 'rxjs';
+import { firstValueFrom, of, tap } from 'rxjs';
 import { getDeltaLink, getImageCount, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
-import { DriveImage, getImages, getNextImages, getThumbnailBlob, DriveImageExt, getImageBlob } from './image.model';
+import { DriveImage, DriveImageExt, getImageBlob, getImages, getNextImages, getThumbnailBlob, ofDriveItem } from './image.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
@@ -20,33 +20,41 @@ export class ImageService {
   async refreshImages() {
     const deltaLink = await getDeltaLink();
     let response$ = deltaLink ? getNextImages(this.httpClient, deltaLink) : getImages(this.httpClient);
+    console.log('Requesting changes from OneDrive...');
 
-    let loading = true;
-    while (loading) {
+    this.loading.set(true);
+    while (this.loading()) {
       let response = await firstValueFrom(response$);
+      if (response.value.length === 0) {
+        console.log('Images are in sync. Nothing do do.');
+      } else {
+        console.log('Processing %s changes.', response.value);
+      }
+
       for (const item of response.value) {
-        if (item.id && item.name && item.photo && item.photo.takenDateTime) {
-          const takenAt = new Date(item.photo.takenDateTime).getTime();
-          const modified = item.lastModifiedDateTime ? new Date(item.lastModifiedDateTime) : new Date();
-          await saveImage({ id: item.id, name: item.name, takenAt: takenAt, lastModifiedAt: modified.getTime() });
-        }
         if (item.id && item.deleted) {
           await removeImage(item.id);
           continue;
+        }
+        const image = ofDriveItem(item);
+        if (image) {
+          await saveImage(image);
         }
       }
 
       // Continue loading as long as we have a next link
       const nextLink = response['@odata.nextLink'];
       if (nextLink) {
+        console.log('Requesting next changes...');
         response$ = getNextImages(this.httpClient, nextLink);
         continue;
       }
 
       // Stop loading and remember the delta link
-      loading = false;
+      this.loading.set(false);
       const deltaLink = response['@odata.deltaLink'];
       if (deltaLink) {
+        console.log('Storing delta link for next time.');
         saveDeltaLink(deltaLink);
       }
     }

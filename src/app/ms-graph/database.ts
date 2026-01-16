@@ -3,33 +3,21 @@ import { from, Observable } from 'rxjs';
 import { CalendarView } from '../ms-graph/calendar.model';
 import { DriveImage } from './image.model';
 
-const db = await openDB('Dashboard', 2, {
-  upgrade(db, oldVersion) {
-    migrateToLatest(db, oldVersion);
-
-    // Store for images
-    const images = db.createObjectStore('images', { keyPath: 'id' });
-    images.createIndex('takenAt', 'takenAt');
-
-    // Store for metadata (delta link, version, etc.)
-    db.createObjectStore('metadata', { keyPath: 'key' });
-  },
-});
-
-/**
- * Migrates the database if possible or drops it
- */
-function migrateToLatest(db: IDBPDatabase<any>, oldVersion: number) {
-  // Schema change: URL to blob -> Drop
-  if (oldVersion < 2) {
+const db = await openDB('Dashboard', 3, {
+  upgrade(db) {
+    // Always drop everything, migration is not worth the effort
     if (db.objectStoreNames.contains('images')) {
       db.deleteObjectStore('images');
     }
     if (db.objectStoreNames.contains('metadata')) {
       db.deleteObjectStore('metadata');
     }
-  }
-}
+
+    const images = db.createObjectStore('images', { keyPath: 'id' });
+    images.createIndex('takenAt', 'takenAt.date');
+    images.createIndex('takenAtMonthDay', ['takenAt.month', 'takenAt.day'], { unique: false });
+  },
+});
 
 /**
  * Loads the next images sorted by 'takenAt' timestamp
