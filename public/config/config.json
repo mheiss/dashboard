@@ -1,18 +1,22 @@
 {
   "graphUrl": "https://graph.microsoft.com/v1.0",
   "images": ["drive/special/cameraroll/delta", "Familie - Ausflüge", "Lena", "Sarah"],
-  "calendar": [
+  "calendars": [
     {
-      "id": "Lena",
+      "name": "Lena",
       "tailwindClasses": "border-sky-600 bg-sky-300"
     },
     {
-      "id": "Sarah",
+      "name": "Sarah",
       "tailwindClasses": "border-fuchsia-600 bg-fuchsia-300"
     },
     {
-      "id": "Familie",
+      "name": "Familie",
       "tailwindClasses": "border-emerald-600 bg-emerald-300"
+    },
+    {
+      "name": "Feiertage",
+      "tailwindClasses": "border-rose-600 bg-rose-300"
     }
   ],
   "msalConfig": {

@@ -12,7 +12,7 @@ export interface AppConfig {
    * The list of calendars to show.
    * This can be a personal calendar or a calendar shared with you.
    */
-  calendar: CalendarConfig[];
+  calendars: CalendarConfig[];
 
   /**
    * The MSAL configuration
@@ -27,7 +27,7 @@ export interface CalendarConfig {
   /**
    * The id/name of the calendar
    */
-  id: string;
+  name: string;
 
   /**
    * The tailwind classes to apply
