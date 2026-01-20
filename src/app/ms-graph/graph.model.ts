@@ -1,10 +1,4 @@
 import { DateTimeTimeZone, NullableOption } from '@microsoft/microsoft-graph-types';
-import { config } from '../../config';
-
-/**
- * The BASE endpoint for the current authenticated user.
- */
-export const MY_GRAPH = `${config.graphUrl}/me`;
 
 /**
  * Basic result type returned by the GRAPH API.

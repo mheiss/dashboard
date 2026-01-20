@@ -1,38 +1,77 @@
-import { HTTP_INTERCEPTORS, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
-import { ApplicationConfig, importProvidersFrom, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import { HTTP_INTERCEPTORS, HttpBackend, HttpClient, provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
+import localeDeAt from '@angular/common/locales/de-AT';
+import { ApplicationConfig, inject, LOCALE_ID, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
-import { MsalBroadcastService, MsalGuard, MsalInterceptor, MsalModule, MsalService } from '@azure/msal-angular';
+import {
+  MSAL_GUARD_CONFIG,
+  MSAL_INSTANCE,
+  MSAL_INTERCEPTOR_CONFIG,
+  MsalBroadcastService,
+  MsalGuard,
+  MsalInterceptor,
+  MsalService,
+} from '@azure/msal-angular';
 import { PublicClientApplication } from '@azure/msal-browser';
 import { AppComponent } from './app/app';
-import { AUTH_CONFIG, GUARD_CONFIG, INTERCEPTOR_CONFIG } from './app/ms-graph/msal.config';
+import { AppConfigService } from './app/feature-config/config.service';
 import { OpenHABService } from './app/feature-openhab/openhab.service';
+import { getGuardConfig, getInterceptorConfig } from './app/ms-graph/msal.config';
 import { routes } from './app/routes';
-import { LOCALE_ID } from '@angular/core';
-import localeDeAt from '@angular/common/locales/de-AT';
-import { registerLocaleData } from '@angular/common';
+import { AppConfig } from './app/feature-config/config.model';
+import { firstValueFrom, tap } from 'rxjs';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(() => {
-      registerLocaleData(localeDeAt);
-
-      const msal = inject(MsalService);
-      msal.handleRedirectObservable().subscribe();
-
       console.log('----------------------------------------');
       console.log('Application starting....');
       console.log('----------------------------------------');
+      registerLocaleData(localeDeAt);
 
       const openHab = inject(OpenHABService);
       openHab.init();
 
-      return msal.initialize();
+      const appService = inject(AppConfigService);
+      const httpBackend = inject(HttpBackend);
+      const httpClient = new HttpClient(httpBackend);
+      return firstValueFrom(
+        httpClient.get<AppConfig>('./config.json').pipe(
+          tap((config) => {
+            console.log('Configuration loaded successful.');
+            appService.config.set(config);
+          }),
+        ),
+      );
     }),
-    provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
+    provideBrowserGlobalErrorListeners(),
     provideHttpClient(withInterceptorsFromDi(), withFetch()),
-    importProvidersFrom(MsalModule.forRoot(new PublicClientApplication(AUTH_CONFIG), GUARD_CONFIG, INTERCEPTOR_CONFIG)),
+    {
+      provide: MSAL_INSTANCE,
+      deps: [AppConfigService],
+      useFactory: (service: AppConfigService) => {
+        const msalConfig = service.config().msalConfig;
+        return new PublicClientApplication(msalConfig);
+      },
+    },
+    {
+      provide: MSAL_GUARD_CONFIG,
+      deps: [AppConfigService],
+      useFactory: (service: AppConfigService) => {
+        const msalConfig = service.config().msalConfig;
+        return getGuardConfig(msalConfig);
+      },
+    },
+    {
+      provide: MSAL_INTERCEPTOR_CONFIG,
+      deps: [AppConfigService],
+      useFactory: (service: AppConfigService) => {
+        const appConfig = service.config();
+        return getInterceptorConfig(appConfig);
+      },
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: MsalInterceptor,

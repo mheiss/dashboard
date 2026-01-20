@@ -1,24 +1,18 @@
-import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { CalendarConfig } from '../feature-config/config.model';
+import { AppConfigService } from '../feature-config/config.service';
 import { arrayRange } from '../utils/array';
 import { isSameDay } from '../utils/date';
-import {
-  DateRange,
-  EventView,
-  getCalendarEvents,
-  getCalendarGroupCalendars,
-  getCalendarGroups,
-  isCalendarType,
-  MyCalendar,
-  MyEvent,
-  nextDays,
-} from './calendar.model';
+import { DateRange, EventView, MyCalendar, MyEvent, nextDays } from './calendar.model';
 import { graphToDate } from './graph.model';
+import { GraphRestService } from './graph.service';
+import { Calendar, Event } from '@microsoft/microsoft-graph-types';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {
-  private readonly httpClient = inject(HttpClient);
+  private readonly graphService = inject(GraphRestService);
+  private readonly appConfigService = inject(AppConfigService);
 
   /**
    * The number of days to display
@@ -32,7 +26,7 @@ export class CalendarService {
 
   /** Refreshes the calendar events */
   async refreshEvents() {
-    const groups = await firstValueFrom(getCalendarGroups(this.httpClient));
+    const groups = await firstValueFrom(this.graphService.getCalendarGroups());
 
     const startDate = new Date();
     const days = arrayRange(0, this.numberOfDays() - 1).map((i) => {
@@ -41,6 +35,7 @@ export class CalendarService {
       d.setDate(startDate.getDate() + i);
       return d;
     });
+    const config = this.appConfigService.config();
 
     // Loop through all calendars in all groups to find the desired ones
     let myCalendars: MyCalendar[] = [];
@@ -48,7 +43,7 @@ export class CalendarService {
       if (!group.id) {
         continue;
       }
-      const calendarsInGroup = await this.getCalendarGroupCalendars(group.id);
+      const calendarsInGroup = await this.getCalendarGroupCalendars(config.calendar, group.id);
       myCalendars = myCalendars.concat(calendarsInGroup);
     }
 
@@ -72,8 +67,8 @@ export class CalendarService {
 
         // Replace events of the calendar that we queried
         for (const view of views) {
-          view.allDay = view.allDay.filter((entry) => entry.myType !== myCalendar.myType);
-          view.events = view.events.filter((entry) => entry.myType !== myCalendar.myType);
+          view.allDay = view.allDay.filter((entry) => entry.myConfig.id !== myCalendar.myConfig.id);
+          view.events = view.events.filter((entry) => entry.myConfig.id !== myCalendar.myConfig.id);
         }
         // Append events
         for (const event of events) {
@@ -110,19 +105,20 @@ export class CalendarService {
   /**
    * Returns the shared calendars to display
    */
-  private async getCalendarGroupCalendars(groupId: string): Promise<MyCalendar[]> {
+  private async getCalendarGroupCalendars(configs: CalendarConfig[], groupId: string): Promise<MyCalendar[]> {
     const result: MyCalendar[] = [];
-    const calendars = await firstValueFrom(getCalendarGroupCalendars(this.httpClient, groupId));
+    const calendars = await firstValueFrom(this.graphService.getCalendarGroupCalendars(groupId));
     for (const calendar of calendars) {
       if (!calendar.id) {
         continue;
       }
       const calendarName = calendar.name;
-      if (!isCalendarType(calendarName)) {
+      const config = configs.find((c) => c.id === calendar.name);
+      if (!config) {
         continue;
       }
       const myCalendar = calendar as MyCalendar;
-      myCalendar.myType = calendarName;
+      myCalendar.myConfig = config;
       myCalendar.myGroupId = groupId;
       result.push(myCalendar);
     }
@@ -133,9 +129,9 @@ export class CalendarService {
    * Lists all events matching the given query.
    */
   async getCalendarEvents(calendar: MyCalendar, range: DateRange): Promise<MyEvent[]> {
-    const events = await firstValueFrom(getCalendarEvents(this.httpClient, range, calendar.myGroupId, calendar.id));
+    const events = await firstValueFrom(this.graphService.getCalendarEvents(range, calendar.myGroupId, calendar.id));
     const myEvents = events.map((e) => e as MyEvent);
-    myEvents.forEach((e) => (e.myType = calendar.myType));
+    myEvents.forEach((e) => (e.myConfig = calendar.myConfig));
     return myEvents;
   }
 }

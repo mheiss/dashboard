@@ -1,4 +1,5 @@
-import { CalendarType, MyEvent } from '../../../ms-graph/calendar.model';
+import { CalendarConfig } from '../../../feature-config/config.model';
+import { MyEvent } from '../../../ms-graph/calendar.model';
 import { graphToDate } from '../../../ms-graph/graph.model';
 import { intersect, Rectangle } from '../../../utils/rectangle';
 
@@ -8,7 +9,7 @@ import { intersect, Rectangle } from '../../../utils/rectangle';
 export interface DayViewEvent {
   id: string;
   subject: string;
-  myType: CalendarType;
+  tailwindClasses: string;
   position: Rectangle;
   slot: number;
 }
@@ -19,11 +20,11 @@ export interface DayViewEvent {
 export const convert = (event: MyEvent): DayViewEvent => {
   const id = event.id;
   const subject = event.subject;
-  const myType = event.myType;
   const position = toRectangle(event, 2, 96);
+  const tailwindClasses = event.myConfig.tailwindClasses;
   const slot = 1;
 
-  return { id, subject, myType, position, slot } as DayViewEvent;
+  return { id, subject, tailwindClasses, position, slot } as DayViewEvent;
 };
 
 /**

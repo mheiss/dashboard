@@ -22,13 +22,15 @@ export class AgendaView {
       const eventsByDay = eventView.events.map((event) => {
         const id = event.id;
         const subject = event.subject;
-        const myType = event.myType;
+        const myConfig = event.myConfig;
 
         const start = graphToDate(event.start);
         const end = graphToDate(event.end);
-        const past = now > end;
-
-        return { id, subject, myType, start, end, past } as AgendaEvent;
+        let tailwindClasses = event.myConfig.tailwindClasses;
+        if (now > end) {
+          tailwindClasses = tailwindClasses + ' opacity-50';
+        }
+        return { id, subject, start, end, tailwindClasses } as AgendaEvent;
       });
       return eventsByDay.sort((a, b) => a.start.getTime() - b.start.getTime());
     });

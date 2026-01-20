@@ -1,4 +1,6 @@
-<div class="grid h-full" [ngClass]="{
+<div
+  class="grid h-full"
+  [ngClass]="{
     'grid-cols-[45px_repeat(1,minmax(0,1fr))]': events().length === 1,
     'grid-cols-[45px_repeat(2,minmax(0,1fr))]': events().length === 2,
     'grid-cols-[45px_repeat(3,minmax(0,1fr))]': events().length === 3,
@@ -6,28 +8,24 @@
     'grid-cols-[45px_repeat(5,minmax(0,1fr))]': events().length === 5,
     'grid-cols-[45px_repeat(6,minmax(0,1fr))]': events().length === 6,
     'grid-cols-[45px_repeat(7,minmax(0,1fr))]': events().length === 7,
-  }">
+  }"
+>
   <div class="border-r bg-gray-50 px-2 py-1"></div>
-  @for (event of agendaEvents(); track $index) {
-  <div class="border-r bg-white">
-    <div class="mt-2">
-      @for (event of event; track event.id) {
-      <div
-        class="min-h-14 m-1 overflow-hidden rounded border border-b border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
-        [ngClass]="{
-              'border-emerald-600 bg-emerald-300': event.myType === 'Familie',
-              'border-fuchsia-600 bg-fuchsia-300': event.myType === 'Sarah',
-              'border-sky-600 bg-sky-300': event.myType === 'Lena',
-              'opacity-50':event.past,
-            }">
-        <div class="text-base font-bold">
-          {{ event.subject }}
-        </div>
-        <div class="mt-2 text-sm text-stone-500">{{ event.start | date: 'HH:mm' }} - {{ event.end | date: 'HH:mm' }}
-        </div>
+  @for (dayEvents of agendaEvents(); track $index) {
+    <div class="border-r bg-white">
+      <div class="mt-2">
+        @for (event of dayEvents; track event.id) {
+          <div
+            class="m-1 min-h-14 overflow-hidden rounded border border-b border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
+            [ngClass]="event.tailwindClasses"
+          >
+            <div class="text-base font-bold">
+              {{ event.subject }}
+            </div>
+            <div class="mt-2 text-sm text-stone-500">{{ event.start | date: 'HH:mm' }} - {{ event.end | date: 'HH:mm' }}</div>
+          </div>
+        }
       </div>
-      }
     </div>
-  </div>
   }
 </div>

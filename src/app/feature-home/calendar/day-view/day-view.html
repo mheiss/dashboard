@@ -37,15 +37,11 @@
 
     <!-- Events -->
     <div class="relative h-full">
-      @for (item of dayEvents; track item.id;) {
+      @for (event of dayEvents; track event.id;) {
       <div class="absolute overflow-hidden rounded border border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
-        [style.top.%]="item.position.y" [style.left.%]="item.position.x" [style.height.%]="item.position.height"
-        [style.width.%]="item.position.width" [ngClass]="{
-              'border-emerald-600 bg-emerald-300': item.myType === 'Familie',
-              'border-fuchsia-600 bg-fuchsia-300': item.myType === 'Sarah',
-              'border-sky-600 bg-sky-300': item.myType === 'Lena',
-            }">
-        {{ item.subject }}
+        [style.top.%]="event.position.y" [style.left.%]="event.position.x" [style.height.%]="event.position.height"
+        [style.width.%]="event.position.width" [ngClass]="event.tailwindClasses">
+        {{ event.subject }}
       </div>
       }
     </div>

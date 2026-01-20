@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source '../public/config.json';
 
 @font-face {
   font-family: 'AtkinsonHyperlegible';
@@ -62,7 +63,6 @@ body {
 * Custom Animations and Styles
 */
 @layer utilities {
-
   @keyframes left-right {
     from {
       transform: translateX(-25px);

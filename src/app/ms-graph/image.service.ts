@@ -1,12 +1,12 @@
-import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { firstValueFrom, of, tap } from 'rxjs';
 import { getDeltaLink, getImageCount, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
-import { DriveImage, DriveImageExt, getImageBlob, getImages, getNextImages, getThumbnailBlob, ofDriveItem } from './image.model';
+import { GraphRestService } from './graph.service';
+import { DriveImage, DriveImageExt, toDriveImage } from './image.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
-  private readonly httpClient = inject(HttpClient);
+  private readonly graphService = inject(GraphRestService);
 
   readonly loading = signal(false);
   readonly images = signal<DriveImageExt[]>([]);
@@ -19,7 +19,7 @@ export class ImageService {
    */
   async refreshImages() {
     const deltaLink = await getDeltaLink();
-    let response$ = deltaLink ? getNextImages(this.httpClient, deltaLink) : getImages(this.httpClient);
+    let response$ = deltaLink ? this.graphService.getNextImages(deltaLink) : this.graphService.getImages();
     console.log('Requesting changes from OneDrive...');
 
     this.loading.set(true);
@@ -28,7 +28,7 @@ export class ImageService {
       if (response.value.length === 0) {
         console.log('Images are in sync. Nothing do do.');
       } else {
-        console.log('Processing %s changes.', response.value.length);
+        console.log('Processing next block with %s items.).', response.value.length);
       }
 
       for (const item of response.value) {
@@ -36,7 +36,7 @@ export class ImageService {
           await removeImage(item.id);
           continue;
         }
-        const image = ofDriveItem(item);
+        const image = toDriveImage(item);
         if (image) {
           await saveImage(image);
         }
@@ -46,7 +46,7 @@ export class ImageService {
       const nextLink = response['@odata.nextLink'];
       if (nextLink) {
         console.log('Requesting next changes...');
-        response$ = getNextImages(this.httpClient, nextLink);
+        response$ = this.graphService.getNextImages(nextLink);
         continue;
       }
 
@@ -86,7 +86,7 @@ export class ImageService {
       const imageExts: DriveImageExt[] = [];
       for (const image of response.items) {
         const thumbnail$ = this.getThumbnail(image);
-        const original$ = getImageBlob(this.httpClient, image);
+        const original$ = this.graphService.getImageBlob(image);
         imageExts.push({ image, thumbnail$, original$ });
       }
       this.images.update((images) => {
@@ -100,7 +100,7 @@ export class ImageService {
     if (image.thumbnailBlob) {
       return of(image.thumbnailBlob);
     }
-    return getThumbnailBlob(this.httpClient, image).pipe(
+    return this.graphService.getThumbnailBlob(image).pipe(
       tap((blob) => {
         const now = new Date();
         image.thumbnailBlob = blob;

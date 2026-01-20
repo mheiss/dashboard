@@ -1,13 +1,11 @@
-import { CalendarType } from '../../../ms-graph/calendar.model';
-
 /**
  * Event displayed in the agenda view.
  */
 export interface AgendaEvent {
   id: string;
   subject: string;
-  myType: CalendarType;
+  tailwindClasses: string;
   start: Date;
   end: Date;
-  past:boolean;
+  past: boolean;
 }
