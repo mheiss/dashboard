@@ -2,7 +2,7 @@ import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { EventView } from '../../../ms-graph/calendar.model';
 import { graphToDate } from '../../../ms-graph/graph.model';
-import { AgendaEvent } from './aganda-view.model';
+import { AgendaEvent } from './agenda-view.model';
 
 @Component({
   selector: 'app-agenda-view',
@@ -22,7 +22,6 @@ export class AgendaView {
       const eventsByDay = eventView.events.map((event) => {
         const id = event.id;
         const subject = event.subject;
-        const myConfig = event.myConfig;
 
         const start = graphToDate(event.start);
         const end = graphToDate(event.end);

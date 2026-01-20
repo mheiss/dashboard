@@ -1,5 +1,5 @@
 import { DecimalPipe, NgClass } from '@angular/common';
-import { Component, computed, ElementRef, input, OnInit, viewChild } from '@angular/core';
+import { Component, computed, effect, ElementRef, input, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 import { EventView, getPercentageOfDay, sortByStartDate } from '../../../ms-graph/calendar.model';
@@ -11,11 +11,11 @@ import { alignPosition, convert } from './day-view.model';
   templateUrl: './day-view.html',
   imports: [NgClass, DecimalPipe],
 })
-export class DayView implements OnInit {
+export class DayView {
   readonly events = input.required<EventView[]>();
   readonly hoursOfDay: number[] = arrayRange(0, 23);
 
-  readonly nowMarker = viewChild.required<ElementRef<HTMLDivElement>>('now');
+  readonly nowMarker = viewChild<ElementRef<HTMLDivElement>>('now');
 
   /**
    * Signal that provides the event and the position where it shall appear.
@@ -34,14 +34,17 @@ export class DayView implements OnInit {
     interval(oncePerMinute)
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.updateMarker());
-  }
 
-  ngOnInit(): void {
-    setTimeout(() => this.updateMarker(), 0);
+    effect(() => {
+      this.updateMarker();
+    });
   }
 
   updateMarker() {
-    const div = this.nowMarker().nativeElement;
-    div.style.top = getPercentageOfDay() + '%';
+    const marker = this.nowMarker();
+    if (marker) {
+      const div = marker.nativeElement;
+      div.style.top = getPercentageOfDay() + '%';
+    }
   }
 }

@@ -27,9 +27,9 @@ export class Calendar {
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.updateScrollContainer());
 
-    const storedView = getCalendarView().then((view) => {
-      if (isCalendarView(storedView)) {
-        this.view.set(storedView);
+    getCalendarView().then((view) => {
+      if (isCalendarView(view)) {
+        this.view.set(view);
       }
     });
 
