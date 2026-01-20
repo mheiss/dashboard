@@ -36,6 +36,6 @@ export const getGuardConfig = (config: MsalConfig): MsalGuardConfiguration => {
 export const getInterceptorConfig = (appConfig: AppConfig): MsalInterceptorConfiguration => {
   return {
     interactionType: InteractionType.Redirect,
-    protectedResourceMap: new Map([[appConfig.graphUrl, appConfig.msalConfig.authRequest.scope]]),
+    protectedResourceMap: new Map([[appConfig.graphUrl, appConfig.msalConfig.scope]]),
   };
 };
