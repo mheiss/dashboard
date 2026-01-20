@@ -28,7 +28,7 @@ export class ImageService {
       if (response.value.length === 0) {
         console.log('Images are in sync. Nothing do do.');
       } else {
-        console.log('Processing next block with %s items.).', response.value.length);
+        console.log('Processing next block with %s items.', response.value.length);
       }
 
       for (const item of response.value) {

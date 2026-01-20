@@ -14,13 +14,12 @@ import {
   MsalService,
 } from '@azure/msal-angular';
 import { PublicClientApplication } from '@azure/msal-browser';
-import { AppComponent } from './app/app';
-import { AppConfigService } from './app/feature-config/config.service';
-import { OpenHABService } from './app/feature-openhab/openhab.service';
-import { getGuardConfig, getInterceptorConfig } from './app/ms-graph/msal.config';
-import { routes } from './app/routes';
-import { AppConfig } from './app/feature-config/config.model';
 import { firstValueFrom, tap } from 'rxjs';
+import { AppComponent } from './app/app';
+import { AppConfig } from './app/feature-config/config.model';
+import { AppConfigService } from './app/feature-config/config.service';
+import { getAuthConfig, getGuardConfig, getInterceptorConfig } from './app/ms-graph/msal.config';
+import { routes } from './app/routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -30,16 +29,15 @@ export const appConfig: ApplicationConfig = {
       console.log('----------------------------------------');
       registerLocaleData(localeDeAt);
 
-      const openHab = inject(OpenHABService);
-      openHab.init();
-
+      // Manually create a HTTP client to avoid that the MSAL interceptors
+      // are created before loading the config
       const appService = inject(AppConfigService);
       const httpBackend = inject(HttpBackend);
       const httpClient = new HttpClient(httpBackend);
       return firstValueFrom(
-        httpClient.get<AppConfig>('./config.json').pipe(
+        httpClient.get<AppConfig>('./config/config.json').pipe(
           tap((config) => {
-            console.log('Configuration loaded successful.');
+            console.log('Configuration successful loaded.');
             appService.config.set(config);
           }),
         ),
@@ -52,7 +50,7 @@ export const appConfig: ApplicationConfig = {
       provide: MSAL_INSTANCE,
       deps: [AppConfigService],
       useFactory: (service: AppConfigService) => {
-        const msalConfig = service.config().msalConfig;
+        const msalConfig = getAuthConfig(service.config().msalConfig);
         return new PublicClientApplication(msalConfig);
       },
     },

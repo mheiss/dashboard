@@ -8,8 +8,8 @@ import { AppConfig, MsalConfig } from '../feature-config/config.model';
 export const getAuthConfig = (config: MsalConfig) => {
   return {
     auth: {
-      clientId: config.auth.clientId,
-      authority: config.auth.authority,
+      clientId: config.clientId,
+      authority: config.authority,
       redirectUri: '/',
     },
     cache: {
@@ -25,7 +25,7 @@ export const getGuardConfig = (config: MsalConfig): MsalGuardConfiguration => {
   return {
     interactionType: InteractionType.Redirect,
     authRequest: {
-      scopes: config.authRequest.scope,
+      scopes: config.scope,
     },
   };
 };

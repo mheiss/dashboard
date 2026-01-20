@@ -1,6 +1,4 @@
-import { HttpClient } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Injectable, signal } from '@angular/core';
 import { AppConfig } from './config.model';
 
 @Injectable({ providedIn: 'root' })

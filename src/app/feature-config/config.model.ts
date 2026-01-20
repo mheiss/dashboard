@@ -40,13 +40,9 @@ export interface CalendarConfig {
  * https://portal.azure.com/?utm_source=copilot.com#view/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/~/Overview
  */
 export interface MsalConfig {
-  auth: {
-    clientId: string;
-    authority: string;
-  };
-  authRequest: {
-    scope: AuthScope[];
-  };
+  clientId: string;
+  authority: string;
+  scope: AuthScope[];
 }
 
 export type AuthScope = 'User.Read' | 'Calendars.Read' | 'Files.Read';
