@@ -3,15 +3,14 @@
   <!-- Calendar Column -->
   <div class="flex gap-4 h-[50%] md:w-2/5 md:h-full">
     <div class="flex-1 min-h-0 rounded bg-white p-4">
-      <app-calendar class="block h-full min-h-0" [events]="calendarService.events()"></app-calendar>
+      <app-calendar class="block h-full min-h-0"></app-calendar>
     </div>
   </div>
 
   <!-- Gallery Column -->
   <div class="flex h-[50%] md:w-3/5 md:h-full">
     <div class="flex-1 min-h-0 rounded bg-white p-4">
-      <app-gallery class="block h-full min-h-0" [images]="imageService.images()"
-        [imageCount]="imageService.imageCount()" (loadMore)="imageService.loadMore()"></app-gallery>
+      <app-gallery class="block h-full min-h-0"></app-gallery>
     </div>
   </div>
 

@@ -1,12 +1,13 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, effect, ElementRef, inject, input, signal, viewChild } from '@angular/core';
+import { Component, effect, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
-import { CalendarView, EventView, getPercentageOfDay, isCalendarView } from '../../ms-graph/calendar.model';
+import { CalendarView, getPercentageOfDay, isCalendarView } from '../../ms-graph/calendar.model';
+import { CalendarService } from '../../ms-graph/calendar.service';
 import { getCalendarView, saveCalendarView } from '../../ms-graph/database';
+import { LayoutService } from '../../utils/layout.service';
 import { AgendaView } from './agenda-view/agenda-view';
 import { DayView } from './day-view/day-view';
-import { LayoutService } from '../../utils/layout.service';
 
 @Component({
   selector: 'app-calendar',
@@ -15,17 +16,23 @@ import { LayoutService } from '../../utils/layout.service';
 })
 export class Calendar {
   readonly layout = inject(LayoutService);
+  readonly source = inject(CalendarService);
 
-  readonly events = input.required<EventView[]>();
+  readonly events = this.source.events.asReadonly();
   readonly view = signal<CalendarView>('Agenda');
 
   readonly scrollContainer = viewChild.required<ElementRef<HTMLDivElement>>('container');
 
   constructor() {
-    const oncePerMinute = 1000 * 60;
-    interval(oncePerMinute)
+    const oneMinute = 1000 * 60;
+    interval(oneMinute)
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.updateScrollContainer());
+
+    const tenMinutes = 1000 * 10 * 60;
+    interval(tenMinutes)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.source.refreshEvents());
 
     getCalendarView().then((view) => {
       if (isCalendarView(view)) {

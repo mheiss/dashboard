@@ -1,15 +1,14 @@
 @if (images().length === 0) {
-<div class="text-gray-500">Lade Bilder...</div>
+  <div class="text-gray-500">Lade Bilder...</div>
 }
-<cdk-virtual-scroll-viewport #gallery class="h-full w-full overflow-auto p-2" [itemSize]="220"
-  (scrolledIndexChange)="loadMore.emit()">
+<cdk-virtual-scroll-viewport #gallery class="h-full w-full overflow-auto p-2" [itemSize]="220" (scrolledIndexChange)="service.loadMore()">
   @for (row of rows(); track $index) {
-  <div class="grid gap-2 p-1" [style.gridTemplateColumns]="'repeat('+columns()+', 1fr)'">
-    @for (imageExt of row; track imageExt.image.id) {
-    <div class="aspect-square overflow-hidden rounded bg-gray-100" (click)="openDetailView(imageExt)">
-      <img class="h-full w-full object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
+    <div class="grid gap-2 p-1" [style.gridTemplateColumns]="'repeat(' + columns() + ', 1fr)'">
+      @for (imageExt of row; track imageExt.image.id) {
+        <div class="aspect-square overflow-hidden rounded bg-gray-100" (click)="openDetailView(imageExt)">
+          <img class="h-full w-full object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
+        </div>
+      }
     </div>
-    }
-  </div>
   }
 </cdk-virtual-scroll-viewport>
