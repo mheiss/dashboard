@@ -4,10 +4,10 @@
 export interface AppConfig {
   graphUrl: string;
   /**
-   * The list of drive folders to show.
-   * This can be a  personal folder or a folder shared with you.
+   * The list of folders to show in the gallery.
+   * Path must be starting from the root.
    */
-  images: string[];
+  folders: string[];
   /**
    * The list of calendars to show.
    * This can be a personal calendar or a calendar shared with you.

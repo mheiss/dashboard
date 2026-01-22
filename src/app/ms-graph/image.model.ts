@@ -6,6 +6,7 @@ import { Observable } from 'rxjs';
  */
 export interface DriveImage {
   id: string;
+  driveId: string;
   name: string;
   takenAt: DateExt;
   lastModifiedAt: DateExt;
@@ -26,15 +27,21 @@ export interface DateExt {
  * Returns null if the given item is no photo at all.
  */
 export const toDriveImage = (item: DriveItem): DriveImage | null => {
-  if (!item.id || !item.photo) {
+  if (!item.id || !item.parentReference?.driveId || !item.photo) {
     return null;
   }
-  const id = item.id;
+  let id = item.id;
+  let driveId = item.parentReference?.driveId;
+  if (item.remoteItem?.id && item.remoteItem.parentReference?.driveId) {
+    id = item.remoteItem.id;
+    driveId = item.remoteItem.parentReference.driveId;
+  }
   const name = item.name ? item.name : id;
   const takenAt = toDateExt(item.photo?.takenDateTime);
   const lastModifiedAt = toDateExt(item.lastModifiedDateTime);
   return {
     id,
+    driveId,
     name,
     takenAt,
     lastModifiedAt,

@@ -1,10 +1,10 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Calendar, Event, CalendarGroup, DriveItem } from '@microsoft/microsoft-graph-types';
+import { Calendar, CalendarGroup, DriveItem, Event, NullableOption, RemoteItem } from '@microsoft/microsoft-graph-types';
 import { map, Observable } from 'rxjs';
 import { AppConfigService } from '../feature-config/config.service';
 import { DateRange } from './calendar.model';
-import { GraphListResponse } from './graph.model';
+import { GraphListResponse, logGraphListError } from './graph.model';
 
 @Injectable({ providedIn: 'root' })
 export class GraphRestService {
@@ -24,50 +24,60 @@ export class GraphRestService {
     params.append('endDateTime', range.end.toISOString());
     params.append('orderby', 'start/dateTime');
 
-    const url = `${this.config.myGraph()}/${endpoint}?${params.toString()}`;
-    return this.client.get<GraphListResponse<Event[]>>(url).pipe(map((data) => data.value));
+    const url = `${this.config.graph()}/me/${endpoint}?${params.toString()}`;
+    return this.client.get<GraphListResponse<Event>>(url).pipe(map((data) => data.value));
   }
 
   /**
    * List all calendars
    */
   getCalendarGroups(): Observable<CalendarGroup[]> {
-    const endpoint = 'calendarGroups';
-    const url = `${this.config.myGraph()}/${endpoint}`;
-    return this.client.get<GraphListResponse<CalendarGroup[]>>(url).pipe(map((data) => data.value));
+    const url = `${this.config.graph()}/me/calendarGroups`;
+    return this.client.get<GraphListResponse<CalendarGroup>>(url).pipe(map((data) => data.value));
   }
 
   /**
    * Returns a list of all calendars in the given group
    */
   getCalendarGroupCalendars(groupId: string): Observable<Calendar[]> {
-    const url = `${this.config.myGraph()}/calendarGroups/${groupId}/calendars`;
-    return this.client.get<GraphListResponse<Calendar[]>>(url).pipe(map((data) => data.value));
+    const url = `${this.config.graph()}/me/calendarGroups/${groupId}/calendars`;
+    return this.client.get<GraphListResponse<Calendar>>(url).pipe(map((data) => data.value));
   }
 
   /**
-   * List all images in the camera backup folder.
+   * Returns the item with the given path.
    */
-  getImages(): Observable<GraphListResponse<DriveItem[]>> {
-    const endpoint = `drive/special/cameraroll/delta`;
+  getItem(path: string): Observable<DriveItem> {
+    const url = `${this.config.graph()}/me/drive/root:/${path}`;
+    return this.client.get<DriveItem>(url);
+  }
 
-    const url = `${this.config.myGraph()}/${endpoint}`;
-    return this.client.get<GraphListResponse<DriveItem[]>>(url);
+  /**
+   * Start to track changes to the given item and its children.
+   */
+  getChanges(item: DriveItem) {
+    let itemId: NullableOption<string> | undefined = item.id;
+    let driveId: NullableOption<string> | undefined = item.parentReference?.driveId;
+    if (item.remoteItem) {
+      itemId = item.remoteItem.id;
+      driveId = item.remoteItem.parentReference?.driveId;
+    }
+    const url = `${this.config.graph()}/drives/${driveId}/items/${itemId}/delta`;
+    return this.client.get<GraphListResponse<DriveItem>>(url).pipe(logGraphListError());
   }
 
   /**
    * Loads more images with the provided link
    */
-  getNextImages(nextLink: string) {
-    return this.client.get<GraphListResponse<DriveItem[]>>(nextLink);
+  getNextChanges(nextLink: string) {
+    return this.client.get<GraphListResponse<DriveItem>>(nextLink);
   }
 
   /**
    * Returns the thumbnail of a given item.
    */
   getThumbnailBlob(item: DriveItem): Observable<any> {
-    const endpoint = `drive/items/${item.id}/thumbnails/0/large/content`;
-    const url = `${this.config.myGraph()}/${endpoint}`;
+    const url = `${this.config.graph()}/me/drive/items/${item.id}/thumbnails/0/large/content`;
     return this.client.get(url, {
       responseType: 'blob',
     });
@@ -78,7 +88,7 @@ export class GraphRestService {
    */
   getImageBlob = (item: DriveItem): Observable<any> => {
     const endpoint = `drive/items/${item.id}/content`;
-    const url = `${this.config.myGraph()}/${endpoint}`;
+    const url = `${this.config.graph()}/me/${endpoint}`;
     return this.client.get(url, {
       responseType: 'blob',
     });

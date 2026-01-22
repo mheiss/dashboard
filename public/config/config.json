@@ -1,6 +1,6 @@
 {
   "graphUrl": "https://graph.microsoft.com/v1.0",
-  "images": ["drive/special/cameraroll/delta", "Familie - Ausflüge", "Lena", "Sarah"],
+  "folders": ["Pictures/#Uploads", "Familie - Ausflüge", "Lena", "Sarah"],
   "calendars": [
     {
       "name": "Lena",

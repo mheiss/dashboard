@@ -1,22 +1,22 @@
-import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
+import { CdkVirtualScrollViewport, ScrollingModule, CdkVirtualForOf } from '@angular/cdk/scrolling';
 import { AsyncPipe } from '@angular/common';
-import { Component, computed, inject, input, OnInit, output, viewChild } from '@angular/core';
+import { Component, computed, inject, OnInit, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { distinctUntilChanged, filter, interval, map, tap } from 'rxjs';
 import { DriveImageExt } from '../../ms-graph/image.model';
+import { ImageService } from '../../ms-graph/image.service';
 import { PopupService } from '../../popup/popup.service';
 import { LayoutService } from '../../utils/layout.service';
 import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
 import { DetailViewerData } from './gallery.model';
-import { ImageService } from '../../ms-graph/image.service';
-import { interval } from 'rxjs';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-gallery',
   templateUrl: './gallery.html',
   imports: [ScrollingModule, AsyncPipe, BlobSrcDirective],
 })
-export class GalleryComponent {
+export class GalleryComponent implements OnInit {
   readonly dialog = inject(PopupService);
   readonly layout = inject(LayoutService);
   readonly service = inject(ImageService);
@@ -61,6 +61,16 @@ export class GalleryComponent {
     interval(oncePerHour)
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.service.refreshImages());
+  }
+
+  ngOnInit(): void {
+    this.gallery()
+      .renderedRangeStream.pipe(
+        map((range) => range.end),
+        map((end) => end * this.columns()),
+        filter((end) => end >= this.images().length - 10),
+      )
+      .subscribe(() => this.service.loadMore());
   }
 
   openDetailView(image: DriveImageExt) {

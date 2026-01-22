@@ -2,7 +2,11 @@ import { IDBPDatabase, openDB } from 'idb';
 import { from, Observable } from 'rxjs';
 import { CalendarView } from '../ms-graph/calendar.model';
 import { DriveImage } from './image.model';
+import { DriveItem } from '@microsoft/microsoft-graph-types';
 
+// V3:
+//    + image.takenAt.Month/Day
+//    + image.driveId
 const db = await openDB('Dashboard', 3, {
   upgrade(db) {
     // Always drop everything, migration is not worth the effort
@@ -76,7 +80,7 @@ export function getImage(image: DriveImage) {
 }
 
 /**
- * Removes the given item in the local database
+ * Removes the given item from the local database
  */
 export async function removeImage(id: string) {
   await db.delete('images', id);
@@ -85,15 +89,15 @@ export async function removeImage(id: string) {
 /**
  * Stores the delta link to get new image
  */
-export async function saveDeltaLink(deltaLink: string) {
-  await db.put('metadata', { key: 'images.deltaLink', value: deltaLink });
+export async function saveDeltaLink(item: DriveItem, deltaLink: string) {
+  await db.put('metadata', { key: `${item.id}.deltaLink`, value: deltaLink });
 }
 
 /**
  * Returns the delta link to get new images
  */
-export async function getDeltaLink(): Promise<string | null> {
-  const entry = await db.get('metadata', 'images.deltaLink');
+export async function getDeltaLink(item: DriveItem): Promise<string | null> {
+  const entry = await db.get('metadata', `${item.id}.deltaLink`);
   return entry?.value ?? null;
 }
 

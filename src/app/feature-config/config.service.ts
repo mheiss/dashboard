@@ -11,7 +11,7 @@ export class AppConfigService {
   /**
    * The BASE endpoint for the current authenticated user.
    */
-  myGraph() {
-    return `${this.config().graphUrl}/me`;
+  graph() {
+    return `${this.config().graphUrl}`;
   }
 }

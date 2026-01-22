@@ -1,12 +1,26 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DateTimeTimeZone, NullableOption } from '@microsoft/microsoft-graph-types';
+import { catchError, of, OperatorFunction } from 'rxjs';
 
 /**
  * Basic result type returned by the GRAPH API.
  */
 export interface GraphListResponse<T> {
-  value: T;
+  value: T[];
   '@odata.nextLink'?: string;
   '@odata.deltaLink'?: string;
+  '@app.error'?: HttpErrorResponse;
+}
+
+/**
+ * A RXJS operator that catches HTTP errors during graph list request and returns an empty response with an error set.
+ */
+export function logGraphListError<T>(): OperatorFunction<GraphListResponse<T>, GraphListResponse<T>> {
+  return catchError((e) => {
+    console.log('Failed to query data.', e);
+    const response: GraphListResponse<T> = { value: [], '@app.error': e };
+    return of(response);
+  });
 }
 
 /**
