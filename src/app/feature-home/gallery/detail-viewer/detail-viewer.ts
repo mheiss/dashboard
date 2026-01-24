@@ -1,23 +1,25 @@
 import { DIALOG_DATA } from '@angular/cdk/dialog';
-import { DatePipe, NgClass } from '@angular/common';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
+import { AsyncPipe, DatePipe, NgClass } from '@angular/common';
 import { Component, computed, effect, ElementRef, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 import { delay, first } from 'rxjs';
 import { DriveImageExt } from '../../../ms-graph/image.model';
-import { Popup } from '../../../popup/popup';
 import { BlobSrcDirective } from '../blob.directive';
 import { DetailViewerData } from '../gallery.model';
+import { Popup } from '../../../popup/popup';
 
 @Component({
   selector: 'app-detail-viewer',
   templateUrl: './detail-viewer.html',
-  imports: [NgClass, DatePipe, BlobSrcDirective, Popup],
+  imports: [NgClass, DatePipe, AsyncPipe, BlobSrcDirective, ScrollingModule, Popup],
 })
 export class DetailViewerComponent implements OnInit {
   readonly data: DetailViewerData = inject(DIALOG_DATA).data;
   readonly image = signal<DriveImageExt>(this.data.image);
   readonly imageBlob = signal<Blob | null>(null);
   readonly images = this.data.images;
+  readonly gallery = viewChild.required<CdkVirtualScrollViewport>('gallery');
   readonly imageElement = viewChild.required<ElementRef<HTMLImageElement>>('imageElement');
   readonly originalLoaded = signal<boolean>(false);
 
@@ -60,6 +62,7 @@ export class DetailViewerComponent implements OnInit {
       maxScale: 5,
       minScale: 1,
     });
+    this.showImage(this.image());
   }
 
   hasNext() {
@@ -70,23 +73,28 @@ export class DetailViewerComponent implements OnInit {
     return this.images().indexOf(this.image()) > 0;
   }
 
-  onNext() {
+  showImage(image: DriveImageExt) {
+    // Reset scrolling as we do not have any other means to do it via UI
     this.panzoom.reset();
 
-    const index = this.images().indexOf(this.image());
+    // Display the image
+    this.image.set(image);
+    const index = this.images().indexOf(image);
+    this.gallery().scrollToIndex(index - 5, 'smooth');
 
     // Trigger loading more if we reach the end
-    if (index == this.images().length - 2) {
+    if (index == this.images().length - 10) {
       this.data.loadMore();
     }
+  }
 
-    this.image.set(this.images()[index + 1]);
+  onNext() {
+    const index = this.images().indexOf(this.image());
+    this.showImage(this.images()[index + 1]);
   }
 
   onPrevious() {
-    this.panzoom.reset();
-
     const index = this.images().indexOf(this.image());
-    this.image.set(this.images()[index - 1]);
+    this.showImage(this.images()[index - 1]);
   }
 }
