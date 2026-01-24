@@ -57,7 +57,7 @@ export const toDateExt = (dateAsString: NullableOption<string> | undefined) => {
     const date = new Date(dateAsString);
     return {
       date: date.getTime(),
-      day: date.getDay(),
+      day: date.getDate(),
       month: date.getMonth(),
     };
   }

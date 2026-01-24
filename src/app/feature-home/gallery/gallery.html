@@ -1,12 +1,28 @@
+<div class=" text-stone-900 font-bold text-2xl px-1 py-2"> An diesem Tag </div>
 @if (service.loading()) {
-  <div class="text-gray-500">Lade Bilder...</div>
+<div class="text-gray-500">Lade...</div>
 }
-<cdk-virtual-scroll-viewport #gallery class="h-full w-full overflow-auto p-2" [itemSize]="220">
-  <div *cdkVirtualFor="let row of rows()" class="grid gap-2 p-1" [style.gridTemplateColumns]="'repeat(' + columns() + ', 1fr)'">
+<div class="flex flex-row gap-2 justify-around bg-gray-00 mb-2 py-2" [style.margin-right.px]="layout.scrollbarSize()">
+  @for (moment of momentsByDay(); track $index) {
+  <div (click)="openMomentView(moment)" class="relative border rounded-2xl justify-baseline h-full overflow-hidden">
+    <div class="absolute bottom-0 inset-0 flex items-center justify-center text-gray-100 text-xl font-semibold">
+      {{moment.day}}
+    </div>
+    <img class="h-32 w-32 object-cover" [blobSrc]="moment.images[0].thumbnail$ | async" />
+  </div>
+  }
+</div>
+<div class=" text-stone-900 font-bold text-2xl px-1 py-2"> Gallerie </div>
+@if (service.loading()) {
+<div class="text-gray-500">Lade...</div>
+}
+<cdk-virtual-scroll-viewport #gallery class="h-[calc(100%-250px)] w-full overflow-auto p-2" [itemSize]="200">
+  <div *cdkVirtualFor="let row of rows()" class="grid gap-2 p-1"
+    [style.gridTemplateColumns]="'repeat(' + columns() + ', 1fr)'">
     @for (imageExt of row; track imageExt.image.id) {
-      <div class="aspect-square overflow-hidden rounded bg-gray-100" (click)="openDetailView(imageExt)">
-        <img class="h-full w-full object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
-      </div>
+    <div class="aspect-square overflow-hidden rounded bg-gray-100" (click)="openDetailView(imageExt)">
+      <img class="h-full w-full object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
+    </div>
     }
   </div>
 </cdk-virtual-scroll-viewport>

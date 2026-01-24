@@ -2,7 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { DriveItem } from '@microsoft/microsoft-graph-types';
 import { firstValueFrom, of, tap } from 'rxjs';
 import { AppConfigService } from '../feature-config/config.service';
-import { getDeltaLink, getImageCount, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
+import { getDeltaLink, getImageCount, loadImages, loadMoments, removeImage, saveDeltaLink, saveImage } from './database';
 import { GraphRestService } from './graph.service';
 import { DriveImage, DriveImageExt, toDriveImage } from './image.model';
 
@@ -11,9 +11,10 @@ export class ImageService {
   private readonly graphService = inject(GraphRestService);
   private readonly appConfigService = inject(AppConfigService);
 
-  readonly loading = signal(false);
+  readonly loading = signal(true);
   readonly folders = signal<DriveItem[]>([]);
   readonly images = signal<DriveImageExt[]>([]);
+  readonly moments = signal<DriveImageExt[]>([]);
   readonly imageCount = signal(0);
 
   nextKey: IDBValidKey | null;
@@ -28,9 +29,13 @@ export class ImageService {
   /**
    * Obtains the latest changes of all configured folders
    */
-  refreshImages() {
-    // Fetch all changes in all folders
+  async refreshImages() {
+    if (!this.folders()) {
+      return;
+    }
     this.loading.set(true);
+
+    // Fetch all changes in all folders
     const tasks: Promise<void>[] = [];
     for (const folder of this.folders()) {
       const task = this.refreshImagesOf(folder);
@@ -45,6 +50,9 @@ export class ImageService {
         this.imageCount.set(count);
       });
 
+      // Refresh moments
+      this.refreshMoments();
+
       // Update images when done
       this.nextKey = null;
       this.images.set([]);
@@ -53,7 +61,33 @@ export class ImageService {
   }
 
   /**
-   * Obtains the latest changes of the given folder
+   * Fetches images what happened on this day throughout the years
+   */
+  async refreshMoments() {
+    let date = new Date();
+    let found = 0;
+    let daysBack = 0;
+
+    const moments: DriveImageExt[] = [];
+    while (found < 4 && daysBack < 10) {
+      const momentsOfDay = await loadMoments(date.getDate(), date.getMonth());
+      if (momentsOfDay && momentsOfDay.length > 0) {
+        found++;
+      }
+      for (const image of momentsOfDay) {
+        const thumbnail$ = this.getThumbnail(image);
+        const original$ = this.graphService.getImageBlob(image);
+        moments.push({ image, thumbnail$, original$ });
+      }
+      // continue with the previous day
+      daysBack++;
+      date.setDate(date.getDate() - 1);
+    }
+    this.moments.set(moments);
+  }
+
+  /**
+   * Returns the latest changes of the given folder
    */
   private async refreshImagesOf(folder: DriveItem) {
     const deltaLink = await getDeltaLink(folder);
@@ -124,7 +158,7 @@ export class ImageService {
         image.thumbnailBlob = blob;
         image.lastModifiedAt = {
           date: now.getTime(),
-          day: now.getDay(),
+          day: now.getDate(),
           month: now.getMonth(),
         };
         saveImage(image);

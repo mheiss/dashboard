@@ -60,7 +60,7 @@ export class Calendar {
 
   isToday(date: Date) {
     const now = new Date();
-    return date.getDay() == now.getDay();
+    return date.getDate() == now.getDate();
   }
 
   updateScrollContainer() {

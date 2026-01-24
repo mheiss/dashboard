@@ -1,9 +1,17 @@
 /**
- * Returns if the year,month and day is the same.
+ * Returns if the year is the same.
+ * The other parts are ignored when comparing.
+ */
+export function isSameYear(a: Date, b: Date) {
+  return a.getFullYear() == b.getFullYear();
+}
+
+/**
+ * Returns if the year, month and day is the same.
  * The time is ignored when comparing.
  */
 export function isSameDay(a: Date, b: Date) {
-  return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDay() == b.getDay();
+  return a.getFullYear() == b.getFullYear() && a.getMonth() == b.getMonth() && a.getDate() == b.getDate();
 }
 
 /**

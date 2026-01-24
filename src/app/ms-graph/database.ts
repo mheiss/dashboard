@@ -1,12 +1,15 @@
-import { IDBPDatabase, openDB } from 'idb';
+import { DriveItem } from '@microsoft/microsoft-graph-types';
+import { openDB } from 'idb';
 import { from, Observable } from 'rxjs';
 import { CalendarView } from '../ms-graph/calendar.model';
 import { DriveImage } from './image.model';
-import { DriveItem } from '@microsoft/microsoft-graph-types';
+import { isSameDay, isSameYear } from '../utils/date';
+import { not } from 'xstate';
 
 // V3:
 //    + image.takenAt.Month/Day
 //    + image.driveId
+//    ~ Index renaming
 const db = await openDB('Dashboard', 3, {
   upgrade(db) {
     // Always drop everything, migration is not worth the effort
@@ -19,8 +22,8 @@ const db = await openDB('Dashboard', 3, {
 
     // Store for images
     const images = db.createObjectStore('images', { keyPath: 'id' });
-    images.createIndex('takenAt', 'takenAt.date');
-    images.createIndex('takenAtMonthDay', ['takenAt.month', 'takenAt.day'], { unique: false });
+    images.createIndex('takenAt.date', 'takenAt.date');
+    images.createIndex('takenAt.month-day', ['takenAt.month', 'takenAt.day'], { unique: false });
 
     // Store for metadata (delta link, version, etc.)
     db.createObjectStore('metadata', { keyPath: 'key' });
@@ -32,7 +35,7 @@ const db = await openDB('Dashboard', 3, {
  */
 export async function loadImages(count: number, lastKey: IDBValidKey | null) {
   const tx = db.transaction('images', 'readonly');
-  const index = tx.store.index('takenAt');
+  const index = tx.store.index('takenAt.date');
 
   let cursor;
   if (lastKey === undefined || lastKey === null) {
@@ -53,6 +56,24 @@ export async function loadImages(count: number, lastKey: IDBValidKey | null) {
     items: results,
     lastKey: cursor?.key ?? null,
   };
+}
+
+/**
+ * Loads the moments of the given day and month.
+ */
+export async function loadMoments(day: number, month: number) {
+  const tx = db.transaction('images', 'readonly');
+  const store = tx.objectStore('images');
+  const index = store.index('takenAt.month-day');
+
+  const range = IDBKeyRange.only([month, day]);
+  const request = await index.getAll(range);
+  const images = request as DriveImage[];
+
+  const today = new Date();
+  const filtered = images.filter((image) => !isSameYear(today, new Date(image.takenAt.date)));
+  const sorted = filtered.sort((a, b) => b.takenAt.date - a.takenAt.date);
+  return sorted;
 }
 
 /**

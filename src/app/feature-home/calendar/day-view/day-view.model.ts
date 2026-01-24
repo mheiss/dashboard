@@ -1,4 +1,3 @@
-import { CalendarConfig } from '../../../feature-config/config.model';
 import { MyEvent } from '../../../ms-graph/calendar.model';
 import { graphToDate } from '../../../ms-graph/graph.model';
 import { intersect, Rectangle } from '../../../utils/rectangle';
@@ -15,7 +14,7 @@ export interface DayViewEvent {
 }
 
 /**
- * Converts the given event into a day-view event-
+ * Converts the given event into a day-view event.
  */
 export const convert = (event: MyEvent): DayViewEvent => {
   const id = event.id;

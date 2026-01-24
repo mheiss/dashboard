@@ -1,15 +1,15 @@
-import { CdkVirtualScrollViewport, ScrollingModule, CdkVirtualForOf } from '@angular/cdk/scrolling';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { AsyncPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, viewChild } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, Signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { distinctUntilChanged, filter, interval, map, tap } from 'rxjs';
+import { filter, interval, map, tap } from 'rxjs';
 import { DriveImageExt } from '../../ms-graph/image.model';
 import { ImageService } from '../../ms-graph/image.service';
 import { PopupService } from '../../popup/popup.service';
 import { LayoutService } from '../../utils/layout.service';
 import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
-import { DetailViewerData } from './gallery.model';
+import { DetailViewerData, Moment } from './gallery.model';
 
 @Component({
   selector: 'app-gallery',
@@ -40,7 +40,7 @@ export class GalleryComponent implements OnInit {
     if (this.layout.mobile$()) {
       return 1;
     }
-    return 3;
+    return 4;
   });
 
   /**
@@ -56,6 +56,24 @@ export class GalleryComponent implements OnInit {
     return result;
   });
 
+  /**
+   * Returns the moments grouped by day
+   */
+  readonly momentsByDay: Signal<Moment[]> = computed(() => {
+    const moments = this.service.moments.asReadonly();
+    const grouped = new Map<number, DriveImageExt[]>();
+    for (const imageExt of moments()) {
+      const day = imageExt.image.takenAt.day;
+      let images = grouped.get(day);
+      if (!images) {
+        images = [];
+        grouped.set(day, images);
+      }
+      images.push(imageExt);
+    }
+    return Array.from(grouped.entries()).map(([day, images]) => ({ day, images }));
+  });
+
   constructor() {
     const oncePerHour = 60 * 60 * 1000;
     interval(oncePerHour)
@@ -69,6 +87,7 @@ export class GalleryComponent implements OnInit {
         map((range) => range.end),
         map((end) => end * this.columns()),
         filter((end) => end >= this.images().length - 10),
+        tap((end) => console.log('%s -> %s', end, this.images().length)),
       )
       .subscribe(() => this.service.loadMore());
   }
@@ -80,6 +99,19 @@ export class GalleryComponent implements OnInit {
         imageCount: this.imageCount(),
         images: this.images,
         loadMore: () => this.service.loadMore(),
+      } as DetailViewerData,
+      disableClose: false,
+      width: '85%',
+    });
+  }
+
+  openMomentView(moment: Moment) {
+    this.dialog.open(DetailViewerComponent, {
+      data: {
+        image: moment.images[0],
+        imageCount: moment.images.length,
+        images: signal(moment.images),
+        loadMore: () => {},
       } as DetailViewerData,
       disableClose: false,
       width: '85%',

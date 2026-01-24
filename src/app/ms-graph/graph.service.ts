@@ -77,7 +77,7 @@ export class GraphRestService {
   /**
    * Returns the thumbnail of a given item.
    */
-  getThumbnailBlob(item: DriveImage): Observable<any> {
+  getThumbnailBlob(item: DriveImage): Observable<Blob> {
     const url = `${this.config.graph()}/drives/${item.driveId}/items/${item.id}/thumbnails/0/large/content`;
     return this.client.get(url, {
       responseType: 'blob',
@@ -87,7 +87,7 @@ export class GraphRestService {
   /**
    * Returns the original size of a given item.
    */
-  getImageBlob = (item: DriveImage): Observable<any> => {
+  getImageBlob = (item: DriveImage): Observable<Blob> => {
     const url = `${this.config.graph()}/drives/${item.driveId}/items/${item.id}/content`;
     return this.client.get(url, {
       responseType: 'blob',
