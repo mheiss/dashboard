@@ -1,10 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
+import { DriveItem } from '@microsoft/microsoft-graph-types';
 import { firstValueFrom, of, tap } from 'rxjs';
+import { AppConfigService } from '../feature-config/config.service';
 import { getDeltaLink, getImageCount, loadImages, removeImage, saveDeltaLink, saveImage } from './database';
 import { GraphRestService } from './graph.service';
 import { DriveImage, DriveImageExt, toDriveImage } from './image.model';
-import { AppConfigService } from '../feature-config/config.service';
-import { DriveItem } from '@microsoft/microsoft-graph-types';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
@@ -58,17 +58,12 @@ export class ImageService {
   private async refreshImagesOf(folder: DriveItem) {
     const deltaLink = await getDeltaLink(folder);
     let response$ = deltaLink ? this.graphService.getNextChanges(deltaLink) : this.graphService.getChanges(folder);
-    console.log('Synchronizing folder %s...', folder.name);
+    console.log('%s: Start synchronization of images.', folder.name);
 
     let finished = false;
+    let newImages = 0;
     while (!finished) {
       let response = await firstValueFrom(response$);
-      if (response.value.length === 0) {
-        console.log('  Images are in sync. Nothing do do.');
-      } else {
-        console.log('  Processing next block with %s items.', response.value.length);
-      }
-
       for (const item of response.value) {
         if (item.id && item.deleted) {
           await removeImage(item.id);
@@ -76,6 +71,7 @@ export class ImageService {
         }
         const image = toDriveImage(item);
         if (image) {
+          newImages++;
           await saveImage(image);
         }
       }
@@ -83,7 +79,7 @@ export class ImageService {
       // Continue loading as long as we have a next link
       const nextLink = response['@odata.nextLink'];
       if (nextLink) {
-        console.log('  Requesting next changes...');
+        console.log('%s: Requesting next changes...', folder.name);
         response$ = this.graphService.getNextChanges(nextLink);
         continue;
       }
@@ -92,7 +88,7 @@ export class ImageService {
       finished = true;
       const deltaLink = response['@odata.deltaLink'];
       if (deltaLink) {
-        console.log('  Storing delta link for next time.');
+        console.log('%s: Synchronization finished. # New images: %s', folder.name, newImages);
         saveDeltaLink(folder, deltaLink);
       }
     }

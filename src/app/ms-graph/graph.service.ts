@@ -5,6 +5,7 @@ import { map, Observable } from 'rxjs';
 import { AppConfigService } from '../feature-config/config.service';
 import { DateRange } from './calendar.model';
 import { GraphListResponse, logGraphListError } from './graph.model';
+import { DriveImage } from './image.model';
 
 @Injectable({ providedIn: 'root' })
 export class GraphRestService {
@@ -76,8 +77,8 @@ export class GraphRestService {
   /**
    * Returns the thumbnail of a given item.
    */
-  getThumbnailBlob(item: DriveItem): Observable<any> {
-    const url = `${this.config.graph()}/me/drive/items/${item.id}/thumbnails/0/large/content`;
+  getThumbnailBlob(item: DriveImage): Observable<any> {
+    const url = `${this.config.graph()}/drives/${item.driveId}/items/${item.id}/thumbnails/0/large/content`;
     return this.client.get(url, {
       responseType: 'blob',
     });
@@ -86,9 +87,8 @@ export class GraphRestService {
   /**
    * Returns the original size of a given item.
    */
-  getImageBlob = (item: DriveItem): Observable<any> => {
-    const endpoint = `drive/items/${item.id}/content`;
-    const url = `${this.config.graph()}/me/${endpoint}`;
+  getImageBlob = (item: DriveImage): Observable<any> => {
+    const url = `${this.config.graph()}/drives/${item.driveId}/items/${item.id}/content`;
     return this.client.get(url, {
       responseType: 'blob',
     });
