@@ -8,7 +8,7 @@
     <div class="absolute bottom-0 inset-0 flex items-center justify-center text-gray-100 text-xl font-semibold">
       {{moment.day}}
     </div>
-    <img class="h-32 w-32 object-cover" [blobSrc]="moment.images[0].thumbnail$ | async" />
+    <img class="h-32 w-32 object-cover" [blobSrc]="moment.poster().thumbnail$ | async" />
   </div>
   }
 </div>

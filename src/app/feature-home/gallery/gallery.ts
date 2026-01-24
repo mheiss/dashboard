@@ -9,7 +9,7 @@ import { PopupService } from '../../popup/popup.service';
 import { LayoutService } from '../../utils/layout.service';
 import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
-import { DetailViewerData, Moment } from './gallery.model';
+import { DetailViewerData, Moment, toMoment } from './gallery.model';
 
 @Component({
   selector: 'app-gallery',
@@ -71,14 +71,19 @@ export class GalleryComponent implements OnInit {
       }
       images.push(imageExt);
     }
-    return Array.from(grouped.entries()).map(([day, images]) => ({ day, images }));
+    return Array.from(grouped.entries()).map(toMoment);
   });
 
   constructor() {
-    const oncePerHour = 60 * 60 * 1000;
-    interval(oncePerHour)
+    const everyHour = 60 * 60 * 1000;
+    interval(everyHour)
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.service.refreshImages());
+
+    const every15Seconds = 15 * 1000;
+    interval(every15Seconds)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.updateMomentPoster());
   }
 
   ngOnInit(): void {
@@ -90,6 +95,13 @@ export class GalleryComponent implements OnInit {
         tap((end) => console.log('%s -> %s', end, this.images().length)),
       )
       .subscribe(() => this.service.loadMore());
+  }
+
+  updateMomentPoster(): void {
+    for (const moment of this.momentsByDay()) {
+      const nextPoster = Math.floor(Math.random() * moment.images.length);
+      moment.poster.set(moment.images[nextPoster]);
+    }
   }
 
   openDetailView(image: DriveImageExt) {
@@ -108,7 +120,7 @@ export class GalleryComponent implements OnInit {
   openMomentView(moment: Moment) {
     this.dialog.open(DetailViewerComponent, {
       data: {
-        image: moment.images[0],
+        image: moment.poster(),
         imageCount: moment.images.length,
         images: signal(moment.images),
         loadMore: () => {},

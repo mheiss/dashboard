@@ -62,7 +62,7 @@ export class DetailViewerComponent implements OnInit {
       maxScale: 5,
       minScale: 1,
     });
-    this.showImage(this.image());
+    setTimeout(() => this.showImage(this.image()), 0);
   }
 
   hasNext() {
@@ -83,7 +83,8 @@ export class DetailViewerComponent implements OnInit {
     this.gallery().scrollToIndex(index - 5, 'smooth');
 
     // Trigger loading more if we reach the end
-    if (index == this.images().length - 10) {
+    const remaining = this.images().length - index;
+    if (remaining <= 10) {
       this.data.loadMore();
     }
   }
