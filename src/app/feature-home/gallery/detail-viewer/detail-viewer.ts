@@ -66,7 +66,7 @@ export class DetailViewerComponent implements OnInit {
   }
 
   hasNext() {
-    return this.images().indexOf(this.image()) < this.images().length;
+    return this.images().indexOf(this.image()) < this.images().length-1;
   }
 
   hasPrevious() {

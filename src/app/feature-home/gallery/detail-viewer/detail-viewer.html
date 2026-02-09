@@ -1,7 +1,7 @@
 <app-popup>
   <div class="flex flex-col">
     <div class="relative flex flex-1 cursor-default items-center justify-center overflow-hidden bg-stone-200">
-      <div class="absolute left-2 flex items-center justify-center">
+      <div class="absolute left-2 flex items-center justify-center z-10">
         @if (hasPrevious()) {
         <button (click)="onPrevious()"
           class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
@@ -12,7 +12,7 @@
       <div class="rounded-1 flex h-[65vh] w-full items-center justify-center overflow-hidden p-4">
         <img #imageElement class="max-h-full max-w-full object-contain" [blobSrc]="imageBlob()" [alt]="imageName()" />
       </div>
-      <div class="absolute right-2 flex items-center justify-center">
+      <div class="absolute right-2 flex items-center justify-center z-10">
         @if (hasNext()) {
         <button (click)="onNext()"
           class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">

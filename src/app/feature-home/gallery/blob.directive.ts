@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, input, Input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
+import { Directive, ElementRef, inject, input, OnChanges, OnDestroy, SimpleChanges } from '@angular/core';
 
 @Directive({
   selector: '[blobSrc]',
@@ -11,21 +11,30 @@ export class BlobSrcDirective implements OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if ('blobSrc' in changes) {
-      this.updateImage();
+      const blobChanges = changes['blobSrc'];
+      this.updateImage(blobChanges.currentValue);
     }
   }
 
-  private updateImage(): void {
-    if (this.objectUrl) {
-      URL.revokeObjectURL(this.objectUrl);
-      this.objectUrl = null;
+  private updateImage(newBlob: Blob): void {
+    // Keep the old value displayed until we have a new one set
+    if (!newBlob) {
+      return;
     }
-    const blob = this.blobSrc();
-    if (blob) {
-      this.objectUrl = URL.createObjectURL(blob);
+
+    // Switch old and new
+    const oldUrl = this.objectUrl;
+    if (newBlob) {
+      this.objectUrl = URL.createObjectURL(newBlob);
       this.element.nativeElement.src = this.objectUrl;
     } else {
+      this.objectUrl = null;
       this.element.nativeElement.src = '';
+    }
+
+    // Cleanup old reference
+    if (oldUrl) {
+      URL.revokeObjectURL(oldUrl);
     }
   }
 
