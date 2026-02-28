@@ -30,7 +30,7 @@ export class ImageService {
    * Obtains the latest changes of all configured folders
    */
   async refreshImages() {
-    if (!this.folders()) {
+    if (this.folders().length === 0) {
       return;
     }
     this.loading.set(true);

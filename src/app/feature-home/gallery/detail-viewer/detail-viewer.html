@@ -23,8 +23,8 @@
     </div>
 
     <cdk-virtual-scroll-viewport #gallery orientation="horizontal"
-      class=" bg-white w-full h-34 overflow-x-auto overflow-y-hidden whitespace-nowrap" [itemSize]="120">
-      <div *cdkVirtualFor="let imageExt of images()"
+      class="bg-white w-full h-34 overflow-x-auto overflow-y-hidden whitespace-nowrap" [itemSize]="80">
+      <div *cdkVirtualFor="let imageExt of images(); trackBy: trackByImageId"
         class="inline-flex items-center justify-center mx-2 aspect-square rounded bg-gray-100 gap-2 p-1">
         <div (click)="showImage(imageExt)" class="aspect-square overflow-hidden rounded bg-gray-100" [ngClass]="{
             'border-2 border-stone-800 opacity-75': imageExt === image()

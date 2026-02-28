@@ -98,4 +98,8 @@ export class DetailViewerComponent implements OnInit {
     const index = this.images().indexOf(this.image());
     this.showImage(this.images()[index - 1]);
   }
+
+  trackByImageId(_: number, item: any) {
+    return (item as DriveImageExt).image.id;
+  }
 }
