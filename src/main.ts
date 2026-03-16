@@ -14,7 +14,7 @@ import {
   MsalService,
 } from '@azure/msal-angular';
 import { PublicClientApplication } from '@azure/msal-browser';
-import { firstValueFrom, tap } from 'rxjs';
+import { firstValueFrom, switchMap, tap } from 'rxjs';
 import { AppComponent } from './app/app';
 import { AppConfig } from './app/feature-config/config.model';
 import { AppConfigService } from './app/feature-config/config.service';
@@ -23,7 +23,7 @@ import { routes } from './app/routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideAppInitializer(() => {
+    provideAppInitializer(async () => {
       console.log('----------------------------------------');
       console.log('Application starting....');
       console.log('----------------------------------------');
@@ -34,14 +34,11 @@ export const appConfig: ApplicationConfig = {
       const appService = inject(AppConfigService);
       const httpBackend = inject(HttpBackend);
       const httpClient = new HttpClient(httpBackend);
-      return firstValueFrom(
-        httpClient.get<AppConfig>('./config/config.json').pipe(
-          tap((config) => {
-            console.log('Configuration successful loaded.');
-            appService.config.set(config);
-          }),
-        ),
-      );
+
+      const config = await firstValueFrom(httpClient.get<AppConfig>('./config/config.json'));
+      appService.config.set(config);
+      console.log('Configuration successful loaded.');
+      return Promise.resolve();
     }),
     provideRouter(routes),
     provideBrowserGlobalErrorListeners(),
