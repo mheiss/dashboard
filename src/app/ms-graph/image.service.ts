@@ -39,25 +39,25 @@ export class ImageService {
     const tasks: Promise<void>[] = [];
     for (const folder of this.folders()) {
       const task = this.refreshImagesOf(folder);
-      tasks.concat(task);
+      tasks.push(task);
     }
 
-    Promise.all(tasks).then(() => {
-      this.loading.set(false);
+    // Wait for all task to finish
+    await Promise.all(tasks);
+    this.loading.set(false);
 
-      // Provide image counter
-      getImageCount().then((count) => {
-        this.imageCount.set(count);
-      });
-
-      // Refresh moments
-      this.refreshMoments();
-
-      // Update images when done
-      this.nextKey = null;
-      this.images.set([]);
-      this.loadMore();
+    // Provide image counter
+    getImageCount().then((count) => {
+      this.imageCount.set(count);
     });
+
+    // Refresh moments
+    this.refreshMoments();
+
+    // Update images when done
+    this.nextKey = null;
+    this.images.set([]);
+    this.loadMore();
   }
 
   /**
@@ -89,7 +89,7 @@ export class ImageService {
   /**
    * Returns the latest changes of the given folder
    */
-  private async refreshImagesOf(folder: DriveItem) {
+  private async refreshImagesOf(folder: DriveItem): Promise<void> {
     const deltaLink = await getDeltaLink(folder);
     let response$ = deltaLink ? this.graphService.getNextChanges(deltaLink) : this.graphService.getChanges(folder);
     console.log('%s: Start synchronization of images.', folder.name);
