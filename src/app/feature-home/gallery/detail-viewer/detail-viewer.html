@@ -1,40 +1,48 @@
 <app-popup>
   <div class="flex flex-col">
     <div class="relative flex flex-1 cursor-default items-center justify-center overflow-hidden bg-stone-200">
-      <div class="absolute left-2 flex items-center justify-center z-10">
+      <div class="absolute left-2 z-10 flex items-center justify-center">
         @if (hasPrevious()) {
-        <button (click)="onPrevious()"
-          class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
-          <img src="/assets/left.svg" alt="Previous" />
-        </button>
+          <button (click)="onPrevious()" class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
+            <img src="/assets/left.svg" alt="Previous" />
+          </button>
         }
       </div>
       <div class="rounded-1 flex h-[65vh] w-full items-center justify-center overflow-hidden p-4">
         <img #imageElement class="max-h-full max-w-full object-contain" [blobSrc]="imageBlob()" [alt]="imageName()" />
       </div>
-      <div class="absolute right-2 flex items-center justify-center z-10">
+      <div class="absolute right-2 z-10 flex items-center justify-center">
         @if (hasNext()) {
-        <button (click)="onNext()"
-          class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
-          <img src="/assets/right.svg" alt="Next" />
-        </button>
+          <button (click)="onNext()" class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
+            <img src="/assets/right.svg" alt="Next" />
+          </button>
         }
       </div>
     </div>
 
-    <cdk-virtual-scroll-viewport #gallery orientation="horizontal"
-      class="bg-white w-full h-34 overflow-x-auto overflow-y-hidden whitespace-nowrap" [itemSize]="80">
-      <div *cdkVirtualFor="let imageExt of images(); trackBy: trackByImageId"
-        class="inline-flex items-center justify-center mx-2 aspect-square rounded bg-gray-100 gap-2 p-1">
-        <div (click)="showImage(imageExt)" class="aspect-square overflow-hidden rounded bg-gray-100" [ngClass]="{
-            'border-2 border-stone-800 opacity-75': imageExt === image()
-          }">
+    <cdk-virtual-scroll-viewport
+      #gallery
+      orientation="horizontal"
+      class="h-34 w-full overflow-x-auto overflow-y-hidden bg-white whitespace-nowrap"
+      [itemSize]="80"
+    >
+      <div
+        *cdkVirtualFor="let imageExt of images(); trackBy: trackByImageId"
+        class="mx-2 inline-flex aspect-square items-center justify-center gap-2 rounded bg-gray-100 p-1"
+      >
+        <div
+          (click)="showImage(imageExt)"
+          class="aspect-square overflow-hidden rounded bg-gray-100"
+          [ngClass]="{
+            'border-2 border-stone-800 opacity-75': imageExt === image(),
+          }"
+        >
           <img class="h-26 w-26 object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
         </div>
       </div>
     </cdk-virtual-scroll-viewport>
 
-    <div class="grid h-8 grid-cols-3 items-center bg-stone-800 px-4 text-stone-300 drop-shadow-lg  rounded-xl">
+    <div class="grid h-8 grid-cols-3 items-center rounded-xl bg-stone-800 px-4 text-stone-300 drop-shadow-lg">
       <div class="justify-self-start text-stone-500" [ngClass]="originalLoaded() ? 'not-italic' : 'italic'">
         <span>{{ imageName() }}</span>
       </div>

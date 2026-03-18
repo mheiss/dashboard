@@ -92,7 +92,6 @@ export class GalleryComponent implements OnInit {
         map((range) => range.end),
         map((end) => end * this.columns()),
         filter((end) => end >= this.images().length - 10),
-        tap((end) => console.log('%s -> %s', end, this.images().length)),
       )
       .subscribe(() => this.service.loadMore());
   }

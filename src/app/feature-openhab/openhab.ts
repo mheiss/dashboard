@@ -5,5 +5,4 @@ import { Component } from '@angular/core';
   imports: [],
   templateUrl: './openhab.html',
 })
-export class Openhab {
-}
+export class Openhab {}

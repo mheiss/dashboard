@@ -37,7 +37,6 @@ export const appConfig: ApplicationConfig = {
 
       const config = await firstValueFrom(httpClient.get<AppConfig>('./config/config.json'));
       appService.config.set(config);
-      console.log('Configuration successful loaded.');
       return Promise.resolve();
     }),
     provideRouter(routes),

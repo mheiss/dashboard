@@ -1,4 +1,6 @@
-<div class="grid h-full" [ngClass]="{
+<div
+  class="grid h-full"
+  [ngClass]="{
     'grid-cols-[45px_repeat(1,minmax(0,1fr))]': events().length === 1,
     'grid-cols-[45px_repeat(2,minmax(0,1fr))]': events().length === 2,
     'grid-cols-[45px_repeat(3,minmax(0,1fr))]': events().length === 3,
@@ -6,45 +8,50 @@
     'grid-cols-[45px_repeat(5,minmax(0,1fr))]': events().length === 5,
     'grid-cols-[45px_repeat(6,minmax(0,1fr))]': events().length === 6,
     'grid-cols-[45px_repeat(7,minmax(0,1fr))]': events().length === 7,
-  }">
-
+  }"
+>
   <!-- Time labels -->
   <div class="border-r">
     @for (h of hoursOfDay; track h) {
-    <div class="relative h-12 border-b">
-      <div class="absolute top-4 left-4 text-xs text-gray-500">
-        {{ h | number: '2.0' }}
+      <div class="relative h-12 border-b">
+        <div class="absolute top-4 left-4 text-xs text-gray-500">
+          {{ h | number: '2.0' }}
+        </div>
       </div>
-    </div>
     }
   </div>
 
   <!-- Day columns -->
   @for (dayEvents of positionedEvents(); track $index) {
-  <div class="relative border-r">
-    @if($first) {
-    <div #now class="relative z-15 h-1 bg-amber-500">
-      <div class="absolute -top-1 -left-2 h-4 w-4 rounded-full bg-amber-600"></div>
-    </div>
-    }
-
-    <!-- Hour grid -->
-    <div class="pointer-events-none absolute inset-0">
-      @for (h of hoursOfDay; track h) {
-      <div class="h-12 border-b"></div>
+    <div class="relative border-r">
+      @if ($first) {
+        <div #now class="relative z-15 h-1 bg-amber-500">
+          <div class="absolute -top-1 -left-2 h-4 w-4 rounded-full bg-amber-600"></div>
+        </div>
       }
-    </div>
 
-    <!-- Events -->
-    <div class="relative h-full">
-      @for (event of dayEvents; track event.id;) {
-      <div class="absolute overflow-hidden rounded border border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
-        [style.top.%]="event.position.y" [style.left.%]="event.position.x" [style.height.%]="event.position.height"
-        [style.width.%]="event.position.width" [ngClass]="event.tailwindClasses">
-        {{ event.subject }}
+      <!-- Hour grid -->
+      <div class="pointer-events-none absolute inset-0">
+        @for (h of hoursOfDay; track h) {
+          <div class="h-12 border-b"></div>
+        }
       </div>
-      }
+
+      <!-- Events -->
+      <div class="relative h-full">
+        @for (event of dayEvents; track event.id) {
+          <div
+            class="absolute overflow-hidden rounded border border-l-8 border-blue-300 bg-blue-100 px-2 py-1 text-xs"
+            [style.top.%]="event.position.y"
+            [style.left.%]="event.position.x"
+            [style.height.%]="event.position.height"
+            [style.width.%]="event.position.width"
+            [ngClass]="event.tailwindClasses"
+          >
+            {{ event.subject }}
+          </div>
+        }
+      </div>
     </div>
-  </div>
   }
 </div>
