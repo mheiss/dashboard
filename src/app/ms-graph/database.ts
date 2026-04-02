@@ -115,6 +115,13 @@ export async function saveDeltaLink(item: DriveItem, deltaLink: string) {
 }
 
 /**
+ * Removes the delta link as it is not valid anymore.
+ */
+export async function removeDeltaLink(item: DriveItem) {
+  await db.delete('metadata', `${item.id}.deltaLink`);
+}
+
+/**
  * Returns the delta link to get new images
  */
 export async function getDeltaLink(item: DriveItem): Promise<string | null> {

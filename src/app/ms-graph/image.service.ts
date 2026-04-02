@@ -2,9 +2,10 @@ import { inject, Injectable, signal } from '@angular/core';
 import { DriveItem } from '@microsoft/microsoft-graph-types';
 import { firstValueFrom, of, tap } from 'rxjs';
 import { AppConfigService } from '../feature-config/config.service';
-import { getDeltaLink, getImageCount, loadImages, loadMoments, removeImage, saveDeltaLink, saveImage } from './database';
+import { getDeltaLink, getImageCount, loadImages, loadMoments, removeDeltaLink, removeImage, saveDeltaLink, saveImage } from './database';
 import { GraphRestService } from './graph.service';
 import { DriveImage, DriveImageExt, toDriveImage } from './image.model';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
@@ -27,7 +28,7 @@ export class ImageService {
   }
 
   /**
-   * Obtains the latest changes of all configured folders
+   * Fetches the latest changes of all configured folders
    */
   async refreshImages() {
     if (this.folders().length === 0) {
@@ -36,14 +37,15 @@ export class ImageService {
     this.loading.set(true);
 
     // Fetch all changes in all folders
-    const tasks: Promise<void>[] = [];
-    for (const folder of this.folders()) {
-      const task = this.refreshImagesOf(folder);
-      tasks.push(task);
+    // Retry up to three times to handle potential errors
+    let foldersToRefresh = this.folders();
+    for (let i = 0; i < 3; i++) {
+      const failedFolders = await this.doRefreshImages(foldersToRefresh);
+      if (failedFolders.length === 0) {
+        break;
+      }
+      foldersToRefresh = failedFolders;
     }
-
-    // Wait for all task to finish
-    await Promise.all(tasks);
     this.loading.set(false);
 
     // Provide image counter
@@ -58,6 +60,37 @@ export class ImageService {
     this.nextKey = null;
     this.images.set([]);
     this.loadMore();
+  }
+
+  /**
+   *  Refreshes the given folders and returns the ones that failed to refresh.
+   */
+  private async doRefreshImages(folders: DriveItem[]) {
+    // Create a task for each folder
+    const tasks: Promise<void>[] = [];
+    for (const folder of folders) {
+      const task = this.refreshImagesOf(folder);
+      tasks.push(task);
+    }
+
+    const failed = [];
+    const results = await Promise.allSettled(tasks);
+    for (const [index, result] of results.entries()) {
+      const folder = folders[index];
+      if (result.status === 'fulfilled') {
+        continue;
+      }
+      failed.push(folder);
+      if (result.reason instanceof HttpErrorResponse) {
+        if (result.reason.status === 410) {
+          console.error('Removing invalid delta token:', folder.name);
+          await removeDeltaLink(folder);
+        } else {
+          console.error('Error while refreshing images of folder %s: %s', folder.name, result.reason.message);
+        }
+      }
+    }
+    return failed;
   }
 
   /**
