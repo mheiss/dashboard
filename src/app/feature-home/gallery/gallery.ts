@@ -7,6 +7,7 @@ import { DriveImageExt } from '../../ms-graph/image.model';
 import { ImageService } from '../../ms-graph/image.service';
 import { PopupService } from '../../popup/popup.service';
 import { LayoutService } from '../../utils/layout.service';
+import { VisibilityService } from '../../utils/visibility.service';
 import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
 import { DetailViewerData, Moment, toMoment } from './gallery.model';
@@ -20,6 +21,7 @@ export class GalleryComponent implements OnInit {
   readonly dialog = inject(PopupService);
   readonly layout = inject(LayoutService);
   readonly service = inject(ImageService);
+  readonly visibility = inject(VisibilityService);
 
   readonly gallery = viewChild.required<CdkVirtualScrollViewport>('gallery');
 
@@ -77,13 +79,19 @@ export class GalleryComponent implements OnInit {
   constructor() {
     const everyHour = 60 * 60 * 1000;
     interval(everyHour)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(), this.visibility.skipWhenHidden())
       .subscribe(() => this.service.refreshImages());
 
     const every15Seconds = 15 * 1000;
     interval(every15Seconds)
-      .pipe(takeUntilDestroyed())
+      .pipe(takeUntilDestroyed(), this.visibility.skipWhenHidden())
       .subscribe(() => this.updateMomentPoster());
+
+    // immediate refresh after resume to avoid stale data
+    this.visibility.screenOnAgain$.pipe(takeUntilDestroyed()).subscribe(async () => {
+      this.updateMomentPoster();
+      this.service.refreshImages();
+    });
   }
 
   ngOnInit(): void {
@@ -97,6 +105,7 @@ export class GalleryComponent implements OnInit {
   }
 
   updateMomentPoster(): void {
+    console.log('Updating moment posters');
     for (const moment of this.momentsByDay()) {
       const nextPoster = Math.floor(Math.random() * moment.images.length);
       moment.poster.set(moment.images[nextPoster]);
