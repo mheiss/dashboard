@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { WebSocket } from 'partysocket';
 import { interval } from 'rxjs';
+import { DebugService } from '../utils/debug.service';
 import { getWebSocketUrl } from '../utils/webSocket';
 import { DoorbellItem, OpenHabItem, PinItem, SecurityItem } from './openhab.items';
 import { Payload, PingEvent } from './openhab.model';
@@ -13,6 +14,7 @@ export class OpenHABService {
   private readonly http = inject(HttpClient);
   private readonly fully = inject(FullyService);
   private readonly router = inject(Router);
+  private readonly debug = inject(DebugService);
   private readonly ws = this.createWebSocket();
   private readonly items: OpenHabItem<any>[] = [];
 
@@ -22,18 +24,18 @@ export class OpenHABService {
    * * ON == Armed
    * * OFF == Disarmed
    */
-  readonly security = new SecurityItem(this.ws, this.http, this.items);
+  readonly security = new SecurityItem(this.ws, this.http, this.items, this.debug);
 
   /**
    * The item which accepts the security PIN. If the PIN is correct then the
    * security system will be turned off / disarmed.
    */
-  readonly pin = new PinItem(this.ws, this.http, this.items);
+  readonly pin = new PinItem(this.ws, this.http, this.items, this.debug);
 
   /**
    * The doorbell item.
    */
-  readonly doorbell = new DoorbellItem(this.ws, this.http, this.items);
+  readonly doorbell = new DoorbellItem(this.ws, this.http, this.items, this.debug);
 
   /**
    * Initializes the communication between the dashboard and openHAB
@@ -68,11 +70,11 @@ export class OpenHABService {
   }
 
   private onOpen(): void {
-    console.log('OpenHAB: Connected via WebSocket.');
+    this.debug.log('OpenHAB: Connected via WebSocket.');
   }
 
   private onError(e: any): void {
-    console.log('OpenHAB: WebSocket error occurred.', e);
+    this.debug.log('OpenHAB: WebSocket error occurred.', e);
   }
 
   private onMessage(e: MessageEvent<any>): void {

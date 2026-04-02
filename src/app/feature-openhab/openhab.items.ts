@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { WebSocket } from 'partysocket';
 import { BehaviorSubject } from 'rxjs';
+import { DebugService } from '../utils/debug.service';
 import { createCommandEvent, createStringPayload, onOffConverter, stringConverter } from './openhab.model';
 import { Openhab } from './openhab';
 
@@ -17,6 +18,7 @@ export abstract class OpenHabItem<T> {
     protected items: OpenHabItem<any>[],
     protected itemName: string,
     protected converter: (value: string) => T,
+    protected debug: DebugService,
   ) {
     client.get('/api/openhab/items/' + itemName + '/state', { responseType: 'text' }).subscribe((value) => {
       this.onWebSocketMessage(value);
@@ -29,7 +31,7 @@ export abstract class OpenHabItem<T> {
    */
   public onWebSocketMessage(value: string) {
     this.value.next(this.converter(value));
-    console.log(`Item '${this.itemName}' has been updated to '${value}'`);
+    this.debug.log(`Item '${this.itemName}' has been updated to '${value}'`);
   }
 
   /**
@@ -40,8 +42,8 @@ export abstract class OpenHabItem<T> {
   }
 }
 export class PinItem extends OpenHabItem<string> {
-  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[]) {
-    super(ws, client, items, 'Security_Pin', stringConverter);
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], debug: DebugService) {
+    super(ws, client, items, 'Security_Pin', stringConverter, debug);
   }
 
   /**
@@ -55,13 +57,13 @@ export class PinItem extends OpenHabItem<string> {
 }
 
 export class SecurityItem extends OpenHabItem<boolean> {
-  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[]) {
-    super(ws, client, items, 'Security', onOffConverter);
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], debug: DebugService) {
+    super(ws, client, items, 'Security', onOffConverter, debug);
   }
 }
 
 export class DoorbellItem extends OpenHabItem<boolean> {
-  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[]) {
-    super(ws, client, items, 'Entrance_Bell_Switch', onOffConverter);
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], debug: DebugService) {
+    super(ws, client, items, 'Entrance_Bell_Switch', onOffConverter, debug);
   }
 }

@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Calendar, CalendarGroup, DriveItem, Event, NullableOption, RemoteItem } from '@microsoft/microsoft-graph-types';
 import { map, Observable } from 'rxjs';
 import { AppConfigService } from '../feature-config/config.service';
+import { DebugService } from '../utils/debug.service';
 import { DateRange } from './calendar.model';
 import { GraphListResponse, logGraphListError } from './graph.model';
 import { DriveImage } from './image.model';
@@ -11,6 +12,7 @@ import { DriveImage } from './image.model';
 export class GraphRestService {
   private readonly client = inject(HttpClient);
   private readonly config = inject(AppConfigService);
+  private readonly debug = inject(DebugService);
 
   /**
    * Lists all events in the given datetime range
@@ -64,7 +66,7 @@ export class GraphRestService {
       driveId = item.remoteItem.parentReference?.driveId;
     }
     const url = `${this.config.graph()}/drives/${driveId}/items/${itemId}/delta`;
-    return this.client.get<GraphListResponse<DriveItem>>(url).pipe(logGraphListError());
+    return this.client.get<GraphListResponse<DriveItem>>(url).pipe(logGraphListError(this.debug));
   }
 
   /**

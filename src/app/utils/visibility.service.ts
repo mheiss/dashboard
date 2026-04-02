@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { BehaviorSubject, fromEvent, interval, merge, Observable, OperatorFunction } from 'rxjs';
 import { distinctUntilChanged, filter, map, pairwise, shareReplay, startWith, tap } from 'rxjs/operators';
+import { DebugService } from './debug.service';
 
 /**
  * A service to track the visibility state of the application (e.g. if the screen is on or off).
@@ -9,6 +10,8 @@ import { distinctUntilChanged, filter, map, pairwise, shareReplay, startWith, ta
  */
 @Injectable({ providedIn: 'root' })
 export class VisibilityService {
+  private readonly debug = inject(DebugService);
+
   private readonly screenOnSubject = new BehaviorSubject<boolean>(this.getInitialScreenState());
 
   readonly screenOn$ = this.screenOnSubject.asObservable().pipe(shareReplay({ bufferSize: 1, refCount: true }));
@@ -61,7 +64,7 @@ export class VisibilityService {
    */
   logVisibilityChange(): OperatorFunction<boolean, boolean> {
     return tap((state: boolean) => {
-      console.log(`Screen is ${state ? 'ON' : 'OFF'}.`);
+      this.debug.log(`Screen is ${state ? 'ON' : 'OFF'}.`);
     });
   }
 

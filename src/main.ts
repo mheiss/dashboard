@@ -19,14 +19,16 @@ import { AppComponent } from './app/app';
 import { AppConfig } from './app/feature-config/config.model';
 import { AppConfigService } from './app/feature-config/config.service';
 import { getAuthConfig, getGuardConfig, getInterceptorConfig } from './app/ms-graph/msal.config';
+import { DebugService } from './app/utils/debug.service';
 import { routes } from './app/routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideAppInitializer(async () => {
-      console.log('----------------------------------------');
-      console.log('Application starting....');
-      console.log('----------------------------------------');
+      const debug = inject(DebugService);
+      debug.log('----------------------------------------');
+      debug.log('Application starting....');
+      debug.log('----------------------------------------');
       registerLocaleData(localeDeAt);
 
       // Manually create a HTTP client to avoid that the MSAL interceptors

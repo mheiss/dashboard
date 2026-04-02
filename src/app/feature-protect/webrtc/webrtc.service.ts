@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Camera, StreamQuality } from '../protect.model';
+import { DebugService } from '../../utils/debug.service';
 import { StreamOffer, WebRTCStream } from './webrtc';
 
 /**
@@ -9,6 +10,7 @@ import { StreamOffer, WebRTCStream } from './webrtc';
 @Injectable({ providedIn: 'root' })
 export class WebRTCService {
   private readonly httpClient = inject(HttpClient);
+  private readonly debug = inject(DebugService);
   private readonly streams = new Map<string, WebRTCStream>();
   private readonly visibilityFunc = async () => this.onVisibilityChanged();
 
@@ -23,7 +25,7 @@ export class WebRTCService {
     const streamName = this.buildStreamName(camera, quality);
     let stream = this.streams.get(streamName);
     if (!stream) {
-      stream = new WebRTCStream(this.httpClient, streamName);
+      stream = new WebRTCStream(this.httpClient, streamName, this.debug);
       this.streams.set(streamName, stream);
     }
     return stream.start();

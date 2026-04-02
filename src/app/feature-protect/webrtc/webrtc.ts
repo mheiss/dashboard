@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { WebSocket } from 'partysocket';
 import { BehaviorSubject, interval, Observable, pipe, Subject, takeUntil, timer } from 'rxjs';
+import { DebugService } from '../../utils/debug.service';
 import { getWebSocketUrl } from '../../utils/webSocket';
 import { unescapeLeadingUnderscores } from 'typescript';
 
@@ -43,6 +44,7 @@ export class WebRTCStream {
   constructor(
     private httpClient: HttpClient,
     private camera: string,
+    private debug: DebugService,
   ) {
     this.webSocket = new WebSocket(getWebSocketUrl('/ws/webrtc?src=' + camera));
     this.webSocket.onopen = async (e) => this.onWebSocketOpen();
@@ -105,12 +107,12 @@ export class WebRTCStream {
     const offer = await this.peerConnection.createOffer();
     await this.peerConnection.setLocalDescription(offer);
 
-    console.log('%s: Starting a new WebRTC connection.', this.camera);
-    this.webSocket.send(JSON.stringify({ type: 'webrtc/offer', value: offer.sdp }));
+    this.debug.log('%s: Starting a new WebRTC connection.', this.camera);
+    this.debug.log('%s: Starting a new WebRTC connection.', this.camera);
   }
 
   private async onWebSocketClose() {
-    console.log('%s: Socket closed.', this.camera);
+    this.debug.log('%s: Socket closed.', this.camera);
     if (this.peerConnection) {
       this.peerConnection.getSenders().forEach((sender) => {
         this.peerConnection?.removeTrack(sender);
@@ -120,13 +122,13 @@ export class WebRTCStream {
       });
       this.peerConnection.close();
       this.peerConnection = null;
-      console.log('%s: Closed WebRTC connection and stopped streaming.', this.camera);
+      this.debug.log('%s: Closed WebRTC connection and stopped streaming.', this.camera);
     }
     this.status.next('offline');
   }
 
   private async onWebSocketError(e: any) {
-    console.log('%s: Unexpected error.', this.camera, e);
+    this.debug.log('%s: Unexpected error.', this.camera, e);
   }
 
   private async onWebSocketMessage(msg: any) {
@@ -144,13 +146,13 @@ export class WebRTCStream {
         this.peerConnection?.setRemoteDescription(remoteDesc);
         break;
       default:
-        console.log('%s: Unknown data received: %s', this.camera, data);
+        this.debug.log('%s: Unknown data received: %s', this.camera, data);
         break;
     }
   }
 
   private onTrack(ev: RTCTrackEvent) {
-    console.log('%s: Playing new media track.', this.camera);
+    this.debug.log('%s: Playing new media track.', this.camera);
     this.media.next(ev.streams[0]);
     this.status.next('connected');
   }
@@ -161,7 +163,7 @@ export class WebRTCStream {
     }
     const candidate = event.candidate;
 
-    console.log('%s: Got new ICE candidate. Type: %s, Protocol: %s', this.camera, candidate.type, candidate.protocol);
+    this.debug.log('%s: Got new ICE candidate. Type: %s, Protocol: %s', this.camera, candidate.type, candidate.protocol);
     this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate.toJSON().candidate }));
   }
 
@@ -183,7 +185,7 @@ export class WebRTCStream {
       // Restart the stream if stale for more than 5 seconds
       const elapsed = Date.now() - lastReport.timestamp;
       if (elapsed > 5_000) {
-        console.log('Stale stream detected. Restarting socket.');
+        this.debug.log('Stale stream detected. Restarting socket.');
         this.webSocket.close();
         this.webSocket.reconnect();
         return;

@@ -8,6 +8,7 @@ import { ImageService } from '../../ms-graph/image.service';
 import { PopupService } from '../../popup/popup.service';
 import { LayoutService } from '../../utils/layout.service';
 import { VisibilityService } from '../../utils/visibility.service';
+import { DebugService } from '../../utils/debug.service';
 import { BlobSrcDirective } from './blob.directive';
 import { DetailViewerComponent } from './detail-viewer/detail-viewer';
 import { DetailViewerData, Moment, toMoment } from './gallery.model';
@@ -22,6 +23,7 @@ export class GalleryComponent implements OnInit {
   readonly layout = inject(LayoutService);
   readonly service = inject(ImageService);
   readonly visibility = inject(VisibilityService);
+  readonly debug = inject(DebugService);
 
   readonly gallery = viewChild.required<CdkVirtualScrollViewport>('gallery');
 
@@ -105,7 +107,7 @@ export class GalleryComponent implements OnInit {
   }
 
   updateMomentPoster(): void {
-    console.log('Updating moment posters');
+    this.debug.log('Updating moment posters');
     for (const moment of this.momentsByDay()) {
       const nextPoster = Math.floor(Math.random() * moment.images.length);
       moment.poster.set(moment.images[nextPoster]);

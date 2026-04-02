@@ -2,6 +2,7 @@ import { inject, Injectable, signal } from '@angular/core';
 import { DriveItem } from '@microsoft/microsoft-graph-types';
 import { firstValueFrom, of, tap } from 'rxjs';
 import { AppConfigService } from '../feature-config/config.service';
+import { DebugService } from '../utils/debug.service';
 import { getDeltaLink, getImageCount, loadImages, loadMoments, removeDeltaLink, removeImage, saveDeltaLink, saveImage } from './database';
 import { GraphRestService } from './graph.service';
 import { DriveImage, DriveImageExt, toDriveImage } from './image.model';
@@ -11,6 +12,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 export class ImageService {
   private readonly graphService = inject(GraphRestService);
   private readonly appConfigService = inject(AppConfigService);
+  private readonly debug = inject(DebugService);
 
   readonly loading = signal(true);
   readonly folders = signal<DriveItem[]>([]);
@@ -125,7 +127,7 @@ export class ImageService {
   private async refreshImagesOf(folder: DriveItem): Promise<void> {
     const deltaLink = await getDeltaLink(folder);
     let response$ = deltaLink ? this.graphService.getNextChanges(deltaLink) : this.graphService.getChanges(folder);
-    console.log('%s: Start synchronization of images.', folder.name);
+    this.debug.log('%s: Start synchronization of images.', folder.name);
 
     let finished = false;
     let newImages = 0;
@@ -146,7 +148,7 @@ export class ImageService {
       // Continue loading as long as we have a next link
       const nextLink = response['@odata.nextLink'];
       if (nextLink) {
-        console.log('%s: Requesting next changes...', folder.name);
+        this.debug.log('%s: Requesting next changes...', folder.name);
         response$ = this.graphService.getNextChanges(nextLink);
         continue;
       }
@@ -155,7 +157,7 @@ export class ImageService {
       finished = true;
       const deltaLink = response['@odata.deltaLink'];
       if (deltaLink) {
-        console.log('%s: Synchronization finished. # New images: %s', folder.name, newImages);
+        this.debug.log('%s: Synchronization finished. # New images: %s', folder.name, newImages);
         saveDeltaLink(folder, deltaLink);
       }
     }
