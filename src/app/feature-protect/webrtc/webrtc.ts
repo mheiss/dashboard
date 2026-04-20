@@ -1,32 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { WebSocket } from 'partysocket';
-import { BehaviorSubject, interval, Observable } from 'rxjs';
+import { BehaviorSubject, interval } from 'rxjs';
 import { DebugService } from '../../utils/debug.service';
 import { getWebSocketUrl } from '../../utils/webSocket';
-
-/**
- * Health status of the stream.
- */
-export type Status = 'offline' | 'connecting' | 'connected' | 'streaming' | 'stale';
-
-/**
- * The video stream along with some metadata.
- */
-export interface StreamOffer {
-  media: Observable<MediaStream | null>;
-  poster: Observable<string | null>;
-  status: Observable<Status>;
-  report: Observable<StreamReport>;
-}
-
-/**
- * Status report of a stream.
- */
-export interface StreamReport {
-  frames: number;
-  bytes: number;
-  timestamp: number;
-}
+import { Status, StreamOffer, StreamReport } from './webrtc.model';
 
 export class WebRTCStream {
   private readonly webSocket: WebSocket;
@@ -58,6 +35,7 @@ export class WebRTCStream {
     interval(1000).subscribe(() => this.checkHealth());
   }
 
+  /** Starts streaming and returns the observable stream state. */
   start(): StreamOffer {
     // Disable any stop attempts
     clearTimeout(this.stopTimer);
@@ -66,12 +44,8 @@ export class WebRTCStream {
     // establish connection if we do not have a connection
     this.updatePoster();
     this.shallStream = true;
-    if (
-      this.webSocket.readyState !== WebSocket.OPEN &&
-      this.webSocket.readyState !== WebSocket.CONNECTING &&
-      !this.reconnectPending
-    ) {
-      this.requestReconnect('start requested');
+    if (this.shouldReconnectOnStart()) {
+      this.requestReconnect('Start requested');
     }
 
     return {
@@ -82,6 +56,7 @@ export class WebRTCStream {
     };
   }
 
+  /** Schedules the stream to stop after a short idle timeout. */
   stop() {
     clearTimeout(this.stopTimer);
     this.stopTimer = setTimeout(() => {
@@ -93,15 +68,38 @@ export class WebRTCStream {
     }, 30_000);
   }
 
+  /** Creates an empty baseline report for health tracking. */
   private createEmptyReport(): StreamReport {
     return { bytes: 0, frames: 0, timestamp: 0 };
   }
 
+  /** Checks whether the socket is open and the peer connection exists. */
+  private hasOpenConnection(): boolean {
+    return this.webSocket.readyState === WebSocket.OPEN && this.peerConnection !== null;
+  }
+
+  /** Decides whether start should trigger a reconnect attempt. */
+  private shouldReconnectOnStart(): boolean {
+    return this.webSocket.readyState !== WebSocket.OPEN && this.webSocket.readyState !== WebSocket.CONNECTING && !this.reconnectPending;
+  }
+
+  /** Returns whether the current health-check cycle should be skipped. */
+  private shouldSkipHealthCheck(): boolean {
+    return this.healthCheckRunning || this.reconnectPending || !this.shallStream || !this.hasOpenConnection();
+  }
+
+  /** Returns whether an in-flight health-check result should be ignored. */
+  private shouldAbortHealthCheck(): boolean {
+    return this.reconnectPending || !this.shallStream || !this.hasOpenConnection();
+  }
+
+  /** Clears stale tracking and resets the current stream report. */
   private resetHealthState() {
     this.staleSince = null;
     this.streamReport.next(this.createEmptyReport());
   }
 
+  /** Stops and disposes the current peer connection if present. */
   private cleanupPeerConnection() {
     if (!this.peerConnection) {
       return;
@@ -115,6 +113,14 @@ export class WebRTCStream {
     this.peerConnection = null;
   }
 
+  /** Marks the stream as offline and clears transient state. */
+  private markStreamOffline() {
+    this.media.next(null);
+    this.resetHealthState();
+    this.status.next('offline');
+  }
+
+  /** Starts a single reconnect flow when streaming should continue. */
   private requestReconnect(reason: string) {
     if (!this.shallStream || this.reconnectPending) {
       return;
@@ -137,6 +143,7 @@ export class WebRTCStream {
     this.webSocket.close();
   }
 
+  /** Fetches and updates the latest poster image for the camera. */
   private updatePoster() {
     this.httpClient.get(`/api/webrtc/frame.jpeg?src=${this.camera}`, { responseType: 'blob' }).subscribe((blob) => {
       const oldValue = this.poster.getValue();
@@ -147,6 +154,7 @@ export class WebRTCStream {
     });
   }
 
+  /** Creates a fresh peer connection when the signaling socket opens. */
   private async onWebSocketOpen() {
     if (!this.shallStream) {
       this.webSocket.close();
@@ -175,17 +183,16 @@ export class WebRTCStream {
     this.debug.log('%s: Starting a new WebRTC connection.', this.camera);
   }
 
+  /** Cleans up the current connection and reconnects when required. */
   private async onWebSocketClose() {
     this.debug.log('%s: Socket closed.', this.camera);
 
     this.cleanupPeerConnection();
-    this.media.next(null);
-    this.resetHealthState();
-    this.status.next('offline');
+    this.markStreamOffline();
 
     if (this.shallStream) {
       this.reconnectPending = false;
-      this.requestReconnect('socket closed');
+      this.requestReconnect('Socket closed');
       return;
     }
 
@@ -193,10 +200,12 @@ export class WebRTCStream {
     this.debug.log('%s: Closed WebRTC connection and stopped streaming.', this.camera);
   }
 
+  /** Logs unexpected signaling socket errors. */
   private async onWebSocketError(e: any) {
     this.debug.log('%s: Unexpected error.', this.camera, e);
   }
 
+  /** Applies incoming signaling messages to the peer connection. */
   private async onWebSocketMessage(msg: MessageEvent) {
     if (!this.peerConnection) {
       this.debug.log('%s: Ignoring signaling message without peer connection.', this.camera);
@@ -218,6 +227,7 @@ export class WebRTCStream {
     }
   }
 
+  /** Publishes the received media track and marks the stream connected. */
   private onTrack(ev: RTCTrackEvent) {
     this.debug.log('%s: Playing new media track.', this.camera);
     this.media.next(ev.streams[0] ?? null);
@@ -225,6 +235,35 @@ export class WebRTCStream {
     this.status.next('connected');
   }
 
+  /** Updates the stream status from the latest transport stats. */
+  private updateHealthStatus(currentReport: StreamReport) {
+    const lastReport = this.streamReport.value;
+    const hasPreviousReport = lastReport.timestamp > 0;
+
+    this.streamReport.next(currentReport);
+    if (!hasPreviousReport) {
+      return;
+    }
+
+    const deltaFrames = currentReport.frames - lastReport.frames;
+    const deltaBytes = currentReport.bytes - lastReport.bytes;
+    if (deltaFrames > 0 && deltaBytes > 0) {
+      this.staleSince = null;
+      this.status.next('streaming');
+      return;
+    }
+
+    if (this.staleSince === null) {
+      this.staleSince = Date.now();
+    }
+    this.status.next('stale');
+
+    if (Date.now() - this.staleSince > 5_000) {
+      this.requestReconnect('Stale stream');
+    }
+  }
+
+  /** Sends newly gathered ICE candidates to the signaling socket. */
   private onIceCandidate(event: RTCPeerConnectionIceEvent) {
     if (!event.candidate || this.webSocket.readyState !== WebSocket.OPEN) {
       return;
@@ -235,79 +274,50 @@ export class WebRTCStream {
     this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate.toJSON().candidate }));
   }
 
+  /** Periodically checks whether the active stream is still healthy. */
   private async checkHealth() {
     // We do check the health only if we are connected and shall stream
-    if (
-      this.healthCheckRunning ||
-      this.reconnectPending ||
-      !this.shallStream ||
-      this.webSocket.readyState !== WebSocket.OPEN ||
-      !this.peerConnection
-    ) {
+    if (this.shouldSkipHealthCheck()) {
       return;
     }
 
-    this.healthCheckRunning = true;
-
     try {
+      this.healthCheckRunning = true;
       const currentReport = await this.getStreamReport();
-      if (
-        this.reconnectPending ||
-        !this.shallStream ||
-        this.webSocket.readyState !== WebSocket.OPEN ||
-        !this.peerConnection
-      ) {
+      if (this.shouldAbortHealthCheck()) {
         return;
       }
 
-      const lastReport = this.streamReport.value;
-      const hasPreviousReport = lastReport.timestamp > 0;
-
-      this.streamReport.next(currentReport);
-      if (!hasPreviousReport) {
-        return;
-      }
-
-      // Check if the stream sends data
-      const deltaFrames = currentReport.frames - lastReport.frames;
-      const deltaBytes = currentReport.bytes - lastReport.bytes;
-      if (deltaFrames > 0 && deltaBytes > 0) {
-        this.staleSince = null;
-        this.status.next('streaming');
-        return;
-      }
-
-      if (this.staleSince === null) {
-        this.staleSince = Date.now();
-      }
-      this.status.next('stale');
-
-      if (Date.now() - this.staleSince > 5_000) {
-        this.requestReconnect('stale stream');
-      }
+      this.updateHealthStatus(currentReport);
     } catch (error) {
       this.debug.log('%s: Health check failed.', this.camera, error);
-      this.requestReconnect('health check failure');
+      this.requestReconnect('Health check failure');
     } finally {
       this.healthCheckRunning = false;
     }
   }
 
-  /**
-   * Returns a report of the video stream.
-   */
+  /** Returns the current inbound video statistics for the stream. */
   private async getStreamReport(): Promise<StreamReport> {
-    const wsAlive = this.webSocket.readyState === WebSocket.OPEN;
-    if (wsAlive && this.peerConnection) {
-      const stats = await this.peerConnection.getStats();
-      const reports = Array.from(stats.values());
-      const videoReports = reports.filter((r) => r.type === 'inbound-rtp' && r.kind === 'video');
-      if (videoReports && videoReports.length > 0) {
-        const videoReport = videoReports[0];
-        const frames = videoReport.framesDecoded;
-        const bytes = videoReport.bytesReceived;
-        const timestamp = Date.now();
-        return { bytes: bytes, frames: frames, timestamp: timestamp } as StreamReport;
+    if (this.hasOpenConnection()) {
+      const peerConnection = this.peerConnection;
+      if (!peerConnection) {
+        return { bytes: 0, frames: 0, timestamp: Date.now() } as StreamReport;
+      }
+
+      const stats = await peerConnection.getStats();
+      const videoReport = Array.from(stats.values()).find(
+        (report): report is RTCStats & { kind?: string; bytesReceived?: number; framesDecoded?: number } => {
+          const inboundReport = report as RTCStats & { kind?: string; bytesReceived?: number; framesDecoded?: number };
+          return inboundReport.type === 'inbound-rtp' && inboundReport.kind === 'video';
+        },
+      );
+      if (videoReport) {
+        return {
+          bytes: videoReport.bytesReceived ?? 0,
+          frames: videoReport.framesDecoded ?? 0,
+          timestamp: Date.now(),
+        } as StreamReport;
       }
     }
     return { bytes: 0, frames: 0, timestamp: Date.now() } as StreamReport;
