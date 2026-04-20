@@ -1,10 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Camera, StreamQuality } from '../protect.model';
 import { DebugService } from '../../utils/debug.service';
 import { VisibilityService } from '../../utils/visibility.service';
-import { StreamOffer, WebRTCStream } from './webrtc';
+import { Camera, StreamQuality } from '../protect.model';
+import { WebRTCStream } from './webrtc';
+import { StreamOffer } from './webrtc.model';
 
 /**
  * Manages all WebRTC streams of the dashboard.
@@ -18,17 +19,11 @@ export class WebRTCService {
   private screenOn = true;
 
   constructor() {
-    this.visibility.screenOn$
-      .pipe(takeUntilDestroyed())
-      .subscribe((screenOn) => (this.screenOn = screenOn));
+    this.visibility.screenOn$.pipe(takeUntilDestroyed()).subscribe((screenOn) => (this.screenOn = screenOn));
 
-    this.visibility.screenOffAgain$
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.stopAllStreams());
+    this.visibility.screenOffAgain$.pipe(takeUntilDestroyed()).subscribe(() => this.stopAllStreams());
 
-    this.visibility.screenOnAgain$
-      .pipe(takeUntilDestroyed())
-      .subscribe(() => this.startAllStreams());
+    this.visibility.screenOnAgain$.pipe(takeUntilDestroyed()).subscribe(() => this.startAllStreams());
   }
 
   /**
