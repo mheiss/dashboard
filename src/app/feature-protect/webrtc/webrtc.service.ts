@@ -1,7 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Camera, StreamQuality } from '../protect.model';
 import { DebugService } from '../../utils/debug.service';
+import { VisibilityService } from '../../utils/visibility.service';
 import { StreamOffer, WebRTCStream } from './webrtc';
 
 /**
@@ -11,11 +13,22 @@ import { StreamOffer, WebRTCStream } from './webrtc';
 export class WebRTCService {
   private readonly httpClient = inject(HttpClient);
   private readonly debug = inject(DebugService);
+  private readonly visibility = inject(VisibilityService);
   private readonly streams = new Map<string, WebRTCStream>();
-  private readonly visibilityFunc = async () => this.onVisibilityChanged();
+  private screenOn = true;
 
   constructor() {
-    document.addEventListener('visibilitychange', this.visibilityFunc);
+    this.visibility.screenOn$
+      .pipe(takeUntilDestroyed())
+      .subscribe((screenOn) => (this.screenOn = screenOn));
+
+    this.visibility.screenOffAgain$
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.stopAllStreams());
+
+    this.visibility.screenOnAgain$
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.startAllStreams());
   }
 
   /**
@@ -28,7 +41,13 @@ export class WebRTCService {
       stream = new WebRTCStream(this.httpClient, streamName, this.debug);
       this.streams.set(streamName, stream);
     }
-    return stream.start();
+
+    const offer = stream.start();
+    if (!this.screenOn) {
+      stream.stop();
+    }
+
+    return offer;
   }
 
   /**
@@ -43,14 +62,17 @@ export class WebRTCService {
   }
 
   /**
-   * Starts / Stops the stream depending on the visibility of the document
+   * Stops all streams when the screen turns off.
    */
-  private async onVisibilityChanged() {
-    if (document.hidden) {
-      this.streams.forEach((stream) => stream.stop());
-    } else {
-      this.streams.forEach((stream) => stream.start());
-    }
+  private stopAllStreams() {
+    this.streams.forEach((stream) => stream.stop());
+  }
+
+  /**
+   * Starts all known streams again when the screen turns on.
+   */
+  private startAllStreams() {
+    this.streams.forEach((stream) => stream.start());
   }
 
   private buildStreamName(camera: Camera, quality: StreamQuality) {
