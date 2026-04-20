@@ -1,9 +1,9 @@
 import { Component, ElementRef, inject, input, OnChanges, OnInit, signal, viewChild } from '@angular/core';
 import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Camera, StreamQuality } from '../protect.model';
-import { Status } from '../webrtc/webrtc';
 import { WebRTCService } from '../webrtc/webrtc.service';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
+import { Status } from '../webrtc/webrtc.model';
 
 @Component({
   selector: 'app-video',
