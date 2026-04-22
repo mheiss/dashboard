@@ -106,6 +106,10 @@ export class GalleryComponent implements OnInit {
       .subscribe(() => this.service.loadMore());
   }
 
+  trackByRow(_: number, row: DriveImageExt[]) {
+    return row[0]?.image.id ?? _;
+  }
+
   updateMomentPoster(): void {
     this.debug.log('Updating moment posters');
     for (const moment of this.momentsByDay()) {
