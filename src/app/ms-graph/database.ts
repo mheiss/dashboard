@@ -1,7 +1,6 @@
 import { DriveItem } from '@microsoft/microsoft-graph-types';
 import { openDB } from 'idb';
 import { from, Observable } from 'rxjs';
-import { CalendarView } from '../ms-graph/calendar.model';
 import { DriveImage } from './image.model';
 import { isSameDay, isSameYear } from '../utils/date';
 import { not } from 'xstate';
@@ -129,17 +128,3 @@ export async function getDeltaLink(item: DriveItem): Promise<string | null> {
   return entry?.value ?? null;
 }
 
-/**
- * Stores the calendar preferences
- */
-export async function saveCalendarView(view: CalendarView) {
-  await db.put('metadata', { key: 'calendar.view', value: view });
-}
-
-/**
- * Loads the calendar preferences
- */
-export async function getCalendarView(): Promise<string | null> {
-  const entry = await db.get('metadata', 'calendar.view');
-  return entry?.value ?? null;
-}

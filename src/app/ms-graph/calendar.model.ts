@@ -2,14 +2,6 @@ import { Calendar, Event } from '@microsoft/microsoft-graph-types';
 import { CalendarConfig } from '../feature-config/config.model';
 
 /**
- * Display type
- */
-export type CalendarView = 'Day' | 'Agenda';
-export function isCalendarView(view: any): view is CalendarView {
-  return ['Day', 'Agenda'].indexOf(view) !== -1;
-}
-
-/**
  * Associates the type and the group with a calendar.
  */
 export interface MyCalendar extends Calendar {

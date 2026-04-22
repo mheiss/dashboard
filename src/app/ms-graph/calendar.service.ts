@@ -20,7 +20,7 @@ export class CalendarService {
   /**
    * The number of days to display
    */
-  readonly numberOfDays = signal<number>(3);
+  readonly numberOfDays = signal<number>(4);
 
   /**
    * All calendar events

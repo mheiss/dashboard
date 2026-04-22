@@ -1,64 +1,8 @@
 <div class="flex h-full min-h-0 flex-col">
   <div class="px-1 py-2 text-2xl font-bold text-stone-900">Kalender</div>
-  <div
-    class="grid scroll-m-2 grid-rows-[auto_auto_1fr] bg-gray-100 text-sm text-gray-900"
-    [style.margin-right.px]="layout.scrollbarSize()"
-    [ngClass]="{
-      'grid-cols-[45px_repeat(1,minmax(0,1fr))]': events().length === 1,
-      'grid-cols-[45px_repeat(2,minmax(0,1fr))]': events().length === 2,
-      'grid-cols-[45px_repeat(3,minmax(0,1fr))]': events().length === 3,
-      'grid-cols-[45px_repeat(4,minmax(0,1fr))]': events().length === 4,
-      'grid-cols-[45px_repeat(5,minmax(0,1fr))]': events().length === 5,
-      'grid-cols-[45px_repeat(6,minmax(0,1fr))]': events().length === 6,
-      'grid-cols-[45px_repeat(7,minmax(0,1fr))]': events().length === 7,
-    }"
-  >
-    <!-- Row 1: Date headers -->
-    <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
-      <button class="rounded border border-stone-700 bg-stone-100" (click)="switchView()">
-        @if (view() === 'Agenda') {
-          <img src="assets/view_agenda.svg" class="h-8 w-8" />
-        } @else if (view() === 'Day') {
-          <img src="assets/view_day.svg" class="h-8 w-8" />
-        }
-      </button>
-    </div>
-    @for (event of events(); track $index) {
-      <div class="sticky top-0 z-20 border-r bg-white px-2 py-2">
-        <div
-          class="text-2xl font-bold"
-          [ngClass]="{
-            'text-amber-600': isToday(event.day),
-            'text-stone-500': !isToday(event.day),
-          }"
-        >
-          {{ event.day | date: 'dd' }}
-        </div>
-        <div class="text-xs text-stone-500">
-          {{ event.day | date: 'EEEE' }}
-        </div>
-      </div>
-    }
-
-    <!-- All-day events -->
-    <div class="sticky top-16 z-20 border-t-4 border-r border-stone-500 bg-gray-50 px-2 py-1 text-xs"></div>
-    @for (event of events(); track $index) {
-      <div class="sticky top-16 z-20 border-t-4 border-r border-stone-500 bg-gray-50 px-1 py-1">
-        @for (event of event.allDay; track event.id) {
-          <div class="rounded border border-blue-300 bg-blue-100 px-2 py-1" [ngClass]="event.myConfig.tailwindClasses" ,>
-            <span class="text-s wrap-break-word text-stone-900"> {{ event.subject }}</span>
-          </div>
-        }
-      </div>
-    }
-  </div>
 
   <!-- Events -->
-  <div #container class="flex-1 overflow-y-scroll">
-    @if (view() === 'Agenda') {
-      <app-agenda-view class="col-span-3" [events]="events()" />
-    } @else {
-      <app-day-view [events]="events()" />
-    }
+  <div #container class="flex-1 overflow-y-scroll px-1 pb-2" [style.margin-right.px]="layout.scrollbarSize()">
+    <app-agenda-view [events]="events()" />
   </div>
 </div>

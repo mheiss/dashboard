@@ -2,6 +2,7 @@ import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, input } from '@angular/core';
 import { EventView } from '../../../ms-graph/calendar.model';
 import { graphToDate } from '../../../ms-graph/graph.model';
+import { isSameDay } from '../../../utils/date';
 import { AgendaEvent } from './agenda-view.model';
 
 @Component({
@@ -11,6 +12,10 @@ import { AgendaEvent } from './agenda-view.model';
 })
 export class AgendaView {
   readonly events = input.required<EventView[]>();
+
+  isToday(day: Date) {
+    return isSameDay(day, new Date());
+  }
 
   /**
    * Signal that provides the event in the local date time.
