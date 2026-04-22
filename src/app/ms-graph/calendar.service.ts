@@ -54,25 +54,26 @@ export class CalendarService {
 
       // Replace existing events
       this.events.update((views) => {
-        // Remove all events are before the start date
-        views = views.filter((view) => view.day >= startDate);
+        // Remove all events before the start date and clone each day entry so the signal emits.
+        let nextViews = views
+          .filter((view) => view.day >= startDate)
+          .map((view) => ({
+            day: view.day,
+            allDay: view.allDay.filter((entry) => entry.myConfig.name !== myCalendar.myConfig.name),
+            events: view.events.filter((entry) => entry.myConfig.name !== myCalendar.myConfig.name),
+          }));
 
         // create an entry for each day that we shall display
         for (const day of days) {
-          const exists = views.find((e) => isSameDay(e.day, day));
+          const exists = nextViews.find((e) => isSameDay(e.day, day));
           if (!exists) {
-            views.push({ day: day, allDay: [], events: [] });
+            nextViews.push({ day, allDay: [], events: [] });
           }
         }
 
-        // Replace events of the calendar that we queried
-        for (const view of views) {
-          view.allDay = view.allDay.filter((entry) => entry.myConfig.name !== myCalendar.myConfig.name);
-          view.events = view.events.filter((entry) => entry.myConfig.name !== myCalendar.myConfig.name);
-        }
         // Append events
         for (const event of events) {
-          for (const view of views) {
+          for (const view of nextViews) {
             // Add all-day events to each slot
             if (event.isAllDay) {
               const dayEnd = new Date(view.day);
@@ -97,7 +98,7 @@ export class CalendarService {
             }
           }
         }
-        return views;
+        return nextViews.sort((a, b) => a.day.getTime() - b.day.getTime());
       });
     }
   }
