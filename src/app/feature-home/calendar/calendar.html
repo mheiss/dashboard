@@ -1,8 +1,6 @@
 <div class="flex h-full min-h-0 flex-col">
   <div class="px-1 py-2 text-2xl font-bold text-stone-900">Kalender</div>
-
-  <!-- Events -->
-  <div #container class="flex-1 overflow-y-scroll px-1 pb-2" [style.margin-right.px]="layout.scrollbarSize()">
+  <div class="flex-1 overflow-y-scroll px-1 pb-2" [style.margin-right.px]="layout.scrollbarSize()">
     <app-agenda-view [events]="events()" />
   </div>
 </div>
