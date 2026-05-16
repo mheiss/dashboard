@@ -19,6 +19,8 @@ export class WebRTCStream {
   private reconnectPending = false;
   private healthCheckRunning = false;
   private staleSince: number | null = null;
+  private connectedSince: number | null = null;
+  private bufferingSince: number | null = null;
 
   constructor(
     private httpClient: HttpClient,
@@ -27,7 +29,7 @@ export class WebRTCStream {
   ) {
     this.webSocket = new WebSocket(getWebSocketUrl('/ws/webrtc?src=' + camera));
     this.webSocket.onopen = async () => this.onWebSocketOpen();
-    this.webSocket.onclose = async () => this.onWebSocketClose();
+    this.webSocket.onclose = async (e) => this.onWebSocketClose(e);
     this.webSocket.onmessage = (e) => this.onWebSocketMessage(e);
     this.webSocket.onerror = (e) => this.onWebSocketError(e);
     this.webSocket.binaryType = 'arraybuffer';
@@ -96,6 +98,8 @@ export class WebRTCStream {
   /** Clears stale tracking and resets the current stream report. */
   private resetHealthState() {
     this.staleSince = null;
+    this.bufferingSince = null;
+    this.connectedSince = null;
     this.streamReport.next(this.createEmptyReport());
   }
 
@@ -184,14 +188,13 @@ export class WebRTCStream {
   }
 
   /** Cleans up the current connection and reconnects when required. */
-  private async onWebSocketClose() {
-    this.debug.log('%s: Socket closed.', this.camera);
-
+  private async onWebSocketClose(e: CloseEvent) {
+    this.reconnectPending = false;
     this.cleanupPeerConnection();
     this.markStreamOffline();
 
     if (this.shallStream) {
-      this.reconnectPending = false;
+      this.debug.log('%s: Socket closed. Reason: %s (Code: %s)', this.camera, e.reason, e.code);
       this.requestReconnect('Socket closed');
       return;
     }
@@ -202,7 +205,7 @@ export class WebRTCStream {
 
   /** Logs unexpected signaling socket errors. */
   private async onWebSocketError(e: any) {
-    this.debug.log('%s: Unexpected error.', this.camera, e);
+    this.debug.log('%s: Unexpected error. Reason: %s', this.camera, e);
   }
 
   /** Applies incoming signaling messages to the peer connection. */
@@ -232,6 +235,7 @@ export class WebRTCStream {
     this.debug.log('%s: Playing new media track.', this.camera);
     this.media.next(ev.streams[0] ?? null);
     this.staleSince = null;
+    this.connectedSince = Date.now();
     this.status.next('connected');
   }
 
@@ -245,21 +249,50 @@ export class WebRTCStream {
       return;
     }
 
+    // Allow grace period for initial connection establishment
+    const gracePeriodMs = 5_000;
+    if (!this.connectedSince || Date.now() - this.connectedSince < gracePeriodMs) {
+      return;
+    }
+
     const deltaFrames = currentReport.frames - lastReport.frames;
     const deltaBytes = currentReport.bytes - lastReport.bytes;
+
+    // Stream is actively delivering frames and data
     if (deltaFrames > 0 && deltaBytes > 0) {
       this.staleSince = null;
+      this.bufferingSince = null;
       this.status.next('streaming');
       return;
     }
 
+    // Bytes are arriving but frames not yet decoded (waiting for keyframe or decoder)
+    if (deltaBytes > 0 && deltaFrames === 0) {
+      if (this.bufferingSince === null) {
+        this.bufferingSince = Date.now();
+        this.debug.log('%s: Stream buffering. Bytes: %s', this.camera, deltaBytes);
+      }
+      this.status.next('buffering');
+
+      // Give buffering 10 seconds to resolve (keyframe arrival, decoder catchup, etc)
+      if (Date.now() - this.bufferingSince > 10_000) {
+        this.debug.log('%s: Buffering timeout. Reconnecting.', this.camera);
+        this.requestReconnect('Buffering timeout');
+      }
+      return;
+    }
+
+    // No data arriving at all - connection is dead
+    this.bufferingSince = null;
     if (this.staleSince === null) {
       this.staleSince = Date.now();
+      this.debug.log('%s: Stream is dead (no data). Frames: %s, Bytes: %s', this.camera, deltaFrames, deltaBytes);
     }
-    this.status.next('stale');
+    this.status.next('dead');
 
+    // Reconnect after 5 seconds of no data
     if (Date.now() - this.staleSince > 5_000) {
-      this.requestReconnect('Stale stream');
+      this.requestReconnect('Stream dead');
     }
   }
 
@@ -270,7 +303,7 @@ export class WebRTCStream {
     }
     const candidate = event.candidate;
 
-    this.debug.log('%s: Got new ICE candidate. Type: %s, Protocol: %s', this.camera, candidate.type, candidate.protocol);
+    this.debug.log('%s: Got new ICE candidate.', this.camera);
     this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate.toJSON().candidate }));
   }
 

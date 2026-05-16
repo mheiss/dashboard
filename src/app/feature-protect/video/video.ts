@@ -69,10 +69,12 @@ export class Video implements OnInit, OnChanges {
         return classes + ' bg-yellow-500';
       case 'connected':
         return classes + ' bg-blue-500';
+      case 'buffering':
+        return classes + ' bg-amber-500';
       case 'streaming':
-        return classes + ' bg-[#39FF14]';
-      case 'stale':
-        return classes + ' bg-gray-500';
+        return classes + ' bg-green-400';
+      case 'dead':
+        return classes + ' bg-red-500';
     }
   }
 }

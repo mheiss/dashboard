@@ -3,7 +3,7 @@ import { Observable } from 'rxjs';
 /**
  * Health status of the stream.
  */
-export type Status = 'offline' | 'connecting' | 'connected' | 'streaming' | 'stale';
+export type Status = 'offline' | 'connecting' | 'connected' | 'buffering' | 'streaming' | 'dead';
 
 /**
  * The video stream along with some metadata.
