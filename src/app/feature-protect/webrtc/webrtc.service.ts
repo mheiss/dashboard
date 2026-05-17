@@ -20,9 +20,7 @@ export class WebRTCService {
 
   constructor() {
     this.visibility.screenOn$.pipe(takeUntilDestroyed()).subscribe((screenOn) => (this.screenOn = screenOn));
-
     this.visibility.screenOffAgain$.pipe(takeUntilDestroyed()).subscribe(() => this.stopAllStreams());
-
     this.visibility.screenOnAgain$.pipe(takeUntilDestroyed()).subscribe(() => this.startAllStreams());
   }
 

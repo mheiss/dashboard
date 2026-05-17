@@ -23,3 +23,25 @@ export interface StreamReport {
   bytes: number;
   timestamp: number;
 }
+
+/**
+ * Returns an empty stream report with default values.
+ */
+export function createEmptyReport(): StreamReport {
+  return {
+    frames: 0,
+    bytes: 0,
+    timestamp: 0,
+  };
+}
+
+/**
+ * Returns a new stream report with the given values.
+ */
+export function createStreamReport(frames: number, bytes: number): StreamReport {
+  return {
+    frames: frames,
+    bytes: bytes,
+    timestamp: Date.now(),
+  };
+}
