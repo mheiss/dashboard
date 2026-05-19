@@ -1,8 +1,8 @@
 @if (layout.mobile$()) {
   <div class="p-s flex w-full flex-col items-center bg-gray-200">
     <div class="drop-shadow-2x rounded-md bg-white p-4">
-      @for (camera of cameras; track camera) {
-        <app-video [camera]="camera" />
+      @for (camera of cameras(); track camera.camera) {
+        <app-video [camera]="camera.camera" [play]="camera.play" />
       }
     </div>
   </div>
@@ -10,8 +10,8 @@
   <div class="p-l flex h-full flex-row gap-2 bg-gray-200">
     <div class="h-full w-70 overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
       <div class="flex h-full flex-col items-center">
-        @for (camera of cameras; track camera) {
-          <app-video [camera]="camera" [quality]="'medium'" [zoom]="false" (click)="pinned.set(camera)" />
+        @for (camera of cameras(); track camera.camera) {
+          <app-video [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" (click)="pinned.set(camera.camera)" />
         }
       </div>
     </div>

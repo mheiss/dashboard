@@ -12,6 +12,7 @@ import { Status } from '../webrtc/webrtc.model';
 export class Video implements OnInit, OnChanges {
   private readonly webRtc = inject(WebRTCService);
   readonly camera = input.required<Camera>();
+  readonly play = input<boolean>(true);
   readonly zoom = input<boolean>(true);
   readonly quality = input<StreamQuality>('high');
   readonly showStats = signal<boolean>(false);
@@ -38,7 +39,13 @@ export class Video implements OnInit, OnChanges {
   ngOnChanges(): void {
     this.streamChanged.next();
     this.panzoom?.reset();
-
+    if (!this.play()) {
+      this.webRtc.stop(this.camera(), this.quality());
+      this.video.set(null);
+      this.classes.set(null);
+      this.statusText.set(null);
+      return;
+    }
     const offer = this.webRtc.start(this.camera(), this.quality());
     offer.media.pipe(takeUntil(this.streamChanged)).subscribe((media) => {
       this.video.set(media);
