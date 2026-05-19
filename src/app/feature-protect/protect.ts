@@ -3,14 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
-import { Camera, isCamera } from './protect.model';
-
-interface PlayableCamera {
-  camera: Camera;
-  play: boolean;
-}
-
-const PLAY_DELAY = 50;
+import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 
 @Component({
   selector: 'app-protect',

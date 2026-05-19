@@ -10,3 +10,16 @@ export function isCamera(type: any): type is Camera {
  * Supported video quality
  */
 export type StreamQuality = 'high' | 'medium';
+
+/**
+ * A camera that can be played or not.
+ */
+export interface PlayableCamera {
+  camera: Camera;
+  play: boolean;
+}
+
+/**
+ * Delay in milliseconds between starting each camera stream to avoid overwhelming the system.
+ */
+export const PLAY_DELAY = 50;

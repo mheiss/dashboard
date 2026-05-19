@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DebugService } from '../../utils/debug.service';
 import { VisibilityService } from '../../utils/visibility.service';
-import { Camera, StreamQuality } from '../protect.model';
+import { Camera, PLAY_DELAY, StreamQuality } from '../protect.model';
 import { WebRTCStream } from './webrtc';
 import { StreamOffer } from './webrtc.model';
 
@@ -63,9 +63,12 @@ export class WebRTCService {
 
   /**
    * Starts all known streams again when the screen turns on.
+   * Add a small delay between starting each stream to avoid overwhelming the system with simultaneous stream startups.
    */
   private startAllStreams() {
-    this.streams.forEach((stream) => stream.start());
+    Array.from(this.streams.values()).forEach((stream, index) => {
+      setTimeout(() => stream.start(), index * PLAY_DELAY);
+    });
   }
 
   private buildStreamName(camera: Camera, quality: StreamQuality) {
