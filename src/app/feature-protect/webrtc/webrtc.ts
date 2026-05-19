@@ -30,6 +30,7 @@ export class WebRTCStream {
   private healthCheckRunning = false;
   private staleSince: number | null = null;
   private bufferingSince: number | null = null;
+  private hasDecodedFrame = false;
 
   constructor(
     private httpClient: HttpClient,
@@ -103,6 +104,7 @@ export class WebRTCStream {
   private resetHealthState() {
     this.staleSince = null;
     this.bufferingSince = null;
+    this.hasDecodedFrame = false;
     this.streamReport.next(createEmptyReport());
   }
 
@@ -246,6 +248,10 @@ export class WebRTCStream {
     const lastReport = this.streamReport.value;
     const hasPreviousReport = lastReport.timestamp > 0;
 
+    if (currentReport.frames > 0) {
+      this.hasDecodedFrame = true;
+    }
+
     this.streamReport.next(currentReport);
     if (!hasPreviousReport) {
       return;
@@ -271,10 +277,16 @@ export class WebRTCStream {
         this.bufferingSince = Date.now();
         this.debug.log('%s: Buffering.', this.camera);
       }
-      this.status.next('buffering');
 
-      // Give buffering time to resolve (keyframe arrival, decoder catchup, etc)
-      if (Date.now() - this.bufferingSince > BUFFER_TIMEOUT) {
+      if (this.hasDecodedFrame) {
+        this.status.next('buffering');
+      } else {
+        this.status.next('startup');
+      }
+
+      // During startup on slower devices, wait for the first decoded frame instead of
+      // reconnecting and restarting the keyframe/decode wait from scratch.
+      if (this.hasDecodedFrame && Date.now() - this.bufferingSince > BUFFER_TIMEOUT) {
         this.debug.log('%s: Buffering timeout. Reconnecting.', this.camera);
         this.requestReconnect('Buffering timeout');
       }

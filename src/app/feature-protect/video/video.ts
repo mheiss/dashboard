@@ -20,6 +20,7 @@ export class Video implements OnInit, OnChanges {
   readonly poster = signal<string | null>(null);
   readonly stats = signal<string | null>(null);
   readonly classes = signal<string | null>(null);
+  readonly statusText = signal<string | null>(null);
 
   readonly imageElement = viewChild.required<ElementRef<HTMLImageElement>>('videoElement');
   private streamChanged = new Subject<void>();
@@ -47,6 +48,7 @@ export class Video implements OnInit, OnChanges {
     });
     offer.status.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((status) => {
       this.classes.set(this.toCssClass(status));
+      this.statusText.set(this.toStatusText(status));
     });
     offer.report.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((stats) => {
       const time = new Date(stats.timestamp);
@@ -69,12 +71,33 @@ export class Video implements OnInit, OnChanges {
         return classes + ' bg-yellow-500';
       case 'connected':
         return classes + ' bg-blue-500';
+      case 'startup':
+        return classes + ' bg-sky-400';
       case 'buffering':
         return classes + ' bg-amber-500';
       case 'streaming':
         return classes + ' bg-green-400';
       case 'dead':
         return classes + ' bg-red-500';
+    }
+  }
+
+  private toStatusText(health: Status): string | null {
+    switch (health) {
+      case 'offline':
+        return 'Offline';
+      case 'connecting':
+        return 'Connecting';
+      case 'connected':
+        return 'Connected';
+      case 'startup':
+        return 'Starting';
+      case 'buffering':
+        return 'Buffering';
+      case 'streaming':
+        return null;
+      case 'dead':
+        return 'No signal';
     }
   }
 }

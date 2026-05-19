@@ -1,5 +1,8 @@
 <div class="relative inline-block">
   <video #videoElement class="aspect-3/2 h-full rounded-lg bg-black" [srcObject]="video()" [poster]="poster()" muted autoplay></video>
+  @if (statusText(); as text) {
+    <div class="absolute top-2 left-2 rounded bg-black/35 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-white/75 backdrop-blur-sm">{{ text }}</div>
+  }
   <div class="absolute top-2 right-2" (click)="showStats.set(!showStats())">
     <div [classList]="classes()"></div>
   </div>
