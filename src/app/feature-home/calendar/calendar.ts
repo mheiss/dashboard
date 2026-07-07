@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, viewChild } from '@angular/core';
+import { Component, ElementRef, inject, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { interval } from 'rxjs';
 import { getPercentageOfDay } from '../../ms-graph/calendar.model';
@@ -9,6 +9,7 @@ import { AgendaView } from './agenda-view/agenda-view';
 @Component({
   selector: 'app-calendar',
   templateUrl: './calendar.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [AgendaView],
 })
 export class Calendar {
@@ -22,5 +23,4 @@ export class Calendar {
       .pipe(takeUntilDestroyed())
       .subscribe(() => this.source.refreshEvents());
   }
-
 }

@@ -1,6 +1,6 @@
 import { DialogRef } from '@angular/cdk/dialog';
 import { NgClass } from '@angular/common';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { OpenHABService } from '../../feature-openhab/openhab.service';
@@ -13,6 +13,7 @@ import { Key } from './pin.model';
 @Component({
   selector: 'app-pin',
   templateUrl: './pin.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [Popup, NgClass],
 })
 export class Pin implements OnInit {

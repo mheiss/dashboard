@@ -1,5 +1,5 @@
 import { NgClass } from '@angular/common';
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DefaultUrlSerializer, NavigationEnd, Router, RouterModule, UrlTree } from '@angular/router';
 import { entries } from './navigation.model';
@@ -7,6 +7,7 @@ import { entries } from './navigation.model';
 @Component({
   selector: 'app-navigation',
   templateUrl: './navigation.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [RouterModule, NgClass],
 })
 export class Navigation {

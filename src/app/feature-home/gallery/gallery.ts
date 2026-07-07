@@ -1,6 +1,6 @@
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { AsyncPipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, Signal, viewChild } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, Signal, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter, interval, map, tap } from 'rxjs';
 import { DriveImageExt } from '../../ms-graph/image.model';
@@ -16,6 +16,7 @@ import { DetailViewerData, Moment, toMoment } from './gallery.model';
 @Component({
   selector: 'app-gallery',
   templateUrl: './gallery.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [ScrollingModule, AsyncPipe, BlobSrcDirective],
 })
 export class GalleryComponent implements OnInit {

@@ -1,4 +1,4 @@
-import { Component, ElementRef, inject, input, OnChanges, OnInit, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, inject, input, OnChanges, OnInit, signal, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Camera, StreamQuality } from '../protect.model';
 import { WebRTCService } from '../webrtc/webrtc.service';
@@ -7,6 +7,7 @@ import { Status } from '../webrtc/webrtc.model';
 
 @Component({
   selector: 'app-video',
+  changeDetection: ChangeDetectionStrategy.Eager,
   templateUrl: './video.html',
 })
 export class Video implements OnInit, OnChanges {

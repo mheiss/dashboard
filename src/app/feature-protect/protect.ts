@@ -1,4 +1,4 @@
-import { Component, effect, inject, OnDestroy, signal } from '@angular/core';
+import { Component, effect, inject, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppConfigService } from '../feature-config/config.service';
@@ -9,6 +9,7 @@ import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 @Component({
   selector: 'app-protect',
   templateUrl: './protect.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [Video],
 })
 export class Protect implements OnDestroy {

@@ -1,7 +1,18 @@
 import { DIALOG_DATA } from '@angular/cdk/dialog';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { AsyncPipe, DatePipe, NgClass } from '@angular/common';
-import { Component, computed, effect, ElementRef, inject, OnInit, signal, untracked, viewChild } from '@angular/core';
+import {
+  Component,
+  computed,
+  effect,
+  ElementRef,
+  inject,
+  OnInit,
+  signal,
+  untracked,
+  viewChild,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 import { delay, first } from 'rxjs';
 import { DriveImageExt } from '../../../ms-graph/image.model';
@@ -12,6 +23,7 @@ import { Popup } from '../../../popup/popup';
 @Component({
   selector: 'app-detail-viewer',
   templateUrl: './detail-viewer.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [NgClass, DatePipe, AsyncPipe, BlobSrcDirective, ScrollingModule, Popup],
 })
 export class DetailViewerComponent implements OnInit {

@@ -1,5 +1,5 @@
 import { DatePipe, NgClass } from '@angular/common';
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
 import { EventView } from '../../../ms-graph/calendar.model';
 import { graphToDate } from '../../../ms-graph/graph.model';
 import { isSameDay } from '../../../utils/date';
@@ -8,6 +8,7 @@ import { AgendaEvent } from './agenda-view.model';
 @Component({
   selector: 'app-agenda-view',
   templateUrl: './agenda-view.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [NgClass, DatePipe],
 })
 export class AgendaView {

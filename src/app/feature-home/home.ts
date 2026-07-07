@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { OpenHABService } from '../feature-openhab/openhab.service';
 import { CalendarService } from '../ms-graph/calendar.service';
 import { ImageService } from '../ms-graph/image.service';
@@ -10,6 +10,7 @@ import { Pin } from './pin/pin';
 @Component({
   selector: 'app-home',
   templateUrl: './home.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [Calendar, GalleryComponent],
 })
 export class Home {

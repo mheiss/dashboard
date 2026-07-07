@@ -1,10 +1,11 @@
 import { DIALOG_DATA, DialogModule, DialogRef } from '@angular/cdk/dialog';
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { DialogOptions } from './popup.service';
 
 @Component({
   selector: 'app-popup',
   templateUrl: './popup.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [DialogModule],
 })
 export class Popup {
