@@ -23,16 +23,24 @@ export class Video implements OnInit, OnChanges {
   readonly classes = signal<string | null>(null);
   readonly statusText = signal<string | null>(null);
 
-  readonly imageElement = viewChild.required<ElementRef<HTMLImageElement>>('videoElement');
+  readonly videoElement = viewChild.required<ElementRef<HTMLVideoElement>>('videoElement');
   private streamChanged = new Subject<void>();
-  panzoom: PanzoomObject;
+  private panzoom: PanzoomObject;
+
+  private readonly onWheel = (event: WheelEvent) => {
+    event.preventDefault();
+    this.panzoom.zoomWithWheel(event);
+  };
 
   ngOnInit(): void {
     if (this.zoom()) {
-      this.panzoom = Panzoom(this.imageElement().nativeElement, {
+      const videoElement = this.videoElement().nativeElement;
+      this.panzoom = Panzoom(videoElement, {
+        disablePan: true,
         maxScale: 5,
         minScale: 1,
       });
+      videoElement.addEventListener('wheel', this.onWheel, { passive: false });
     }
   }
 
@@ -64,9 +72,15 @@ export class Video implements OnInit, OnChanges {
   }
 
   ngOnDestroy(): void {
+    this.videoElement();
     this.streamChanged.next();
     this.streamChanged.complete();
     this.webRtc.stop(this.camera(), this.quality());
+
+    const videoElement = this.videoElement().nativeElement;
+    if (videoElement) {
+      videoElement.removeEventListener('wheel', this.onWheel);
+    }
   }
 
   private toCssClass(health: Status) {
