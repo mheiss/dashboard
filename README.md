@@ -10,7 +10,7 @@ The dashboard has four primary sections in the navigation bar:
 
 - **Home**: Shows the configured Microsoft calendars next to a OneDrive photo gallery.
 - **OpenHAB**: Displays the predefined openHAB sitemap for smart home control.
-- **Wallbox**: Hosts the EVCC view for electric vehicle charging information.
+- **Wallbox**: Embeds the configured EVCC view for electric vehicle charging information.
 - **Kamera**: Shows the configured UniFi Protect camera streams.
 
 ## Home Screen
@@ -29,6 +29,12 @@ The Home screen is the default landing page. It is protected by Microsoft sign-i
 The OpenHAB screen displays a predefined openHAB Basic UI sitemap. This is the main OpenHAB feature of the dashboard: users can operate the configured smart home controls directly inside the tablet interface without leaving the dashboard.
 
 The embedded sitemap URL is configured in `public/config/config.json` under `openhab.sitemap`.
+
+## Wallbox Screen
+
+The Wallbox screen embeds the configured EVCC UI so charging information is available directly from the tablet dashboard.
+
+The embedded EVCC URL is configured in `public/config/config.json` under `evcc.url`.
 
 ## Camera Screen
 
@@ -58,6 +64,9 @@ Example structure:
 	"graphUrl": "https://graph.microsoft.com/v1.0",
 	"openhab": {
 		"sitemap": "https://openhab.example.lan/basicui/app"
+	},
+	"evcc": {
+		"url": "https://evcc.example.lan"
 	},
 	"protect": {
 		"cameras": ["entry", "garden", "patio"]
@@ -94,6 +103,10 @@ The `calendars` entries must match the calendar names returned by Microsoft Grap
 ### openHAB Sitemap Setup
 
 Set `openhab.sitemap` in `public/config/config.json` to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
+
+### EVCC Setup
+
+Set `evcc.url` in `public/config/config.json` to the EVCC UI URL that should be embedded on the Wallbox screen. The URL must be reachable from the tablet browser.
 
 ### Camera Setup
 
@@ -255,6 +268,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 - `src/main.ts` loads `config/config.json` before creating MSAL providers, so runtime configuration can change without rebuilding TypeScript.
 - Routes are defined in `src/app/routes.ts`; only the Home route is guarded by MSAL because it needs Microsoft Graph data.
 - `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
+- `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
 - `ImageService` uses Microsoft Graph delta queries and IndexedDB to cache OneDrive image metadata and thumbnails.
 - `CalendarService` fetches configured calendars from all calendar groups, filters by configured name, and refreshes events periodically.
 - `Protect` reads the camera list from `protect.cameras` and passes configured camera names to `WebRTCService`.
@@ -275,11 +289,16 @@ Make sure the backend exposes matching stream names.
 
 The OpenHAB screen is implemented as an iframe in `src/app/feature-openhab/openhab.html`. Change `openhab.sitemap` in `public/config/config.json` when moving to another openHAB host, sitemap, or Basic UI path.
 
+### Changing the EVCC URL
+
+The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.html`. Change `evcc.url` in `public/config/config.json` when moving to another EVCC host or path.
+
 ### Common Troubleshooting
 
 - **Blank Home screen or sign-in loop**: verify the Entra ID redirect URI, `clientId`, `authority`, and Graph scopes in `public/config/config.json`.
 - **Calendars missing**: verify the configured calendar `name` values exactly match the Microsoft calendar names visible to the signed-in user.
 - **Gallery folders missing**: verify each configured OneDrive folder path starts at the drive root and is accessible to the signed-in user.
 - **OpenHAB screen is blank**: verify `openhab.sitemap` in `public/config/config.json` is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
+- **Wallbox screen is blank**: verify `evcc.url` in `public/config/config.json` is reachable from the tablet and allows embedding in an iframe.
 - **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` and `/ws/webrtc` to go2rtc, and the generated `unifi_*` stream names are available there.
 - **Tablet does not wake or reload after deploy**: verify the Fully Kiosk URL and password in `scripts/config.json`.

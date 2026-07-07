@@ -3,6 +3,9 @@
   "openhab": {
     "sitemap": "https://openhab.dashboard.heiss.cloud/basicui/app"
   },
+  "evcc": {
+    "url": "https://evcc.dashboard.heiss.cloud"
+  },
   "protect": {
     "cameras": ["entry", "garden", "patio"]
   },

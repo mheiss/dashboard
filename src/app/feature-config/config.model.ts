@@ -9,6 +9,11 @@ export interface AppConfig {
   openhab: OpenhabConfig;
 
   /**
+   * The EVCC configuration.
+   */
+  evcc: EvccConfig;
+
+  /**
    * The UniFi Protect camera configuration.
    */
   protect: ProtectConfig;
@@ -38,6 +43,16 @@ export interface OpenhabConfig {
    * The URL of the Basic UI sitemap to embed.
    */
   sitemap: string;
+}
+
+/**
+ * The EVCC configuration.
+ */
+export interface EvccConfig {
+  /**
+   * The URL of the EVCC UI to embed.
+   */
+  url: string;
 }
 
 /**
