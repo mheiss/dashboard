@@ -1,0 +1,28 @@
+{
+  "graphUrl": "https://graph.microsoft.com/v1.0",
+  "openhab": {
+    "sitemap": "https://openhab.example.lan/basicui/app"
+  },
+  "evcc": {
+    "url": "https://evcc.example.lan"
+  },
+  "protect": {
+    "cameras": ["entry", "garden", "patio"]
+  },
+  "folders": ["Pictures/Camera Roll", "Pictures/Family"],
+  "calendars": [
+    {
+      "name": "Family",
+      "tailwindClasses": "border-emerald-600 bg-emerald-300"
+    },
+    {
+      "name": "Holidays",
+      "tailwindClasses": "border-rose-600 bg-rose-300"
+    }
+  ],
+  "msalConfig": {
+    "clientId": "00000000-0000-0000-0000-000000000000",
+    "authority": "https://login.microsoftonline.com/consumers",
+    "scope": ["User.Read", "Calendars.Read", "Files.Read"]
+  }
+}

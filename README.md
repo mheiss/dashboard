@@ -57,6 +57,14 @@ The dashboard is intended to run on a wall tablet in fullscreen mode. Use [Fully
 
 Runtime configuration is loaded from `public/config/config.json` during application startup. This file is copied into the built app as `config/config.json`.
 
+Create your local runtime config from the sample file:
+
+```powershell
+Copy-Item public/config/config.sample.json public/config/config.json
+```
+
+`public/config/config.json` contains environment-specific URLs, calendar names, folder names, and Microsoft app registration details. It is ignored by Git. Keep publishable defaults in `public/config/config.sample.json`.
+
 Example structure:
 
 ```json
@@ -203,10 +211,12 @@ Sample Caddyfile:
 
 ```powershell
 npm install
+Copy-Item public/config/config.sample.json public/config/config.json
+Copy-Item src/proxy/proxy.dev.sample.json src/proxy/proxy.dev.json
 npm start
 ```
 
-The development server uses `src/proxy/proxy.dev.json` by default. Update the `target` values in that file for your local backend before testing camera streaming or same-origin openHAB proxy paths.
+The development server uses `src/proxy/proxy.dev.json` by default. Update the `target` values in that local file for your backend before testing camera streaming or same-origin openHAB proxy paths. The local proxy config is ignored by Git; keep publishable defaults in `src/proxy/proxy.dev.sample.json`.
 
 ### Build
 
@@ -259,7 +269,7 @@ src/app/feature-config     Runtime configuration model and service
 src/app/ms-graph           Microsoft Graph calendar/gallery services and IndexedDB cache
 src/app/utils              Shared visibility, layout, date, debug, and WebSocket helpers
 public/config              Runtime configuration copied into the built app
-src/proxy                  Angular development proxy configuration
+src/proxy                  Angular development proxy configuration and sample
 scripts                   Deployment configuration and PowerShell deploy script
 ```
 
