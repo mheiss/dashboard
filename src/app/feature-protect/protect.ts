@@ -1,6 +1,7 @@
 import { Component, effect, inject, OnDestroy, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
+import { AppConfigService } from '../feature-config/config.service';
 import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
 import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
@@ -11,13 +12,14 @@ import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
   imports: [Video],
 })
 export class Protect implements OnDestroy {
+  readonly config = inject(AppConfigService);
   readonly layout = inject(LayoutService);
   readonly router = inject(Router);
   readonly activatedRoute = inject(ActivatedRoute);
 
-  private readonly cameraOrder: Camera[] = ['entry', 'garden', 'patio'];
+  private readonly cameraOrder: Camera[] = this.config.config().protect.cameras;
   readonly cameras = signal<PlayableCamera[]>(this.cameraOrder.map((camera) => ({ camera, play: false })));
-  readonly pinned = signal<Camera>('entry');
+  readonly pinned = signal<Camera>(this.cameraOrder[0] ?? '');
   private playTimers: number[] = [];
 
   constructor() {
@@ -31,7 +33,7 @@ export class Protect implements OnDestroy {
 
     this.activatedRoute.queryParamMap.pipe(takeUntilDestroyed()).subscribe((map) => {
       const param = map.get('camera');
-      if (isCamera(param)) {
+      if (isCamera(param, this.cameraOrder)) {
         this.pinned.set(param);
       }
     });
@@ -44,6 +46,9 @@ export class Protect implements OnDestroy {
   }
 
   next() {
+    if (this.cameraOrder.length === 0) {
+      return;
+    }
     const idx = this.cameraOrder.indexOf(this.pinned());
     let next = idx + 1;
     if (next >= this.cameraOrder.length) {
@@ -53,6 +58,9 @@ export class Protect implements OnDestroy {
   }
 
   previous() {
+    if (this.cameraOrder.length === 0) {
+      return;
+    }
     const idx = this.cameraOrder.indexOf(this.pinned());
     let previous = idx - 1;
     if (previous < 0) {

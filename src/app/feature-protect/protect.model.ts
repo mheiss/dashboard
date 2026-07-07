@@ -1,9 +1,9 @@
 /**
  * All cameras in the system
  */
-export type Camera = 'entry' | 'garden' | 'patio';
-export function isCamera(type: any): type is Camera {
-  return ['entry', 'garden', 'patio'].indexOf(type) !== -1;
+export type Camera = string;
+export function isCamera(type: string | null, cameras: readonly Camera[]): type is Camera {
+  return type !== null && cameras.includes(type);
 }
 
 /**

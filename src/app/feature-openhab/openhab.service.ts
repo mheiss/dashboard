@@ -5,6 +5,7 @@ import { WebSocket } from 'partysocket';
 import { interval } from 'rxjs';
 import { DebugService } from '../utils/debug.service';
 import { getWebSocketUrl } from '../utils/webSocket';
+import { AppConfigService } from '../feature-config/config.service';
 import { DoorbellItem, OpenHabItem, PinItem, SecurityItem } from './openhab.items';
 import { Payload, PingEvent } from './openhab.model';
 import { FullyService } from './fully.service';
@@ -15,6 +16,7 @@ export class OpenHABService {
   private readonly fully = inject(FullyService);
   private readonly router = inject(Router);
   private readonly debug = inject(DebugService);
+  private readonly config = inject(AppConfigService);
   private readonly ws = this.createWebSocket();
   private readonly items: OpenHabItem<any>[] = [];
 
@@ -52,10 +54,14 @@ export class OpenHABService {
       if (!value) {
         return;
       }
+      const camera = this.config.config().protect.cameras[0];
+      if (!camera) {
+        return;
+      }
       this.fully.turnScreenOn();
       this.router.navigate(['/protect'], {
         queryParams: {
-          camera: 'entry',
+          camera,
         },
       });
     });

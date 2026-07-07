@@ -7,6 +7,12 @@ export interface AppConfig {
    * The openHAB configuration.
    */
   openhab: OpenhabConfig;
+
+  /**
+   * The UniFi Protect camera configuration.
+   */
+  protect: ProtectConfig;
+
   /**
    * The list of folders to show in the gallery.
    * Path must be starting from the root.
@@ -32,6 +38,16 @@ export interface OpenhabConfig {
    * The URL of the Basic UI sitemap to embed.
    */
   sitemap: string;
+}
+
+/**
+ * The UniFi Protect camera configuration.
+ */
+export interface ProtectConfig {
+  /**
+   * The camera names to display, in the order they should appear.
+   */
+  cameras: string[];
 }
 
 /**

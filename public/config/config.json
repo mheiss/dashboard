@@ -3,6 +3,9 @@
   "openhab": {
     "sitemap": "https://openhab.dashboard.heiss.cloud/basicui/app"
   },
+  "protect": {
+    "cameras": ["entry", "garden", "patio"]
+  },
   "folders": ["Pictures/#Uploads", "Familie - Ausflüge", "Lena", "Sarah"],
   "calendars": [
     {

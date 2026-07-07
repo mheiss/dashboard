@@ -11,7 +11,7 @@ The dashboard has four primary sections in the navigation bar:
 - **Home**: Shows the configured Microsoft calendars next to a OneDrive photo gallery.
 - **OpenHAB**: Displays the predefined openHAB sitemap for smart home control.
 - **Wallbox**: Hosts the EVCC view for electric vehicle charging information.
-- **Kamera**: Shows UniFi Protect camera streams.
+- **Kamera**: Shows the configured UniFi Protect camera streams.
 
 ## Home Screen
 
@@ -34,9 +34,9 @@ The embedded sitemap URL is configured in `public/config/config.json` under `ope
 
 The camera screen shows UniFi Protect streams through a local WebRTC integration. Use [go2rtc](https://github.com/AlexxIT/go2rtc/) as the WebRTC streaming backend.
 
-- Supported cameras are `entry`, `garden`, and `patio`.
+- Supported cameras are configured in `public/config/config.json` under `protect.cameras`.
 - Use the camera screen controls to move to the next or previous pinned camera.
-- The selected camera is mirrored in the URL query string as `?camera=entry`, `?camera=garden`, or `?camera=patio`.
+- The selected camera is mirrored in the URL query string, for example `?camera=entry`.
 - Streams are started with a short delay between cameras to reduce load on the streaming backend.
 - Streams stop when the tablet screen turns off and restart when it turns on again.
 
@@ -58,6 +58,9 @@ Example structure:
 	"graphUrl": "https://graph.microsoft.com/v1.0",
 	"openhab": {
 		"sitemap": "https://openhab.example.lan/basicui/app"
+	},
+	"protect": {
+		"cameras": ["entry", "garden", "patio"]
 	},
 	"folders": ["Pictures/#Uploads", "Familie - Ausflüge"],
 	"calendars": [
@@ -91,6 +94,17 @@ The `calendars` entries must match the calendar names returned by Microsoft Grap
 ### openHAB Sitemap Setup
 
 Set `openhab.sitemap` in `public/config/config.json` to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
+
+### Camera Setup
+
+Set `protect.cameras` in `public/config/config.json` to the UniFi Protect camera names that should appear on the Camera screen. The order in this array controls the display order and next/previous navigation order.
+
+The WebRTC stream names are generated from each configured camera name:
+
+- high quality: `unifi_{camera}`
+- medium quality: `unifi_{camera}_medium`
+
+Make sure go2rtc exposes matching stream names.
 
 ### Backend/Proxy Paths
 
@@ -243,11 +257,12 @@ scripts                   Deployment configuration and PowerShell deploy script
 - `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
 - `ImageService` uses Microsoft Graph delta queries and IndexedDB to cache OneDrive image metadata and thumbnails.
 - `CalendarService` fetches configured calendars from all calendar groups, filters by configured name, and refreshes events periodically.
+- `Protect` reads the camera list from `protect.cameras` and passes configured camera names to `WebRTCService`.
 - `WebRTCService` owns camera stream lifecycle and reacts to screen visibility events to stop or restart streams.
 
 ### Adding or Changing Cameras
 
-Camera names are defined in `src/app/feature-protect/protect.model.ts`. To add a camera, update the `Camera` union, the `isCamera` guard, and the `cameraOrder` list in `src/app/feature-protect/protect.ts`.
+Camera names are configured in `public/config/config.json` under `protect.cameras`. To add, remove, rename, or reorder cameras, update that array and make sure go2rtc has matching stream names.
 
 The WebRTC stream names are generated as:
 
@@ -266,5 +281,5 @@ The OpenHAB screen is implemented as an iframe in `src/app/feature-openhab/openh
 - **Calendars missing**: verify the configured calendar `name` values exactly match the Microsoft calendar names visible to the signed-in user.
 - **Gallery folders missing**: verify each configured OneDrive folder path starts at the drive root and is accessible to the signed-in user.
 - **OpenHAB screen is blank**: verify `openhab.sitemap` in `public/config/config.json` is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
-- **Camera stream does not start**: verify Caddy routes `/api/webrtc/*` and `/ws/webrtc` to go2rtc and that the generated `unifi_*` stream names are available there.
+- **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` and `/ws/webrtc` to go2rtc, and the generated `unifi_*` stream names are available there.
 - **Tablet does not wake or reload after deploy**: verify the Fully Kiosk URL and password in `scripts/config.json`.
