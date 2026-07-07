@@ -1,5 +1,8 @@
 {
   "graphUrl": "https://graph.microsoft.com/v1.0",
+  "openhab": {
+    "sitemap": "https://openhab.dashboard.heiss.cloud/basicui/app"
+  },
   "folders": ["Pictures/#Uploads", "Familie - Ausflüge", "Lena", "Sarah"],
   "calendars": [
     {

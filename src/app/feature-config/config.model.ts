@@ -4,6 +4,10 @@
 export interface AppConfig {
   graphUrl: string;
   /**
+   * The openHAB configuration.
+   */
+  openhab: OpenhabConfig;
+  /**
    * The list of folders to show in the gallery.
    * Path must be starting from the root.
    */
@@ -18,6 +22,16 @@ export interface AppConfig {
    * The MSAL configuration
    */
   msalConfig: MsalConfig;
+}
+
+/**
+ * The openHAB configuration.
+ */
+export interface OpenhabConfig {
+  /**
+   * The URL of the Basic UI sitemap to embed.
+   */
+  sitemap: string;
 }
 
 /**
