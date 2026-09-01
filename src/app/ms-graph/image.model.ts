@@ -76,3 +76,37 @@ export interface DriveImageExt {
   original$: Observable<Blob | null>;
   thumbnail$: Observable<Blob | null>;
 }
+
+/**
+ * Returns true when a refreshed image page contains the same images in the same order.
+ */
+export const containsSameImages = (currentImages: DriveImageExt[], refreshedImages: DriveImage[]) => {
+  if (currentImages.length !== refreshedImages.length) {
+    return false;
+  }
+
+  return currentImages.every((imageExt, index) => {
+    const refreshedImage = refreshedImages[index];
+    return imageExt.image.id === refreshedImage.id && imageExt.image.lastModifiedAt.date === refreshedImage.lastModifiedAt.date;
+  });
+};
+
+/**
+ * Creates an extended image and reuses an existing one when the stored image did not change.
+ */
+export const toDriveImageExt = (
+  image: DriveImage,
+  getThumbnail: (image: DriveImage) => Observable<Blob | null>,
+  getOriginal: (image: DriveImage) => Observable<Blob | null>,
+  existing?: DriveImageExt,
+): DriveImageExt => {
+  if (existing && existing.image.lastModifiedAt.date === image.lastModifiedAt.date) {
+    return existing;
+  }
+
+  return {
+    image,
+    thumbnail$: getThumbnail(image),
+    original$: getOriginal(image),
+  };
+};

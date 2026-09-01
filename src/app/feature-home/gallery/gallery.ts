@@ -92,7 +92,6 @@ export class GalleryComponent implements OnInit {
 
     // immediate refresh after resume to avoid stale data
     this.visibility.screenOnAgain$.pipe(takeUntilDestroyed()).subscribe(async () => {
-      this.updateMomentPoster();
       this.service.refreshImages();
     });
   }

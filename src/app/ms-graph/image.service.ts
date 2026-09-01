@@ -5,7 +5,7 @@ import { AppConfigService } from '../feature-config/config.service';
 import { DebugService } from '../utils/debug.service';
 import { getDeltaLink, getImageCount, loadImages, loadMoments, removeDeltaLink, removeImage, saveDeltaLink, saveImage } from './database';
 import { GraphRestService } from './graph.service';
-import { DriveImage, DriveImageExt, toDriveImage } from './image.model';
+import { containsSameImages, DriveImage, DriveImageExt, toDriveImage, toDriveImageExt } from './image.model';
 import { HttpErrorResponse } from '@angular/common/http';
 
 @Injectable({ providedIn: 'root' })
@@ -20,6 +20,7 @@ export class ImageService {
   readonly moments = signal<DriveImageExt[]>([]);
   readonly imageCount = signal(0);
 
+  private readonly pageSize = 25;
   private nextKey: IDBValidKey | undefined;
   private allImagesLoaded = false;
   private loadingMore = false;
@@ -65,11 +66,7 @@ export class ImageService {
     this.refreshMoments();
 
     // Update images when done
-    this.nextKey = undefined;
-    this.allImagesLoaded = false;
-    this.loadingMore = false;
-    this.images.set([]);
-    this.loadMore();
+    this.reloadImages();
   }
 
   /**
@@ -181,7 +178,7 @@ export class ImageService {
 
     this.loadingMore = true;
     const paginationVersion = this.paginationVersion;
-    const nextImages = loadImages(25, this.nextKey);
+    const nextImages = loadImages(this.pageSize, this.nextKey);
     nextImages
       .then((response) => {
         if (paginationVersion !== this.paginationVersion) {
@@ -191,12 +188,13 @@ export class ImageService {
         this.nextKey = response.nextKey;
         this.allImagesLoaded = !response.hasMore;
 
-        const imageExts: DriveImageExt[] = [];
-        for (const image of response.items) {
-          const thumbnail$ = this.getThumbnail(image);
-          const original$ = this.graphService.getImageBlob(image);
-          imageExts.push({ image, thumbnail$, original$ });
-        }
+        const imageExts = response.items.map((image) =>
+          toDriveImageExt(
+            image,
+            (image) => this.getThumbnail(image),
+            (image) => this.graphService.getImageBlob(image),
+          ),
+        );
         this.images.update((images) => {
           return images.concat(imageExts);
         });
@@ -206,6 +204,40 @@ export class ImageService {
           this.loadingMore = false;
         }
       });
+  }
+
+  private reloadImages() {
+    this.nextKey = undefined;
+    this.allImagesLoaded = false;
+    this.loadingMore = false;
+
+    const paginationVersion = this.paginationVersion;
+    const currentImages = this.images();
+    const currentImagesById = new Map(currentImages.map((imageExt) => [imageExt.image.id, imageExt]));
+    const count = Math.max(this.pageSize, currentImages.length);
+
+    loadImages(count).then((response) => {
+      if (paginationVersion !== this.paginationVersion) {
+        return;
+      }
+
+      this.nextKey = response.nextKey;
+      this.allImagesLoaded = !response.hasMore;
+      if (containsSameImages(currentImages, response.items)) {
+        return;
+      }
+
+      this.images.set(
+        response.items.map((image) =>
+          toDriveImageExt(
+            image,
+            (image) => this.getThumbnail(image),
+            (image) => this.graphService.getImageBlob(image),
+            currentImagesById.get(image.id),
+          ),
+        ),
+      );
+    });
   }
 
   getThumbnail(image: DriveImage) {
