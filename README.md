@@ -18,7 +18,7 @@ The dashboard has four primary sections in the navigation bar:
 The Home screen is the default landing page. It is protected by Microsoft sign-in because it reads Microsoft Graph data.
 
 - The calendar column shows events from the configured calendars for the next few days.
-- Calendar colors are controlled by the `tailwindClasses` values in `public/config/config.json`.
+- Calendar colors are controlled by the `tailwindClasses` values in the selected environment config.
 - The gallery column displays photos from configured OneDrive folders.
 - Gallery images are cached locally in the browser with IndexedDB so repeat loads are faster.
 - The gallery refreshes periodically and loads more images as you scroll.
@@ -28,19 +28,19 @@ The Home screen is the default landing page. It is protected by Microsoft sign-i
 
 The OpenHAB screen displays a predefined openHAB Basic UI sitemap. This is the main OpenHAB feature of the dashboard: users can operate the configured smart home controls directly inside the tablet interface without leaving the dashboard.
 
-The embedded sitemap URL is configured in `public/config/config.json` under `openhab.sitemap`.
+The embedded sitemap URL is configured in the selected environment config under `openhab.sitemap`.
 
 ## Wallbox Screen
 
 The Wallbox screen embeds the configured EVCC UI so charging information is available directly from the tablet dashboard.
 
-The embedded EVCC URL is configured in `public/config/config.json` under `evcc.url`.
+The embedded EVCC URL is configured in the selected environment config under `evcc.url`.
 
 ## Camera Screen
 
 The camera screen shows UniFi Protect streams through a local WebRTC integration. Use [go2rtc](https://github.com/AlexxIT/go2rtc/) as the WebRTC streaming backend.
 
-- Supported cameras are configured in `public/config/config.json` under `protect.cameras`.
+- Supported cameras are configured in the selected environment config under `protect.cameras`.
 - Use the camera screen controls to move to the next or previous pinned camera.
 - The selected camera is mirrored in the URL query string, for example `?camera=entry`.
 - Streams are started with a short delay between cameras to reduce load on the streaming backend.
@@ -55,15 +55,23 @@ The dashboard is intended to run on a wall tablet in fullscreen mode. Use [Fully
 
 ## Configuration
 
-Runtime configuration is loaded from `public/config/config.json` during application startup. This file is copied into the built app as `config/config.json`.
+Runtime configuration is loaded from `config/config.json` during application startup. Angular serves or builds that file from the selected environment folder.
 
-Create your local runtime config from the sample file:
+Create your production/deployment runtime config from the sample file:
 
 ```powershell
-Copy-Item public/config/config.sample.json public/config/config.json
+Copy-Item public/config/config.sample.json public/config/production/config.json
 ```
 
-`public/config/config.json` contains environment-specific URLs, calendar names, folder names, and Microsoft app registration details. It is ignored by Git. Keep publishable defaults in `public/config/config.sample.json`.
+For local development, create a separate config file:
+
+```powershell
+Copy-Item public/config/config.sample.json public/config/development/config.json
+```
+
+`npm start` uses `public/config/development/config.json` and serves it as `config/config.json`. Production builds and `npm run deploy` use `public/config/production/config.json`.
+
+The environment `config.json` files contain environment-specific URLs, calendar names, folder names, and Microsoft app registration details. They are ignored by Git. Keep publishable defaults in `public/config/config.sample.json`.
 
 Example structure:
 
@@ -110,15 +118,15 @@ The `calendars` entries must match the calendar names returned by Microsoft Grap
 
 ### openHAB Sitemap Setup
 
-Set `openhab.sitemap` in `public/config/config.json` to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
+Set `openhab.sitemap` in the selected environment config to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
 
 ### EVCC Setup
 
-Set `evcc.url` in `public/config/config.json` to the EVCC UI URL that should be embedded on the Wallbox screen. The URL must be reachable from the tablet browser.
+Set `evcc.url` in the selected environment config to the EVCC UI URL that should be embedded on the Wallbox screen. The URL must be reachable from the tablet browser.
 
 ### Camera Setup
 
-Set `protect.cameras` in `public/config/config.json` to the UniFi Protect camera names that should appear on the Camera screen. The order in this array controls the display order and next/previous navigation order.
+Set `protect.cameras` in the selected environment config to the UniFi Protect camera names that should appear on the Camera screen. The order in this array controls the display order and next/previous navigation order.
 
 The WebRTC stream names are generated from each configured camera name:
 
@@ -211,7 +219,8 @@ Sample Caddyfile:
 
 ```powershell
 npm install
-Copy-Item public/config/config.sample.json public/config/config.json
+Copy-Item public/config/config.sample.json public/config/production/config.json
+Copy-Item public/config/config.sample.json public/config/development/config.json
 Copy-Item src/proxy/proxy.dev.sample.json src/proxy/proxy.dev.json
 npm start
 ```
@@ -286,7 +295,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 
 ### Adding or Changing Cameras
 
-Camera names are configured in `public/config/config.json` under `protect.cameras`. To add, remove, rename, or reorder cameras, update that array and make sure go2rtc has matching stream names.
+Camera names are configured in the selected environment config under `protect.cameras`. To add, remove, rename, or reorder cameras, update that array and make sure go2rtc has matching stream names.
 
 The WebRTC stream names are generated as:
 
@@ -297,18 +306,18 @@ Make sure the backend exposes matching stream names.
 
 ### Changing the openHAB Sitemap
 
-The OpenHAB screen is implemented as an iframe in `src/app/feature-openhab/openhab.html`. Change `openhab.sitemap` in `public/config/config.json` when moving to another openHAB host, sitemap, or Basic UI path.
+The OpenHAB screen is implemented as an iframe in `src/app/feature-openhab/openhab.html`. Change `openhab.sitemap` in the selected environment config when moving to another openHAB host, sitemap, or Basic UI path.
 
 ### Changing the EVCC URL
 
-The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.html`. Change `evcc.url` in `public/config/config.json` when moving to another EVCC host or path.
+The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.html`. Change `evcc.url` in the selected environment config when moving to another EVCC host or path.
 
 ### Common Troubleshooting
 
-- **Blank Home screen or sign-in loop**: verify the Entra ID redirect URI, `clientId`, `authority`, and Graph scopes in `public/config/config.json`.
+- **Blank Home screen or sign-in loop**: verify the Entra ID redirect URI, `clientId`, `authority`, and Graph scopes in the selected environment config.
 - **Calendars missing**: verify the configured calendar `name` values exactly match the Microsoft calendar names visible to the signed-in user.
 - **Gallery folders missing**: verify each configured OneDrive folder path starts at the drive root and is accessible to the signed-in user.
-- **OpenHAB screen is blank**: verify `openhab.sitemap` in `public/config/config.json` is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
-- **Wallbox screen is blank**: verify `evcc.url` in `public/config/config.json` is reachable from the tablet and allows embedding in an iframe.
+- **OpenHAB screen is blank**: verify `openhab.sitemap` in the selected environment config is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
+- **Wallbox screen is blank**: verify `evcc.url` in the selected environment config is reachable from the tablet and allows embedding in an iframe.
 - **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` and `/ws/webrtc` to go2rtc, and the generated `unifi_*` stream names are available there.
 - **Tablet does not wake or reload after deploy**: verify the Fully Kiosk URL and password in `scripts/config.json`.

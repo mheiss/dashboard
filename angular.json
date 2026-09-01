@@ -19,12 +19,6 @@
           "options": {
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "public"
-              }
-            ],
             "styles": ["src/styles.css"]
           },
           "configurations": {
@@ -41,12 +35,36 @@
                   "maximumError": "8kB"
                 }
               ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public",
+                  "ignore": ["config/**/*"]
+                },
+                {
+                  "glob": "config.json",
+                  "input": "public/config/production",
+                  "output": "/config/"
+                }
+              ],
               "outputHashing": "all"
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public",
+                  "ignore": ["config/**/*"]
+                },
+                {
+                  "glob": "config.json",
+                  "input": "public/config/development",
+                  "output": "/config/"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
