@@ -20,7 +20,12 @@ export class ImageService {
   readonly moments = signal<DriveImageExt[]>([]);
   readonly imageCount = signal(0);
 
-  nextKey: IDBValidKey | null;
+  private nextKey: IDBValidKey | undefined;
+  private allImagesLoaded = false;
+  private loadingMore = false;
+
+  // Latest pagination version to handle concurrent loadMore calls
+  private paginationVersion = 0;
 
   constructor() {
     this.getImageSourceToDisplay().then((folders) => {
@@ -37,6 +42,7 @@ export class ImageService {
       return;
     }
     this.loading.set(true);
+    this.paginationVersion++;
 
     // Fetch all changes in all folders
     // Retry up to three times to handle potential errors
@@ -59,7 +65,9 @@ export class ImageService {
     this.refreshMoments();
 
     // Update images when done
-    this.nextKey = null;
+    this.nextKey = undefined;
+    this.allImagesLoaded = false;
+    this.loadingMore = false;
     this.images.set([]);
     this.loadMore();
   }
@@ -167,20 +175,37 @@ export class ImageService {
    * Loads and displays the most recent images.
    */
   loadMore() {
-    const nextImages = loadImages(25, this.nextKey);
-    nextImages.then((response) => {
-      this.nextKey = response.lastKey;
+    if (this.loading() || this.loadingMore || this.allImagesLoaded) {
+      return;
+    }
 
-      const imageExts: DriveImageExt[] = [];
-      for (const image of response.items) {
-        const thumbnail$ = this.getThumbnail(image);
-        const original$ = this.graphService.getImageBlob(image);
-        imageExts.push({ image, thumbnail$, original$ });
-      }
-      this.images.update((images) => {
-        return images.concat(imageExts);
+    this.loadingMore = true;
+    const paginationVersion = this.paginationVersion;
+    const nextImages = loadImages(25, this.nextKey);
+    nextImages
+      .then((response) => {
+        if (paginationVersion !== this.paginationVersion) {
+          return;
+        }
+
+        this.nextKey = response.nextKey;
+        this.allImagesLoaded = !response.hasMore;
+
+        const imageExts: DriveImageExt[] = [];
+        for (const image of response.items) {
+          const thumbnail$ = this.getThumbnail(image);
+          const original$ = this.graphService.getImageBlob(image);
+          imageExts.push({ image, thumbnail$, original$ });
+        }
+        this.images.update((images) => {
+          return images.concat(imageExts);
+        });
+      })
+      .finally(() => {
+        if (paginationVersion === this.paginationVersion) {
+          this.loadingMore = false;
+        }
       });
-    });
   }
 
   getThumbnail(image: DriveImage) {

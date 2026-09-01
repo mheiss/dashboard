@@ -107,8 +107,8 @@ export class GalleryComponent implements OnInit {
       .subscribe(() => this.service.loadMore());
   }
 
-  trackByRow(_: number, row: DriveImageExt[]) {
-    return row[0]?.image.id ?? _;
+  trackByImageIds(_: number, row: DriveImageExt[]) {
+    return row.map((imageExt) => imageExt.image.id).join('|');
   }
 
   updateMomentPoster(): void {

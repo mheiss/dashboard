@@ -32,20 +32,22 @@ const db = await openDB('Dashboard', 3, {
 /**
  * Loads the next images sorted by 'takenAt' timestamp
  */
-export async function loadImages(count: number, lastKey: IDBValidKey | null) {
+export async function loadImages(count: number, beforeKey?: IDBValidKey) {
   const tx = db.transaction('images', 'readonly');
   const index = tx.store.index('takenAt.date');
 
   let cursor;
-  if (lastKey === undefined || lastKey === null) {
+  if (beforeKey === undefined) {
     cursor = await index.openCursor(null, 'prev');
   } else {
-    cursor = await index.openCursor(IDBKeyRange.upperBound(lastKey, true), 'prev');
+    cursor = await index.openCursor(IDBKeyRange.upperBound(beforeKey, true), 'prev');
   }
 
   const results: DriveImage[] = [];
+  let nextKey: IDBValidKey | undefined;
   while (cursor && results.length < count) {
     results.push(cursor.value);
+    nextKey = cursor.key;
     cursor = await cursor.continue();
   }
 
@@ -53,7 +55,8 @@ export async function loadImages(count: number, lastKey: IDBValidKey | null) {
 
   return {
     items: results,
-    lastKey: cursor?.key ?? null,
+    nextKey,
+    hasMore: cursor !== null,
   };
 }
 
