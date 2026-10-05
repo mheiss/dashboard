@@ -7,6 +7,7 @@ export interface DialogOptions {
   disableClose: boolean;
   width?: string;
   height?: string;
+  fullScreen?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -17,15 +18,17 @@ export class PopupService {
    * Opens the given component in a popup.
    */
   public open(component: ComponentType<unknown>, options?: DialogOptions) {
+    const width = options?.fullScreen ? '100vw' : options?.width;
+    const height = options?.fullScreen ? '100dvh' : options?.height;
     return this.dialog.open<string>(component, {
       data: options,
       disableClose: options?.disableClose,
-      panelClass: 'app-dialog-panel',
+      panelClass: options?.fullScreen ? [] : 'app-dialog-panel',
       backdropClass: 'app-dialog-backdrop',
-      width: options?.width,
-      height: options?.height,
-      maxHeight: options?.height,
-      maxWidth: options?.width,
+      width,
+      height,
+      maxHeight: height,
+      maxWidth: width,
     });
   }
 }

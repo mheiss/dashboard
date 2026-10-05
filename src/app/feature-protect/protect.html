@@ -19,7 +19,6 @@
               type="button"
               class="relative block w-full shrink-0 overflow-hidden rounded-md border-2 border-transparent text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
               [class.border-emerald-600]="pinned() === camera.camera"
-              [attr.aria-label]="'Kamera ' + cameraLabel(camera.camera) + ' anzeigen'"
               [attr.aria-pressed]="pinned() === camera.camera"
               (click)="pinned.set(camera.camera)"
             >
@@ -36,8 +35,8 @@
       </div>
     </div>
   }
-  <section class="flex shrink-0 items-center gap-2 border-t border-gray-300 bg-white px-2 py-2" aria-label="Letzte Bewegungen">
-    <h2 class="shrink-0 rotate-180 text-xs leading-tight font-semibold text-gray-700 [writing-mode:vertical-rl]" aria-label="Letzte Bewegungen">
+  <section class="flex shrink-0 items-center gap-2 border-t border-gray-300 bg-white px-2 py-2">
+    <h2 class="shrink-0 rotate-180 text-xs leading-tight font-semibold text-gray-700 [writing-mode:vertical-rl]">
       Letzte<br />Bewegungen
     </h2>
     @if (motion.snapshots().length) {
@@ -47,7 +46,6 @@
             type="button"
             aria-haspopup="dialog"
             class="relative w-36 shrink-0 overflow-hidden rounded-md border border-gray-200 text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
-            [attr.aria-label]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera) + ' am ' + (snapshot.timestamp | date: 'medium')"
             [title]="cameraLabel(snapshot.camera) + ' - ' + (snapshot.timestamp | date: 'medium')"
             (click)="openSnapshot(snapshot)"
           >
@@ -79,7 +77,6 @@
       <button
         type="button"
         title="Schließen"
-        aria-label="Schließen"
         class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
         (click)="dialogRef.close()"
       >
