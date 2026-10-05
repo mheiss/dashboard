@@ -127,7 +127,7 @@ export class GalleryComponent implements OnInit {
         loadMore: () => this.service.loadMore(),
       } as DetailViewerData,
       disableClose: false,
-      width: '90%',
+      fullScreen: true,
     });
   }
 
@@ -140,7 +140,7 @@ export class GalleryComponent implements OnInit {
         loadMore: () => {},
       } as DetailViewerData,
       disableClose: false,
-      width: '90%',
+      fullScreen: true,
     });
   }
 }

@@ -12,6 +12,18 @@ export const routes: Routes = [
     canActivate: [MsalGuard],
   },
   {
+    path: 'calendar',
+    component: Home,
+    canActivate: [MsalGuard],
+    data: { mobileView: 'calendar' },
+  },
+  {
+    path: 'gallery',
+    component: Home,
+    canActivate: [MsalGuard],
+    data: { mobileView: 'gallery' },
+  },
+  {
     path: 'openhab',
     component: Openhab,
   },

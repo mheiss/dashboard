@@ -6,7 +6,7 @@ The app is designed for an always-on display in the living room. It keeps the ma
 
 ## Main Screens
 
-The dashboard has four primary sections in the navigation bar:
+On tablets and larger screens, the dashboard has four primary sections in the navigation bar. On mobile (below 640px), Home is replaced by separate Kalender and Galerie buttons.
 
 - **Home**: Shows the configured Microsoft calendars next to a OneDrive photo gallery.
 - **OpenHAB**: Displays the predefined openHAB sitemap for smart home control.
@@ -16,6 +16,8 @@ The dashboard has four primary sections in the navigation bar:
 ## Home Screen
 
 The Home screen is the default landing page. It is protected by Microsoft sign-in because it reads Microsoft Graph data.
+
+On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. Both new routes use the same Microsoft sign-in guard as Home.
 
 - The calendar column shows events from the configured calendars for the next few days.
 - Calendar colors are controlled by the `tailwindClasses` values in the selected environment config.
@@ -284,7 +286,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 ### Architecture Notes
 
 - `src/main.ts` loads `config/config.json` before creating MSAL providers, so runtime configuration can change without rebuilding TypeScript.
-- Routes are defined in `src/app/routes.ts`; only the Home route is guarded by MSAL because it needs Microsoft Graph data.
+- Routes are defined in `src/app/routes.ts`; Home, Calendar, and Gallery are guarded by MSAL because they need Microsoft Graph data.
 - `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
 - `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
 - `ImageService` uses Microsoft Graph delta queries and IndexedDB to cache OneDrive image metadata and thumbnails.

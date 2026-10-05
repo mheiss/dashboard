@@ -13,16 +13,19 @@ export class NavigationEntry {
   constructor(
     public name: string,
     public path: string,
-    protected icons: NavigationIcons,
+    protected icons?: NavigationIcons,
   ) {
+    if (!icons) {
+      return;
+    }
     this.icon.set(icons.normal);
     effect(() => {
       if (this.hover()) {
-        this.icon.set(this.icons.hover);
+        this.icon.set(icons.hover);
       } else if (this.active()) {
-        this.icon.set(this.icons.active);
+        this.icon.set(icons.active);
       } else {
-        this.icon.set(this.icons.normal);
+        this.icon.set(icons.normal);
       }
     });
   }
@@ -41,6 +44,8 @@ export const entries = (): NavigationEntry[] => [
     active: 'assets/home_active.svg',
     hover: 'assets/home_hover.svg',
   }),
+  new NavigationEntry('Kalender', '/calendar'),
+  new NavigationEntry('Galerie', '/gallery'),
   new NavigationEntry('OpenHAB', '/openhab', {
     normal: 'assets/openhab.svg',
     active: 'assets/openhab.svg',

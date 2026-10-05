@@ -1,57 +1,61 @@
-<app-popup>
-  <div class="flex flex-col">
-    <div class="relative flex flex-1 cursor-default items-center justify-center overflow-hidden bg-stone-200">
-      <div class="absolute left-2 z-10 flex items-center justify-center">
-        @if (hasPrevious()) {
-          <button (click)="onPrevious()" class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
-            <img src="/assets/left.svg" alt="Previous" />
-          </button>
-        }
-      </div>
-      <div class="rounded-1 flex h-[65vh] w-full items-center justify-center overflow-hidden p-4">
-        <img #imageElement class="max-h-full max-w-full object-contain" [blobSrc]="imageBlob()" [alt]="imageName()" />
-      </div>
-      <div class="absolute right-2 z-10 flex items-center justify-center">
-        @if (hasNext()) {
-          <button (click)="onNext()" class="flex h-14 w-14 justify-center rounded-full border border-stone-800 bg-stone-600">
-            <img src="/assets/right.svg" alt="Next" />
-          </button>
-        }
-      </div>
-    </div>
-
-    <cdk-virtual-scroll-viewport
-      #gallery
-      orientation="horizontal"
-      class="h-34 w-full overflow-x-auto overflow-y-hidden bg-white whitespace-nowrap"
-      [itemSize]="80"
-    >
-      <div
-        *cdkVirtualFor="let imageExt of images(); trackBy: trackByImageId"
-        class="mx-2 inline-flex aspect-square items-center justify-center gap-2 rounded bg-gray-100 p-1"
-      >
-        <div
-          (click)="showImage(imageExt)"
-          class="aspect-square overflow-hidden rounded bg-gray-100"
-          [ngClass]="{
-            'border-2 border-stone-800 opacity-75': imageExt === image(),
-          }"
-        >
-          <img class="h-26 w-26 object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
-        </div>
-      </div>
-    </cdk-virtual-scroll-viewport>
-
-    <div class="grid h-8 grid-cols-3 items-center rounded-xl bg-stone-800 px-4 text-stone-300 drop-shadow-lg">
-      <div class="justify-self-start text-stone-500" [ngClass]="originalLoaded() ? 'not-italic' : 'italic'">
-        <span>{{ imageName() }}</span>
-      </div>
-      <div class="justify-self-center text-stone-300">
+<div class="flex h-full min-h-0 w-full flex-col bg-black text-white">
+  <header class="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-3 py-2">
+    <div class="min-w-0">
+      <h2 class="truncate text-sm font-semibold" [class.italic]="!originalLoaded()">{{ imageName() }}</h2>
+      <div class="flex flex-wrap items-center gap-x-3 text-xs text-gray-300">
+        <time [attr.datetime]="imageTakenAt().toISOString()">{{ imageTakenAt() | date: 'dd.MM.yyyy HH:mm' }}</time>
         <span>Bild {{ images().indexOf(image()) + 1 }} / {{ data.imageCount }}</span>
       </div>
-      <div class="justify-self-end text-stone-500">
-        <span>{{ imageTakenAt() | date: 'dd.MM.yyyy HH:mm' }}</span>
-      </div>
     </div>
+    <button
+      type="button"
+      title="Schließen"
+      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+      (click)="dialogRef.close()"
+    >
+      <img class="h-6 w-6" src="/assets/close.svg" alt="" />
+    </button>
+  </header>
+  <div class="relative flex min-h-0 flex-1 cursor-default items-center justify-center overflow-hidden">
+    <img #imageElement class="h-full w-full object-contain" [blobSrc]="imageBlob()" [alt]="imageName()" />
+    @if (hasPrevious()) {
+      <button
+        type="button"
+        title="Vorheriges Bild"
+        class="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-black/65 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+        (click)="onPrevious()"
+      >
+        <img class="h-6 w-6" src="/assets/left.svg" alt="" />
+      </button>
+    }
+    @if (hasNext()) {
+      <button
+        type="button"
+        title="Nächstes Bild"
+        class="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-black/65 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+        (click)="onNext()"
+      >
+        <img class="h-6 w-6" src="/assets/right.svg" alt="" />
+      </button>
+    }
   </div>
-</app-popup>
+  <cdk-virtual-scroll-viewport
+    #gallery
+    orientation="horizontal"
+    class="h-20 w-full shrink-0 border-t border-white/15 whitespace-nowrap"
+    style="overflow-x: auto; overflow-y: hidden"
+    [itemSize]="88"
+  >
+    <button
+      *cdkVirtualFor="let imageExt of images(); let index = index; trackBy: trackByImageId"
+      type="button"
+      class="mx-1 my-2 inline-flex h-16 w-20 overflow-hidden rounded-md border-2 border-transparent align-top focus-visible:outline-2 focus-visible:outline-white"
+      [class.border-white]="imageExt === image()"
+      [attr.aria-pressed]="imageExt === image()"
+      [title]="imageExt.image.name"
+      (click)="showImage(imageExt)"
+    >
+      <img class="h-full w-full object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
+    </button>
+  </cdk-virtual-scroll-viewport>
+</div>

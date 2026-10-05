@@ -1,6 +1,6 @@
-import { DIALOG_DATA } from '@angular/cdk/dialog';
+import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
-import { AsyncPipe, DatePipe, NgClass } from '@angular/common';
+import { AsyncPipe, DatePipe } from '@angular/common';
 import {
   Component,
   computed,
@@ -8,6 +8,7 @@ import {
   ElementRef,
   inject,
   OnInit,
+  OnDestroy,
   signal,
   untracked,
   viewChild,
@@ -18,15 +19,16 @@ import { delay, first } from 'rxjs';
 import { DriveImageExt } from '../../../ms-graph/image.model';
 import { BlobSrcDirective } from '../blob.directive';
 import { DetailViewerData } from '../gallery.model';
-import { Popup } from '../../../popup/popup';
 
 @Component({
   selector: 'app-detail-viewer',
   templateUrl: './detail-viewer.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [NgClass, DatePipe, AsyncPipe, BlobSrcDirective, ScrollingModule, Popup],
+  host: { class: 'block h-full min-h-0 w-full' },
+  imports: [DatePipe, AsyncPipe, BlobSrcDirective, ScrollingModule],
 })
-export class DetailViewerComponent implements OnInit {
+export class DetailViewerComponent implements OnInit, OnDestroy {
+  readonly dialogRef = inject(DialogRef);
   readonly data: DetailViewerData = inject(DIALOG_DATA).data;
   readonly image = signal<DriveImageExt>(this.data.image);
   readonly imageBlob = signal<Blob | null>(null);
@@ -75,6 +77,10 @@ export class DetailViewerComponent implements OnInit {
       minScale: 1,
     });
     setTimeout(() => this.showImage(this.image()), 0);
+  }
+
+  ngOnDestroy(): void {
+    this.panzoom?.destroy();
   }
 
   hasNext() {

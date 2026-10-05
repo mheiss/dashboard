@@ -1,18 +1,25 @@
-<div class="flex justify-center space-x-8 text-stone-300">
-  @for (item of elements; track item) {
-    <div
+<div class="flex w-full items-center justify-around gap-1 px-1 text-stone-300 md:justify-center md:gap-8">
+  @for (item of elements(); track item.path) {
+    <a
       [routerLink]="item.path"
-      class="pb-1"
+      [attr.aria-label]="item.name"
+      [attr.aria-current]="highlightedPath() === item.path ? 'page' : null"
+      [title]="item.name"
+      class="flex h-14 min-w-0 max-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-md hover:bg-amber-600 hover:text-white focus-visible:outline-2 focus-visible:outline-white md:h-auto md:max-w-none md:flex-none md:flex-row md:p-2"
       (mouseover)="item.hover.set(true)"
       (mouseleave)="item.hover.set(false)"
       [ngClass]="{
-        'shadow-2xs shadow-amber-500': activePath() === item.path,
+        'shadow-2xs shadow-amber-500 text-amber-400': highlightedPath() === item.path,
       }"
     >
-      <button class="flex flex-row items-center rounded-lg p-2 hover:bg-amber-600 hover:text-white">
-        <img #img class="hover h-7 w-7" [src]="item.icon()" />
-        <span class="hidden pl-3 text-3xl md:inline">{{ item.name }}</span>
-      </button>
-    </div>
+      @if (item.path === '/calendar') {
+        <svg lucideCalendarDays class="h-7 w-7" aria-hidden="true"></svg>
+      } @else if (item.path === '/gallery') {
+        <svg lucideImages class="h-7 w-7" aria-hidden="true"></svg>
+      } @else {
+        <img class="h-7 w-7" [src]="item.icon()" alt="" />
+      }
+      <span class="text-[10px] leading-none md:pl-3 md:text-3xl">{{ item.name }}</span>
+    </a>
   }
 </div>
