@@ -31,13 +31,14 @@ export class WebRTCStream {
   private staleSince: number | null = null;
   private bufferingSince: number | null = null;
   private hasDecodedFrame = false;
+  private lastWebSocketError: string | null = null;
 
   constructor(
     private httpClient: HttpClient,
     private camera: string,
     private debug: DebugService,
   ) {
-    this.webSocket = new WebSocket(getWebSocketUrl('/ws/webrtc?src=' + camera));
+    this.webSocket = new WebSocket(getWebSocketUrl('/api/webrtc/ws?src=' + camera));
     this.webSocket.onopen = async () => this.onWebSocketOpen();
     this.webSocket.onclose = async (e) => this.onWebSocketClose(e);
     this.webSocket.onmessage = (e) => this.onWebSocketMessage(e);
@@ -140,16 +141,11 @@ export class WebRTCStream {
     this.status.next('connecting');
     this.debug.log('%s: Reconnecting WebRTC stream (%s).', this.camera, reason);
 
-    if (this.webSocket.readyState === WebSocket.CLOSED) {
-      this.webSocket.reconnect();
-      return;
-    }
-
     if (this.webSocket.readyState === WebSocket.CLOSING) {
       return;
     }
 
-    this.webSocket.close();
+    this.webSocket.reconnect(1000, reason);
   }
 
   /** Fetches and updates the latest poster image for the camera. */
@@ -170,6 +166,7 @@ export class WebRTCStream {
       return;
     }
 
+    this.lastWebSocketError = null;
     this.reconnectPending = false;
     this.resetHealthState();
     this.status.next('connecting');
@@ -194,12 +191,22 @@ export class WebRTCStream {
 
   /** Cleans up the current connection and reconnects when required. */
   private async onWebSocketClose(e: CloseEvent) {
+    const socketError = this.lastWebSocketError;
+    this.lastWebSocketError = null;
+    const wasReconnectPending = this.reconnectPending;
     this.reconnectPending = false;
     this.cleanupPeerConnection();
     this.markStreamOffline();
 
+    if (wasReconnectPending) {
+      this.reconnectPending = this.shallStream;
+      this.debug.log('%s: Socket closed for reconnect. %s', this.camera, this.describeWebSocketClose(e));
+      return;
+    }
+
     if (this.shallStream) {
-      this.debug.log('%s: Socket closed. Reason: %s (Code: %s)', this.camera, e.reason, e.code);
+      const errorDetail = socketError && (!e.wasClean || e.code !== 1000) ? ` Previous error: ${socketError}` : '';
+      this.debug.log('%s: Socket closed. %s%s', this.camera, this.describeWebSocketClose(e), errorDetail);
       this.requestReconnect('Socket closed');
       return;
     }
@@ -209,8 +216,22 @@ export class WebRTCStream {
   }
 
   /** Logs unexpected signaling socket errors. */
-  private async onWebSocketError(e: any) {
-    this.debug.log('%s: Unexpected error. Reason: %s', this.camera, e);
+  private async onWebSocketError(event: Event) {
+    this.lastWebSocketError = this.describeWebSocketError(event);
+    this.debug.log('%s: WebSocket error event. %s', this.camera, this.lastWebSocketError);
+  }
+
+  /** Builds a readable description from browser WebSocket close events. */
+  private describeWebSocketClose(event: CloseEvent): string {
+    return `Close code=${event.code}, reason=${event.reason || '<none>'}, wasClean=${event.wasClean}.`;
+  }
+
+  /** Builds a readable error description from browser WebSocket error events. */
+  private describeWebSocketError(event: Event): string {
+    if (event instanceof ErrorEvent) {
+      return [event.message, event.error?.message, event.filename].filter(Boolean).join(' | ') || event.type;
+    }
+    return `Browser did not expose a cause. Event type=${event.type}, readyState=${this.webSocket.readyState}, url=${this.webSocket.url}.`;
   }
 
   /** Applies incoming signaling messages to the peer connection. */
