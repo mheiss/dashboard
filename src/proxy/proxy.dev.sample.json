@@ -10,15 +10,10 @@
     "changeOrigin": true,
     "secure": false
   },
-  "/ws/webrtc**": {
+  "/api/webrtc/**": {
     "target": "http://localhost:8080",
     "changeOrigin": true,
     "secure": false,
     "ws": true
-  },
-  "/api/webrtc/*": {
-    "target": "http://localhost:8080",
-    "changeOrigin": true,
-    "secure": false
   }
 }

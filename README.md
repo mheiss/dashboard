@@ -146,9 +146,9 @@ Expected paths:
 - `/api/openhab/*`: proxies openHAB REST requests 
 - `/ws/openhab*`: proxies openHAB WebSocket requests
 - `/api/webrtc/*`: proxies WebRTC offers for camera streams.
-- `/ws/webrtc`: signaling channel for camera streams.
+- `/api/webrtc/ws`: signaling channel for camera streams.
 
-Use [go2rtc](https://github.com/AlexxIT/go2rtc/) behind the `/api/webrtc*` and `/ws/webrtc*` routes. Keep openHAB API tokens and other credentials out of committed documentation and configuration files.
+Use [go2rtc](https://github.com/AlexxIT/go2rtc/) behind the `/api/webrtc*` route. Keep openHAB API tokens and other credentials out of committed documentation and configuration files.
 
 Sample Caddyfile:
 
@@ -172,15 +172,7 @@ Sample Caddyfile:
 		}
 	}
 
-	# go2rtc - WebSocket proxy
-	handle_path /ws/webrtc* {
-		rewrite * /api/ws{path}
-		reverse_proxy localhost:1984 {
-			header_up -Origin
-		}
-	}
-
-	# go2rtc - HTTP API
+	# go2rtc - HTTP API and WebSocket signaling
 	handle_path /api/webrtc* {
 		rewrite * /api{path}
 		reverse_proxy localhost:1984 {
@@ -319,5 +311,5 @@ The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.htm
 - **Gallery folders missing**: verify each configured OneDrive folder path starts at the drive root and is accessible to the signed-in user.
 - **OpenHAB screen is blank**: verify `openhab.sitemap` in the selected environment config is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
 - **Wallbox screen is blank**: verify `evcc.url` in the selected environment config is reachable from the tablet and allows embedding in an iframe.
-- **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` and `/ws/webrtc` to go2rtc, and the generated `unifi_*` stream names are available there.
+- **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` to go2rtc, and the generated `unifi_*` stream names are available there.
 - **Tablet does not wake or reload after deploy**: verify the Fully Kiosk URL and password in `scripts/config.json`.
