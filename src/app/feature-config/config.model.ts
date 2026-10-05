@@ -60,9 +60,10 @@ export interface EvccConfig {
  */
 export interface ProtectConfig {
   /**
-   * The camera names to display, in the order they should appear.
+   * The camera IDs to display, in the order they should appear.
    */
   cameras: string[];
+  cameraLabels?: Record<string, string>;
 }
 
 /**

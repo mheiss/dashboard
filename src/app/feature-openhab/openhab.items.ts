@@ -67,3 +67,9 @@ export class DoorbellItem extends OpenHabItem<boolean> {
     super(ws, client, items, 'Entrance_Bell_Switch', onOffConverter, debug);
   }
 }
+
+export class SmartMotionItem extends OpenHabItem<boolean> {
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], itemName: string, debug: DebugService) {
+    super(ws, client, items, itemName, onOffConverter, debug);
+  }
+}

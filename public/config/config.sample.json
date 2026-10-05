@@ -7,7 +7,12 @@
     "url": "https://evcc.example.lan"
   },
   "protect": {
-    "cameras": ["entry", "garden", "patio"]
+    "cameras": ["entry", "garden", "patio"],
+    "cameraLabels": {
+      "entry": "Eingang",
+      "garden": "Garten",
+      "patio": "Terrasse"
+    }
   },
   "folders": ["Pictures/Camera Roll", "Pictures/Family"],
   "calendars": [

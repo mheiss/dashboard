@@ -1,24 +1,93 @@
-@if (layout.mobile$()) {
-  <div class="p-s flex w-full flex-col items-center bg-gray-200">
-    <div class="drop-shadow-2x rounded-md bg-white p-4">
-      @for (camera of cameras(); track camera.camera) {
-        <app-video [camera]="camera.camera" [play]="camera.play" />
-      }
-    </div>
-  </div>
-} @else {
-  <div class="p-l flex h-full flex-row gap-2 bg-gray-200">
-    <div class="h-full w-70 overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
-      <div class="flex h-full flex-col items-center">
-        @for (camera of cameras(); track camera.camera) {
-          <app-video [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" (click)="pinned.set(camera.camera)" />
+<div class="flex h-full min-h-0 flex-col overflow-auto bg-gray-200">
+  @if (layout.mobile$()) {
+    <div class="flex w-full shrink-0 flex-col items-center p-2">
+      <div class="w-full space-y-2">
+        @for (camera of mobileCameras(); track camera.camera) {
+          <div class="relative overflow-hidden rounded-md">
+            <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" />
+            <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{ cameraLabel(camera.camera) }}</span>
+          </div>
         }
       </div>
     </div>
-    <div class="h-full w-[calc(100%-280px-32px)] overflow-auto rounded-md bg-white p-4 drop-shadow-2xl">
-      @if (pinned(); as pinnedCamera) {
-        <app-video [camera]="pinnedCamera" />
-      }
+  } @else {
+    <div class="flex min-h-0 flex-1 flex-row gap-2 p-2">
+      <div class="h-full w-52 shrink-0 overflow-y-auto">
+        <div class="flex flex-col gap-2">
+          @for (camera of cameras(); track camera.camera) {
+            <button
+              type="button"
+              class="relative block w-full shrink-0 overflow-hidden rounded-md border-2 border-transparent text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
+              [class.border-emerald-600]="pinned() === camera.camera"
+              [attr.aria-label]="'Kamera ' + cameraLabel(camera.camera) + ' anzeigen'"
+              [attr.aria-pressed]="pinned() === camera.camera"
+              (click)="pinned.set(camera.camera)"
+            >
+              <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" />
+              <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{ cameraLabel(camera.camera) }}</span>
+            </button>
+          }
+        </div>
+      </div>
+      <div class="h-full min-w-0 flex-1 overflow-hidden rounded-md bg-black">
+        @if (pinned(); as pinnedCamera) {
+          <app-video class="block h-full w-full" [camera]="pinnedCamera" [fit]="true" />
+        }
+      </div>
+    </div>
+  }
+  <section class="flex shrink-0 items-center gap-2 border-t border-gray-300 bg-white px-2 py-2" aria-label="Letzte Bewegungen">
+    <h2 class="shrink-0 rotate-180 text-xs leading-tight font-semibold text-gray-700 [writing-mode:vertical-rl]" aria-label="Letzte Bewegungen">
+      Letzte<br />Bewegungen
+    </h2>
+    @if (motion.snapshots().length) {
+      <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+        @for (snapshot of motion.snapshots(); track snapshot.id) {
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            class="relative w-36 shrink-0 overflow-hidden rounded-md border border-gray-200 text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
+            [attr.aria-label]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera) + ' am ' + (snapshot.timestamp | date: 'medium')"
+            [title]="cameraLabel(snapshot.camera) + ' - ' + (snapshot.timestamp | date: 'medium')"
+            (click)="openSnapshot(snapshot)"
+          >
+            <img class="aspect-video w-full object-cover" [src]="snapshot.url" [alt]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera)" />
+            <div class="absolute right-0 bottom-0 left-0 flex items-center justify-between gap-1 bg-black/65 px-1.5 py-1 text-xs text-white">
+              <span class="truncate font-medium">{{ cameraLabel(snapshot.camera) }}</span>
+              <time class="shrink-0" [attr.datetime]="snapshot.timestamp.toISOString()">
+                {{ snapshot.timestamp | date: 'HH:mm:ss' }}
+              </time>
+            </div>
+          </button>
+        }
+      </div>
+    } @else {
+      <p class="min-w-0 flex-1 text-sm text-gray-500">Noch keine Bewegung erkannt.</p>
+    }
+  </section>
+</div>
+
+<ng-template #snapshotViewer let-snapshot let-dialogRef="dialogRef">
+  <div class="flex h-full min-h-0 w-full flex-col bg-black text-white">
+    <header class="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-3 py-2">
+      <div class="min-w-0">
+        <h2 class="truncate text-sm font-semibold">{{ cameraLabel(snapshot.camera) }}</h2>
+        <time class="block text-xs text-gray-300" [attr.datetime]="snapshot.timestamp.toISOString()">
+          {{ snapshot.timestamp | date: 'dd.MM.yyyy HH:mm:ss' }}
+        </time>
+      </div>
+      <button
+        type="button"
+        title="Schließen"
+        aria-label="Schließen"
+        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+        (click)="dialogRef.close()"
+      >
+        <img class="h-6 w-6" src="/assets/close.svg" alt="" />
+      </button>
+    </header>
+    <div class="min-h-0 flex-1 overflow-hidden">
+      <img class="h-full w-full object-contain" [src]="snapshot.url" [alt]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera)" />
     </div>
   </div>
-}
+</ng-template>

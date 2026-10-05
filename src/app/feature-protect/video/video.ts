@@ -15,6 +15,7 @@ export class Video implements OnInit, OnChanges {
   readonly camera = input.required<Camera>();
   readonly play = input<boolean>(true);
   readonly zoom = input<boolean>(true);
+  readonly fit = input<boolean>(false);
   readonly quality = input<StreamQuality>('high');
   readonly showStats = signal<boolean>(false);
 

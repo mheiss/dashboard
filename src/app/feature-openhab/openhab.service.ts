@@ -2,13 +2,14 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { WebSocket } from 'partysocket';
-import { interval } from 'rxjs';
+import { filter, interval, pairwise } from 'rxjs';
 import { DebugService } from '../utils/debug.service';
 import { getWebSocketUrl } from '../utils/webSocket';
 import { AppConfigService } from '../feature-config/config.service';
-import { DoorbellItem, OpenHabItem, PinItem, SecurityItem } from './openhab.items';
+import { DoorbellItem, OpenHabItem, PinItem, SecurityItem, SmartMotionItem } from './openhab.items';
 import { Payload, PingEvent } from './openhab.model';
 import { FullyService } from './fully.service';
+import { MotionService } from '../feature-protect/motion.service';
 
 @Injectable({ providedIn: 'root' })
 export class OpenHABService {
@@ -17,6 +18,7 @@ export class OpenHABService {
   private readonly router = inject(Router);
   private readonly debug = inject(DebugService);
   private readonly config = inject(AppConfigService);
+  private readonly motion = inject(MotionService);
   private readonly ws = this.createWebSocket();
   private readonly items: OpenHabItem<any>[] = [];
 
@@ -38,6 +40,21 @@ export class OpenHABService {
    * The doorbell item.
    */
   readonly doorbell = new DoorbellItem(this.ws, this.http, this.items, this.debug);
+
+  /**
+   * The smart motion sensor for the patio camera.
+   */
+  readonly patioMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Patio_Camera_SmartMotion', this.debug);
+
+  /**
+   * The smart motion sensor for the garden camera.
+   */
+  readonly gardenMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Garden_Camera_SmartMotion', this.debug);
+
+  /**
+   * The smart motion sensor for the entry camera.
+   */
+  readonly entryMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Entry_Camera_SmartMotion', this.debug);
 
   /**
    * Initializes the communication between the dashboard and openHAB
@@ -65,6 +82,27 @@ export class OpenHABService {
         },
       });
     });
+
+    // Switch to the camera views when motion is detected on any of the cameras
+    for (const [camera, item] of [
+      ['patio', this.patioMotion],
+      ['garden', this.gardenMotion],
+      ['entry', this.entryMotion],
+    ] as const) {
+      item.value$
+        .pipe(
+          pairwise(),
+          filter(([previous, current]) => previous === false && current === true),
+        )
+        .subscribe(() => {
+          if (!this.config.config().protect.cameras.includes(camera)) {
+            return;
+          }
+          this.motion.capture(camera);
+          this.fully.turnScreenOn();
+          this.router.navigate(['/protect'], { queryParams: { camera } });
+        });
+    }
   }
 
   private createWebSocket() {

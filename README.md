@@ -85,7 +85,12 @@ Example structure:
 		"url": "https://evcc.example.lan"
 	},
 	"protect": {
-		"cameras": ["entry", "garden", "patio"]
+		"cameras": ["entry", "garden", "patio"],
+		"cameraLabels": {
+			"entry": "Eingang",
+			"garden": "Garten",
+			"patio": "Terrasse"
+		}
 	},
 	"folders": ["Pictures/#Uploads", "Familie - Ausflüge"],
 	"calendars": [
@@ -127,6 +132,8 @@ Set `evcc.url` in the selected environment config to the EVCC UI URL that should
 ### Camera Setup
 
 Set `protect.cameras` in the selected environment config to the UniFi Protect camera names that should appear on the Camera screen. The order in this array controls the display order and next/previous navigation order.
+
+Use the optional `protect.cameraLabels` map to translate camera IDs into display names. These labels appear on the live cameras and motion snapshots, including tooltips and accessibility text. Cameras without a configured label display their ID. Labels do not change stream names or camera query parameters.
 
 The WebRTC stream names are generated from each configured camera name:
 
