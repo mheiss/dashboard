@@ -48,7 +48,7 @@ The camera screen shows UniFi Protect streams through a local WebRTC integration
 - Streams are started with a short delay between cameras to reduce load on the streaming backend.
 - Streams stop when the tablet screen turns off and restart when it turns on again.
 
-Regular motion items (`Patio_Camera_Motion`, `Garden_Camera_Motion`, `Entry_Camera_Motion`) and the corresponding `_SmartMotion` items capture a fresh camera snapshot on an OFF-to-ON transition. They also wake the tablet and select the detected camera. Initial ON states and repeated ON updates do not trigger captures.
+Regular and smart motion items are derived from every configured camera ID by uppercasing its first character and appending `_Camera_Motion` or `_Camera_SmartMotion`. For example, `entry` registers `Entry_Camera_Motion` and `Entry_Camera_SmartMotion`. They capture a fresh camera snapshot on an OFF-to-ON transition, wake the tablet, and select that camera. Initial ON states and repeated ON updates do not trigger captures.
 
 The recent-detections filmstrip groups all cameras into 30-second windows starting with each window's first capture. Each window shows its latest smart snapshot when available, otherwise its latest regular snapshot. Opening a window shows all its images chronologically in the full-screen gallery, starting with the preferred image.
 
@@ -86,14 +86,19 @@ Example structure:
 {
 	"graphUrl": "https://graph.microsoft.com/v1.0",
 	"openhab": {
-		"sitemap": "https://openhab.example.lan/basicui/app"
+		"sitemap": "https://openhab.example.lan/basicui/app",
+		"items": {
+			"security": "Security",
+			"pin": "Security_Pin",
+			"doorbell": "Entrance_Bell_Switch"
+		},
+		"doorbellCamera": "entry"
 	},
 	"evcc": {
 		"url": "https://evcc.example.lan"
 	},
 	"protect": {
-		"cameras": ["entry", "garden", "patio"],
-		"cameraLabels": {
+		"cameras": {
 			"entry": "Eingang",
 			"garden": "Garten",
 			"patio": "Terrasse"
@@ -128,9 +133,11 @@ The configured redirect URI should match where the dashboard is served. For loca
 
 The `calendars` entries must match the calendar names returned by Microsoft Graph. The `folders` entries are OneDrive paths from the drive root.
 
-### openHAB Sitemap Setup
+### openHAB Setup
 
 Set `openhab.sitemap` in the selected environment config to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
+
+Set `openhab.items.security`, `openhab.items.pin`, and `openhab.items.doorbell` to the corresponding openHAB item names. These names control initial state requests, WebSocket updates, and PIN commands. Set `openhab.doorbellCamera` to a camera ID present in `protect.cameras`; this camera is selected when the doorbell rings, regardless of camera ordering.
 
 ### EVCC Setup
 
@@ -138,9 +145,7 @@ Set `evcc.url` in the selected environment config to the EVCC UI URL that should
 
 ### Camera Setup
 
-Set `protect.cameras` in the selected environment config to the UniFi Protect camera names that should appear on the Camera screen. The order in this array controls the display order and next/previous navigation order.
-
-Use the optional `protect.cameraLabels` map to translate camera IDs into display names. These labels appear on the live cameras and motion snapshots, including tooltips and accessibility text. Cameras without a configured label display their ID. Labels do not change stream names or camera query parameters.
+Set `protect.cameras` to an object mapping UniFi Protect camera IDs to display labels, such as `{ "entry": "Eingang", "garden": "Garten", "patio": "Terrasse" }`. Property order controls display order. Labels appear on live cameras and motion snapshots, including tooltips. Camera IDs, not labels, determine stream names, query parameters, and derived openHAB motion item names. Stored detections from an unconfigured camera display its ID as a fallback.
 
 The WebRTC stream names are generated from each configured camera name:
 
@@ -301,7 +306,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 
 ### Adding or Changing Cameras
 
-Camera names are configured in the selected environment config under `protect.cameras`. To add, remove, rename, or reorder cameras, update that array and make sure go2rtc has matching stream names.
+Camera IDs and labels are configured in the selected environment config under `protect.cameras`. To add, remove, rename, or reorder cameras, update that object and make sure go2rtc has matching stream names. OpenHAB motion items are registered automatically for each camera using the naming convention described above. Update `openhab.doorbellCamera` if the doorbell's assigned camera changes.
 
 The WebRTC stream names are generated as:
 

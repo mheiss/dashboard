@@ -29,7 +29,7 @@ export class Protect implements OnDestroy {
   private readonly popup = inject(PopupService);
   private snapshotDialog?: DialogRef<string>;
 
-  private readonly cameraOrder: Camera[] = this.config.config().protect.cameras;
+  private readonly cameraOrder: Camera[] = Object.keys(this.config.config().protect.cameras);
   readonly cameras = signal<PlayableCamera[]>(this.cameraOrder.map((camera) => ({ camera, play: false })));
   readonly pinned = signal<Camera>(this.cameraOrder[0] ?? '');
   readonly mobileCameras = computed(() => {
@@ -64,7 +64,7 @@ export class Protect implements OnDestroy {
   }
 
   cameraLabel(camera: Camera): string {
-    return this.config.config().protect.cameraLabels?.[camera] ?? camera;
+    return this.config.config().protect.cameras[camera] ?? camera;
   }
 
   openSnapshot(snapshot: MotionSnapshot): void {

@@ -1,14 +1,19 @@
 {
   "graphUrl": "https://graph.microsoft.com/v1.0",
   "openhab": {
-    "sitemap": "https://openhab.example.lan/basicui/app"
+    "sitemap": "https://openhab.example.lan/basicui/app",
+    "items": {
+      "security": "Security",
+      "pin": "Security_Pin",
+      "doorbell": "Entrance_Bell_Switch"
+    },
+    "doorbellCamera": "entry"
   },
   "evcc": {
     "url": "https://evcc.example.lan"
   },
   "protect": {
-    "cameras": ["entry", "garden", "patio"],
-    "cameraLabels": {
+    "cameras": {
       "entry": "Eingang",
       "garden": "Garten",
       "patio": "Terrasse"

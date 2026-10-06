@@ -28,37 +28,29 @@ export class OpenHABService {
    * * ON == Armed
    * * OFF == Disarmed
    */
-  readonly security = new SecurityItem(this.ws, this.http, this.items, this.debug);
+  readonly security = new SecurityItem(this.ws, this.http, this.items, this.config.config().openhab.items.security, this.debug);
 
   /**
    * The item which accepts the security PIN. If the PIN is correct then the
    * security system will be turned off / disarmed.
    */
-  readonly pin = new PinItem(this.ws, this.http, this.items, this.debug);
+  readonly pin = new PinItem(this.ws, this.http, this.items, this.config.config().openhab.items.pin, this.debug);
 
   /**
    * The doorbell item.
    */
-  readonly doorbell = new DoorbellItem(this.ws, this.http, this.items, this.debug);
+  readonly doorbell = new DoorbellItem(this.ws, this.http, this.items, this.config.config().openhab.items.doorbell, this.debug);
 
   /**
-   * The smart motion sensor for the patio camera.
+   * Creates motion items for each camera in the UniFi Protect configuration.
    */
-  readonly patioSmartMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Patio_Camera_SmartMotion', this.debug);
-
-  /**
-   * The smart motion sensor for the garden camera.
-   */
-  readonly gardenSmartMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Garden_Camera_SmartMotion', this.debug);
-
-  /**
-   * The smart motion sensor for the entry camera.
-   */
-  readonly entrySmartMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Entry_Camera_SmartMotion', this.debug);
-
-  readonly patioMotion = new MotionItem(this.ws, this.http, this.items, 'Patio_Camera_Motion', this.debug);
-  readonly gardenMotion = new MotionItem(this.ws, this.http, this.items, 'Garden_Camera_Motion', this.debug);
-  readonly entryMotion = new MotionItem(this.ws, this.http, this.items, 'Entry_Camera_Motion', this.debug);
+  private readonly motionItems = Object.keys(this.config.config().protect.cameras).flatMap((camera) => {
+    const prefix = camera.charAt(0).toUpperCase() + camera.slice(1) + '_Camera_';
+    return [
+      { camera, item: new MotionItem(this.ws, this.http, this.items, prefix + 'Motion', this.debug), type: 'motion' as const },
+      { camera, item: new SmartMotionItem(this.ws, this.http, this.items, prefix + 'SmartMotion', this.debug), type: 'smart' as const },
+    ];
+  });
 
   /**
    * Initializes the communication between the dashboard and openHAB
@@ -70,13 +62,14 @@ export class OpenHABService {
         this.ws.send(JSON.stringify(PingEvent));
       }
     });
+
     // Switch to the camera views when the doorbell rings
     this.doorbell.value$.subscribe((value) => {
       if (!value) {
         return;
       }
-      const camera = this.config.config().protect.cameras[0];
-      if (!camera) {
+      const camera = this.config.config().openhab.doorbellCamera;
+      if (!Object.hasOwn(this.config.config().protect.cameras, camera)) {
         return;
       }
       this.fully.turnScreenOn();
@@ -88,21 +81,14 @@ export class OpenHABService {
     });
 
     // Switch to the camera views when motion is detected on any of the cameras
-    for (const [camera, item, type] of [
-      ['patio', this.patioMotion, 'motion'],
-      ['patio', this.patioSmartMotion, 'smart'],
-      ['garden', this.gardenMotion, 'motion'],
-      ['garden', this.gardenSmartMotion, 'smart'],
-      ['entry', this.entryMotion, 'motion'],
-      ['entry', this.entrySmartMotion, 'smart'],
-    ] as const) {
+    for (const { camera, item, type } of this.motionItems) {
       item.value$
         .pipe(
           pairwise(),
           filter(([previous, current]) => previous === false && current === true),
         )
         .subscribe(() => {
-          if (!this.config.config().protect.cameras.includes(camera)) {
+          if (!Object.hasOwn(this.config.config().protect.cameras, camera)) {
             return;
           }
           this.motion.capture(camera, type);

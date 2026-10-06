@@ -43,6 +43,31 @@ export interface OpenhabConfig {
    * The URL of the Basic UI sitemap to embed.
    */
   sitemap: string;
+
+  /**
+   * The openHAB items configuration.
+   */
+  items: {
+    /**
+     * The name of the security status item in openHAB.
+     */
+    security: string;
+
+    /**
+     * The name of the security pin item in openHAB.
+     */
+    pin: string;
+
+    /**
+     * The name of the doorbell item in openHAB.
+     * When pressed, it displays the doorbell camera in UniFi Protect.
+     */
+    doorbell: string;
+  };
+  /**
+   * The ID of the doorbell camera in UniFi Protect.
+   */
+  doorbellCamera: string;
 }
 
 /**
@@ -60,10 +85,9 @@ export interface EvccConfig {
  */
 export interface ProtectConfig {
   /**
-   * The camera IDs to display, in the order they should appear.
+   * Camera IDs mapped to display labels, in display order.
    */
-  cameras: string[];
-  cameraLabels?: Record<string, string>;
+  cameras: Record<string, string>;
 }
 
 /**

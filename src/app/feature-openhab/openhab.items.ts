@@ -41,8 +41,8 @@ export abstract class OpenHabItem<T> {
   }
 }
 export class PinItem extends OpenHabItem<string> {
-  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], debug: DebugService) {
-    super(ws, client, items, 'Security_Pin', stringConverter, debug);
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], itemName: string, debug: DebugService) {
+    super(ws, client, items, itemName, stringConverter, debug);
   }
 
   /**
@@ -56,14 +56,14 @@ export class PinItem extends OpenHabItem<string> {
 }
 
 export class SecurityItem extends OpenHabItem<boolean> {
-  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], debug: DebugService) {
-    super(ws, client, items, 'Security', onOffConverter, debug);
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], itemName: string, debug: DebugService) {
+    super(ws, client, items, itemName, onOffConverter, debug);
   }
 }
 
 export class DoorbellItem extends OpenHabItem<boolean> {
-  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], debug: DebugService) {
-    super(ws, client, items, 'Entrance_Bell_Switch', onOffConverter, debug);
+  constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], itemName: string, debug: DebugService) {
+    super(ws, client, items, itemName, onOffConverter, debug);
   }
 }
 
