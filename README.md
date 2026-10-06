@@ -286,6 +286,7 @@ src/app/feature-openhab    Embedded openHAB Basic UI sitemap screen
 src/app/feature-evcc       EVCC wallbox screen
 src/app/feature-protect    UniFi Protect camera screen and WebRTC streaming
 src/app/feature-config     Runtime configuration model and service
+src/app/image-viewer       Shared fullscreen image viewer, image model, and blob directive
 src/app/ms-graph           Microsoft Graph calendar/gallery services and IndexedDB cache
 src/app/utils              Shared visibility, layout, date, debug, and WebSocket helpers
 public/config              Runtime configuration copied into the built app
@@ -300,6 +301,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 - `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
 - `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
 - `ImageService` uses Microsoft Graph delta queries and IndexedDB to cache OneDrive image metadata and thumbnails.
+- Home and Protect adapt their images to the provider-independent `ViewerImage` model for the shared fullscreen viewer.
 - `CalendarService` fetches configured calendars from all calendar groups, filters by configured name, and refreshes events periodically.
 - `Protect` reads the camera list from `protect.cameras` and passes configured camera names to `WebRTCService`.
 - `WebRTCService` owns camera stream lifecycle and reacts to screen visibility events to stop or restart streams.

@@ -1,0 +1,61 @@
+<div class="flex h-full min-h-0 w-full flex-col bg-black text-white">
+  <header class="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-3 py-2">
+    <div class="min-w-0">
+      <h2 class="truncate text-sm font-semibold" [class.italic]="!originalLoaded()">{{ imageName() }}</h2>
+      <div class="flex flex-wrap items-center gap-x-3 text-xs text-gray-300">
+        <time [attr.datetime]="imageTakenAt().toISOString()">{{ imageTakenAt() | date: ('dd.MM.yyyy HH:mm:ss') }}</time>
+        <span>Bild {{ images().indexOf(image()) + 1 }} / {{ data.imageCount }}</span>
+      </div>
+    </div>
+    <button
+      type="button"
+      title="Schließen"
+      class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+      (click)="dialogRef.close()"
+    >
+      <img class="h-6 w-6" src="/assets/close.svg" alt="" />
+    </button>
+  </header>
+  <div class="relative flex min-h-0 flex-1 cursor-default items-center justify-center overflow-hidden">
+    <img #imageElement class="h-full w-full object-contain" [blobSrc]="imageBlob()" [alt]="imageName()" />
+    @if (hasPrevious()) {
+      <button
+        type="button"
+        title="Vorheriges Bild"
+        class="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-black/65 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+        (click)="onPrevious()"
+      >
+        <img class="h-6 w-6" src="/assets/left.svg" alt="" />
+      </button>
+    }
+    @if (hasNext()) {
+      <button
+        type="button"
+        title="Nächstes Bild"
+        class="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-md border border-white/20 bg-black/65 hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
+        (click)="onNext()"
+      >
+        <img class="h-6 w-6" src="/assets/right.svg" alt="" />
+      </button>
+    }
+  </div>
+  <cdk-virtual-scroll-viewport
+    #gallery
+    orientation="horizontal"
+    class="h-20 w-full shrink-0 border-t border-white/15 whitespace-nowrap"
+    style="overflow-x: auto; overflow-y: hidden"
+    [itemSize]="88"
+  >
+    <button
+      *cdkVirtualFor="let viewerImage of images(); let index = index; trackBy: trackByImageId"
+      type="button"
+      class="mx-1 my-2 inline-flex h-16 w-20 overflow-hidden rounded-md border-2 border-transparent align-top focus-visible:outline-2 focus-visible:outline-white"
+      [class.border-white]="viewerImage === image()"
+      [attr.aria-pressed]="viewerImage === image()"
+      [title]="viewerImage.name"
+      (click)="showImage(viewerImage)"
+    >
+      <img class="h-full w-full object-cover" [alt]="viewerImage.name" [blobSrc]="viewerImage.thumbnail$ | async" />
+    </button>
+  </cdk-virtual-scroll-viewport>
+</div>

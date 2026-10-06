@@ -9,9 +9,10 @@ import { PopupService } from '../../popup/popup.service';
 import { LayoutService } from '../../utils/layout.service';
 import { VisibilityService } from '../../utils/visibility.service';
 import { DebugService } from '../../utils/debug.service';
-import { BlobSrcDirective } from './blob.directive';
-import { DetailViewerComponent } from './detail-viewer/detail-viewer';
-import { DetailViewerData, Moment, toMoment } from './gallery.model';
+import { BlobSrcDirective } from '../../image-viewer/blob.directive';
+import { ImageViewerComponent } from '../../image-viewer/image-viewer';
+import { ImageViewerData, ViewerImage } from '../../image-viewer/image-viewer.model';
+import { Moment, toMoment } from './gallery.model';
 
 @Component({
   selector: 'app-gallery',
@@ -37,6 +38,8 @@ export class GalleryComponent implements OnInit {
    * The total number of images
    */
   readonly imageCount = this.service.imageCount.asReadonly();
+  private readonly viewerImageCache = new WeakMap<DriveImageExt, ViewerImage>();
+  private readonly viewerImages = computed(() => this.images().map((image) => this.toViewerImage(image)));
 
   /**
    * Computes the number of columns depending on the viewport size
@@ -119,28 +122,43 @@ export class GalleryComponent implements OnInit {
   }
 
   openDetailView(image: DriveImageExt) {
-    this.dialog.open(DetailViewerComponent, {
+    this.dialog.open(ImageViewerComponent, {
       data: {
-        image: image,
+        image: this.toViewerImage(image),
         imageCount: this.imageCount(),
-        images: this.images,
+        images: this.viewerImages,
         loadMore: () => this.service.loadMore(),
-      } as DetailViewerData,
+      } satisfies ImageViewerData,
       disableClose: false,
       fullScreen: true,
     });
   }
 
   openMomentView(moment: Moment) {
-    this.dialog.open(DetailViewerComponent, {
+    this.dialog.open(ImageViewerComponent, {
       data: {
-        image: moment.poster(),
+        image: this.toViewerImage(moment.poster()),
         imageCount: moment.images.length,
-        images: signal(moment.images),
+        images: signal(moment.images.map((image) => this.toViewerImage(image))),
         loadMore: () => {},
-      } as DetailViewerData,
+      } satisfies ImageViewerData,
       disableClose: false,
       fullScreen: true,
     });
+  }
+
+  private toViewerImage(source: DriveImageExt): ViewerImage {
+    let image = this.viewerImageCache.get(source);
+    if (!image) {
+      image = {
+        id: source.image.id,
+        name: source.image.name,
+        takenAt: new Date(source.image.takenAt.date),
+        thumbnail$: source.thumbnail$,
+        original$: source.original$,
+      };
+      this.viewerImageCache.set(source, image);
+    }
+    return image;
   }
 }

@@ -10,9 +10,8 @@ import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 import { MotionService, MotionSnapshot } from './motion.service';
 import { of } from 'rxjs';
 import { PopupService } from '../popup/popup.service';
-import { DetailViewerComponent } from '../feature-home/gallery/detail-viewer/detail-viewer';
-import { DetailViewerData } from '../feature-home/gallery/gallery.model';
-import { DriveImageExt } from '../ms-graph/image.model';
+import { ImageViewerComponent } from '../image-viewer/image-viewer';
+import { ImageViewerData, ViewerImage } from '../image-viewer/image-viewer.model';
 
 @Component({
   selector: 'app-protect',
@@ -72,29 +71,24 @@ export class Protect implements OnDestroy {
     if (!group) {
       return;
     }
-    const images: DriveImageExt[] = group.snapshots.map((image) => {
-      const timestamp = { date: image.timestamp.getTime(), day: image.timestamp.getDate(), month: image.timestamp.getMonth() };
+    const images: ViewerImage[] = group.snapshots.map((image) => {
       const blob = of(image.image);
       return {
-        image: {
-          id: image.id,
-          driveId: 'motion',
-          name: this.cameraLabel(image.camera) + ' - ' + (image.type === 'smart' ? 'Smarte Bewegung' : 'Bewegung'),
-          takenAt: timestamp,
-          lastModifiedAt: timestamp,
-        },
+        id: image.id,
+        name: this.cameraLabel(image.camera) + ' - ' + (image.type === 'smart' ? 'Smarte Bewegung' : 'Bewegung'),
+        takenAt: image.timestamp,
         thumbnail$: blob,
         original$: blob,
       };
     });
     this.snapshotDialog?.close();
-    this.snapshotDialog = this.popup.open(DetailViewerComponent, {
+    this.snapshotDialog = this.popup.open(ImageViewerComponent, {
       data: {
-        image: images.find((image) => image.image.id === snapshot.id)!,
+        image: images.find((image) => image.id === snapshot.id)!,
         images: signal(images),
         imageCount: images.length,
         loadMore: () => {},
-      } satisfies DetailViewerData,
+      } satisfies ImageViewerData,
       fullScreen: true,
       disableClose: false,
     });

@@ -1,15 +1,5 @@
-import { signal, Signal, WritableSignal } from '@angular/core';
-import { DriveImage, DriveImageExt } from '../../ms-graph/image.model';
-
-/**
- * Data for the detail viewer.
- */
-export interface DetailViewerData {
-  image: DriveImageExt;
-  images: Signal<DriveImageExt[]>;
-  imageCount: number;
-  loadMore: () => void;
-}
+import { signal, WritableSignal } from '@angular/core';
+import { DriveImageExt } from '../../ms-graph/image.model';
 
 /**
  * A moment containing all images of a given day.
