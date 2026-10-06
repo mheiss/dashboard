@@ -23,7 +23,9 @@
               (click)="pinned.set(camera.camera)"
             >
               <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" />
-              <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{ cameraLabel(camera.camera) }}</span>
+              <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{
+                cameraLabel(camera.camera)
+              }}</span>
             </button>
           }
         </div>
@@ -35,10 +37,7 @@
       </div>
     </div>
   }
-  <section class="flex shrink-0 items-center gap-2 border-t border-gray-300 bg-white px-2 py-2">
-    <h2 class="shrink-0 rotate-180 text-xs leading-tight font-semibold text-gray-700 [writing-mode:vertical-rl]">
-      Letzte<br />Bewegungen
-    </h2>
+  <section class="flex shrink-0 items-center gap-2 border-t border-gray-300 bg-white px-2 py-2 min-h-36">
     @if (motion.snapshots().length) {
       <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
         @for (snapshot of motion.snapshots(); track snapshot.id) {
@@ -46,11 +45,23 @@
             type="button"
             aria-haspopup="dialog"
             class="relative w-36 shrink-0 overflow-hidden rounded-md border border-gray-200 text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
-            [title]="cameraLabel(snapshot.camera) + ' - ' + (snapshot.timestamp | date: 'medium')"
+            [title]="
+              cameraLabel(snapshot.camera) +
+              ' - ' +
+              (snapshot.type === 'smart' ? 'Smarte Bewegung' : 'Bewegung') +
+              ' - ' +
+              (snapshot.timestamp | date: 'medium')
+            "
             (click)="openSnapshot(snapshot)"
           >
-            <img class="aspect-video w-full object-cover" [src]="snapshot.url" [alt]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera)" />
-            <div class="absolute right-0 bottom-0 left-0 flex items-center justify-between gap-1 bg-black/65 px-1.5 py-1 text-xs text-white">
+            <img
+              class="aspect-video w-full object-cover"
+              [src]="snapshot.url"
+              [alt]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera)"
+            />
+            <div
+              class="absolute right-0 bottom-0 left-0 flex items-center justify-between gap-1 bg-black/65 px-1.5 py-1 text-xs text-white"
+            >
               <span class="truncate font-medium">{{ cameraLabel(snapshot.camera) }}</span>
               <time class="shrink-0" [attr.datetime]="snapshot.timestamp.toISOString()">
                 {{ snapshot.timestamp | date: 'HH:mm:ss' }}
@@ -64,27 +75,3 @@
     }
   </section>
 </div>
-
-<ng-template #snapshotViewer let-snapshot let-dialogRef="dialogRef">
-  <div class="flex h-full min-h-0 w-full flex-col bg-black text-white">
-    <header class="flex shrink-0 items-center justify-between gap-3 border-b border-white/15 px-3 py-2">
-      <div class="min-w-0">
-        <h2 class="truncate text-sm font-semibold">{{ cameraLabel(snapshot.camera) }}</h2>
-        <time class="block text-xs text-gray-300" [attr.datetime]="snapshot.timestamp.toISOString()">
-          {{ snapshot.timestamp | date: 'dd.MM.yyyy HH:mm:ss' }}
-        </time>
-      </div>
-      <button
-        type="button"
-        title="Schließen"
-        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-white"
-        (click)="dialogRef.close()"
-      >
-        <img class="h-6 w-6" src="/assets/close.svg" alt="" />
-      </button>
-    </header>
-    <div class="min-h-0 flex-1 overflow-hidden">
-      <img class="h-full w-full object-contain" [src]="snapshot.url" [alt]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera)" />
-    </div>
-  </div>
-</ng-template>

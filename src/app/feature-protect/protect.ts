@@ -1,5 +1,5 @@
-import { Component, computed, effect, inject, OnDestroy, signal, ChangeDetectionStrategy, TemplateRef, viewChild } from '@angular/core';
-import { Dialog, DialogModule, DialogRef } from '@angular/cdk/dialog';
+import { Component, computed, effect, inject, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
+import { DialogRef } from '@angular/cdk/dialog';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -8,12 +8,17 @@ import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
 import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 import { MotionService, MotionSnapshot } from './motion.service';
+import { of } from 'rxjs';
+import { PopupService } from '../popup/popup.service';
+import { DetailViewerComponent } from '../feature-home/gallery/detail-viewer/detail-viewer';
+import { DetailViewerData } from '../feature-home/gallery/gallery.model';
+import { DriveImageExt } from '../ms-graph/image.model';
 
 @Component({
   selector: 'app-protect',
   templateUrl: './protect.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [Video, DatePipe, DialogModule],
+  imports: [Video, DatePipe],
 })
 export class Protect implements OnDestroy {
   readonly config = inject(AppConfigService);
@@ -21,9 +26,8 @@ export class Protect implements OnDestroy {
   readonly router = inject(Router);
   readonly activatedRoute = inject(ActivatedRoute);
   readonly motion = inject(MotionService);
-  private readonly dialog = inject(Dialog);
-  private readonly snapshotViewer = viewChild.required<TemplateRef<unknown>>('snapshotViewer');
-  private snapshotDialog?: DialogRef<void>;
+  private readonly popup = inject(PopupService);
+  private snapshotDialog?: DialogRef<string>;
 
   private readonly cameraOrder: Camera[] = this.config.config().protect.cameras;
   readonly cameras = signal<PlayableCamera[]>(this.cameraOrder.map((camera) => ({ camera, play: false })));
@@ -64,40 +68,36 @@ export class Protect implements OnDestroy {
   }
 
   openSnapshot(snapshot: MotionSnapshot): void {
-    this.snapshotDialog?.close();
-    this.snapshotDialog = this.dialog.open<void, MotionSnapshot>(this.snapshotViewer(), {
-      data: snapshot,
-      width: '100vw',
-      height: '100dvh',
-      maxWidth: '100vw',
-      maxHeight: '100dvh',
-      ariaLabel: 'Bewegung bei Kamera ' + this.cameraLabel(snapshot.camera),
-      ariaModal: true,
+    const group = this.motion.groups().find((group) => group.snapshots.some((image) => image.id === snapshot.id));
+    if (!group) {
+      return;
+    }
+    const images: DriveImageExt[] = group.snapshots.map((image) => {
+      const timestamp = { date: image.timestamp.getTime(), day: image.timestamp.getDate(), month: image.timestamp.getMonth() };
+      const blob = of(image.image);
+      return {
+        image: {
+          id: image.id,
+          driveId: 'motion',
+          name: this.cameraLabel(image.camera) + ' - ' + (image.type === 'smart' ? 'Smarte Bewegung' : 'Bewegung'),
+          takenAt: timestamp,
+          lastModifiedAt: timestamp,
+        },
+        thumbnail$: blob,
+        original$: blob,
+      };
     });
-  }
-
-  next() {
-    if (this.cameraOrder.length === 0) {
-      return;
-    }
-    const idx = this.cameraOrder.indexOf(this.pinned());
-    let next = idx + 1;
-    if (next >= this.cameraOrder.length) {
-      next = 0;
-    }
-    this.pinned.set(this.cameraOrder[next]);
-  }
-
-  previous() {
-    if (this.cameraOrder.length === 0) {
-      return;
-    }
-    const idx = this.cameraOrder.indexOf(this.pinned());
-    let previous = idx - 1;
-    if (previous < 0) {
-      previous = this.cameraOrder.length - 1;
-    }
-    this.pinned.set(this.cameraOrder[previous]);
+    this.snapshotDialog?.close();
+    this.snapshotDialog = this.popup.open(DetailViewerComponent, {
+      data: {
+        image: images.find((image) => image.image.id === snapshot.id)!,
+        images: signal(images),
+        imageCount: images.length,
+        loadMore: () => {},
+      } satisfies DetailViewerData,
+      fullScreen: true,
+      disableClose: false,
+    });
   }
 
   private scheduleCameraPlayback() {
