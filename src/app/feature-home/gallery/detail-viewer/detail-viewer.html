@@ -3,7 +3,7 @@
     <div class="min-w-0">
       <h2 class="truncate text-sm font-semibold" [class.italic]="!originalLoaded()">{{ imageName() }}</h2>
       <div class="flex flex-wrap items-center gap-x-3 text-xs text-gray-300">
-        <time [attr.datetime]="imageTakenAt().toISOString()">{{ imageTakenAt() | date: 'dd.MM.yyyy HH:mm' }}</time>
+        <time [attr.datetime]="imageTakenAt().toISOString()">{{ imageTakenAt() | date: ('dd.MM.yyyy HH:mm:ss') }}</time>
         <span>Bild {{ images().indexOf(image()) + 1 }} / {{ data.imageCount }}</span>
       </div>
     </div>

@@ -6,7 +6,7 @@ import { filter, interval, pairwise } from 'rxjs';
 import { DebugService } from '../utils/debug.service';
 import { getWebSocketUrl } from '../utils/webSocket';
 import { AppConfigService } from '../feature-config/config.service';
-import { DoorbellItem, OpenHabItem, PinItem, SecurityItem, SmartMotionItem } from './openhab.items';
+import { DoorbellItem, MotionItem, OpenHabItem, PinItem, SecurityItem, SmartMotionItem } from './openhab.items';
 import { Payload, PingEvent } from './openhab.model';
 import { FullyService } from './fully.service';
 import { MotionService } from '../feature-protect/motion.service';
@@ -44,17 +44,21 @@ export class OpenHABService {
   /**
    * The smart motion sensor for the patio camera.
    */
-  readonly patioMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Patio_Camera_SmartMotion', this.debug);
+  readonly patioSmartMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Patio_Camera_SmartMotion', this.debug);
 
   /**
    * The smart motion sensor for the garden camera.
    */
-  readonly gardenMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Garden_Camera_SmartMotion', this.debug);
+  readonly gardenSmartMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Garden_Camera_SmartMotion', this.debug);
 
   /**
    * The smart motion sensor for the entry camera.
    */
-  readonly entryMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Entry_Camera_SmartMotion', this.debug);
+  readonly entrySmartMotion = new SmartMotionItem(this.ws, this.http, this.items, 'Entry_Camera_SmartMotion', this.debug);
+
+  readonly patioMotion = new MotionItem(this.ws, this.http, this.items, 'Patio_Camera_Motion', this.debug);
+  readonly gardenMotion = new MotionItem(this.ws, this.http, this.items, 'Garden_Camera_Motion', this.debug);
+  readonly entryMotion = new MotionItem(this.ws, this.http, this.items, 'Entry_Camera_Motion', this.debug);
 
   /**
    * Initializes the communication between the dashboard and openHAB
@@ -84,10 +88,13 @@ export class OpenHABService {
     });
 
     // Switch to the camera views when motion is detected on any of the cameras
-    for (const [camera, item] of [
-      ['patio', this.patioMotion],
-      ['garden', this.gardenMotion],
-      ['entry', this.entryMotion],
+    for (const [camera, item, type] of [
+      ['patio', this.patioMotion, 'motion'],
+      ['patio', this.patioSmartMotion, 'smart'],
+      ['garden', this.gardenMotion, 'motion'],
+      ['garden', this.gardenSmartMotion, 'smart'],
+      ['entry', this.entryMotion, 'motion'],
+      ['entry', this.entrySmartMotion, 'smart'],
     ] as const) {
       item.value$
         .pipe(
@@ -98,7 +105,7 @@ export class OpenHABService {
           if (!this.config.config().protect.cameras.includes(camera)) {
             return;
           }
-          this.motion.capture(camera);
+          this.motion.capture(camera, type);
           this.fully.turnScreenOn();
           this.router.navigate(['/protect'], { queryParams: { camera } });
         });

@@ -3,7 +3,6 @@ import { WebSocket } from 'partysocket';
 import { BehaviorSubject } from 'rxjs';
 import { DebugService } from '../utils/debug.service';
 import { createCommandEvent, createStringPayload, onOffConverter, stringConverter } from './openhab.model';
-import { Openhab } from './openhab';
 
 /**
  * Represents an item in openhab.
@@ -68,8 +67,10 @@ export class DoorbellItem extends OpenHabItem<boolean> {
   }
 }
 
-export class SmartMotionItem extends OpenHabItem<boolean> {
+export class MotionItem extends OpenHabItem<boolean> {
   constructor(ws: WebSocket, client: HttpClient, items: OpenHabItem<any>[], itemName: string, debug: DebugService) {
     super(ws, client, items, itemName, onOffConverter, debug);
   }
 }
+
+export class SmartMotionItem extends MotionItem {}

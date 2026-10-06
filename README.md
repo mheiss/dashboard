@@ -48,6 +48,11 @@ The camera screen shows UniFi Protect streams through a local WebRTC integration
 - Streams are started with a short delay between cameras to reduce load on the streaming backend.
 - Streams stop when the tablet screen turns off and restart when it turns on again.
 
+Regular motion items (`Patio_Camera_Motion`, `Garden_Camera_Motion`, `Entry_Camera_Motion`) and the corresponding `_SmartMotion` items capture a fresh camera snapshot on an OFF-to-ON transition. They also wake the tablet and select the detected camera. Initial ON states and repeated ON updates do not trigger captures.
+
+The recent-detections filmstrip groups all cameras into 30-second windows starting with each window's first capture. Each window shows its latest smart snapshot when available, otherwise its latest regular snapshot. Opening a window shows all its images chronologically in the full-screen gallery, starting with the preferred image.
+
+
 ## Tablet/Kiosk Behavior
 
 The dashboard is intended to run on a wall tablet in fullscreen mode. Use [Fully Kiosk Browser](https://www.fully-kiosk.com/) to launch the dashboard as the tablet start URL and keep it running as a fullscreen smart home display.

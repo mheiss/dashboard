@@ -1,33 +1,63 @@
 import { DriveItem } from '@microsoft/microsoft-graph-types';
 import { openDB } from 'idb';
 import { from, Observable } from 'rxjs';
+import { StoredMotionSnapshot } from '../feature-protect/motion.model';
+import { isSameYear } from '../utils/date';
 import { DriveImage } from './image.model';
-import { isSameDay, isSameYear } from '../utils/date';
-import { not } from 'xstate';
+
+// V4:
+//    + motionEvents
 
 // V3:
 //    + image.takenAt.Month/Day
 //    + image.driveId
 //    ~ Index renaming
-const db = await openDB('Dashboard', 3, {
-  upgrade(db) {
-    // Always drop everything, migration is not worth the effort
-    if (db.objectStoreNames.contains('images')) {
-      db.deleteObjectStore('images');
-    }
-    if (db.objectStoreNames.contains('metadata')) {
-      db.deleteObjectStore('metadata');
-    }
+const db = await openDB('Dashboard', 4, {
+  upgrade(db, oldVersion) {
+    if (oldVersion < 3) {
+      // Always drop everything, migration is not worth the effort
+      if (db.objectStoreNames.contains('images')) {
+        db.deleteObjectStore('images');
+      }
+      if (db.objectStoreNames.contains('metadata')) {
+        db.deleteObjectStore('metadata');
+      }
 
-    // Store for images
-    const images = db.createObjectStore('images', { keyPath: 'id' });
-    images.createIndex('takenAt.date', 'takenAt.date');
-    images.createIndex('takenAt.month-day', ['takenAt.month', 'takenAt.day'], { unique: false });
+      // Store for images
+      const images = db.createObjectStore('images', { keyPath: 'id' });
+      images.createIndex('takenAt.date', 'takenAt.date');
+      images.createIndex('takenAt.month-day', ['takenAt.month', 'takenAt.day'], { unique: false });
 
-    // Store for metadata (delta link, version, etc.)
-    db.createObjectStore('metadata', { keyPath: 'key' });
+      // Store for metadata (delta link, version, etc.)
+      db.createObjectStore('metadata', { keyPath: 'key' });
+    }
+    if (!db.objectStoreNames.contains('motionEvents')) {
+      const motionEvents = db.createObjectStore('motionEvents', { keyPath: 'id' });
+      motionEvents.createIndex('timestamp', 'timestamp');
+    }
   },
 });
+
+/**
+ * Reads all stored motion snapshots from the local database.
+ */
+export async function loadMotionSnapshots(): Promise<StoredMotionSnapshot[]> {
+  return db.getAll('motionEvents');
+}
+
+/**
+ * Saves a motion snapshot to the local database and removes any snapshots older than the specified timestamp.
+ */
+export async function saveMotionSnapshot(snapshot: StoredMotionSnapshot, oldestTimestamp: number): Promise<void> {
+  const tx = db.transaction('motionEvents', 'readwrite');
+  await tx.store.put(snapshot);
+  let cursor = await tx.store.index('timestamp').openCursor(IDBKeyRange.upperBound(oldestTimestamp, true));
+  while (cursor) {
+    await cursor.delete();
+    cursor = await cursor.continue();
+  }
+  await tx.done;
+}
 
 /**
  * Loads the next images sorted by 'takenAt' timestamp
@@ -130,4 +160,3 @@ export async function getDeltaLink(item: DriveItem): Promise<string | null> {
   const entry = await db.get('metadata', `${item.id}.deltaLink`);
   return entry?.value ?? null;
 }
-
