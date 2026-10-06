@@ -1,16 +1,15 @@
-import { NgClass } from '@angular/common';
 import { Component, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DefaultUrlSerializer, NavigationEnd, Router, RouterModule, UrlTree } from '@angular/router';
 import { entries } from './navigation.model';
 import { LayoutService } from '../utils/layout.service';
-import { LucideCalendarDays, LucideImages } from '@lucide/angular';
+import { LucideCalendarDays, LucideImages, LucideHouse, LucidePanelsTopLeft, LucideZap, LucideCctv } from '@lucide/angular';
 
 @Component({
   selector: 'app-navigation',
   templateUrl: './navigation.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterModule, NgClass, LucideCalendarDays, LucideImages],
+  imports: [RouterModule, LucideCalendarDays, LucideImages, LucideHouse, LucidePanelsTopLeft, LucideZap, LucideCctv],
 })
 export class Navigation {
   readonly router = inject(Router);
@@ -18,7 +17,9 @@ export class Navigation {
 
   private readonly allElements = entries();
   readonly elements = computed(() =>
-    this.allElements.filter((entry) => this.layout.mobile$() ? entry.path !== '/home' : entry.path !== '/calendar' && entry.path !== '/gallery'),
+    this.allElements.filter((entry) =>
+      this.layout.mobile$() ? entry.path !== '/home' : entry.path !== '/calendar' && entry.path !== '/gallery',
+    ),
   );
   readonly activePath = signal('');
   readonly highlightedPath = computed(() => {

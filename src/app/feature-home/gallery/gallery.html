@@ -1,37 +1,70 @@
-<div class="relative h-full">
-  @if (service.loading()) {
-    <div class="pointer-events-none absolute top-3 right-3 z-10">
-      <span class="block h-5 w-5 animate-spin rounded-full border-2 border-stone-300 border-t-stone-900"></span>
-    </div>
-  }
-
-  <div class="flex items-center justify-between gap-3 px-1 py-2 text-2xl font-bold text-stone-900">
-    <span>An diesem Tag</span>
-  </div>
-  <div class="bg-gray-00 mb-2 flex flex-row justify-around gap-2 py-2" [style.margin-right.px]="layout.scrollbarSize()">
-    @for (moment of momentsByDay(); track moment.day) {
-      <div (click)="openMomentView(moment)" class="relative h-full justify-baseline overflow-hidden rounded-2xl border">
-        <div class="absolute inset-0 bottom-0 flex items-center justify-center text-xl font-semibold text-gray-100">
-          {{ moment.day }}
-        </div>
-        <img class="h-48 w-48 object-cover" [blobSrc]="moment.poster().thumbnail$ | async" />
+<div class="photo-gallery">
+  @if (momentsByDay().length) {
+    <header class="section-heading memories-heading">
+      <div>
+        <span class="section-kicker">Erinnerungen</span>
+        <h2>An diesem Tag</h2>
       </div>
-    }
-  </div>
-  <div class="flex items-center gap-3 px-1 py-2 text-2xl font-bold text-stone-900">
-    <span>Gallerie</span>
-  </div>
-  <cdk-virtual-scroll-viewport #gallery class="h-[calc(100%-250px)] w-full overflow-auto p-2" [itemSize]="200">
-    <div
-      *cdkVirtualFor="let row of rows(); trackBy: trackByImageIds"
-      class="grid gap-2 p-1"
-      [style.gridTemplateColumns]="'repeat(' + columns() + ', 1fr)'"
-    >
-      @for (imageExt of row; track imageExt.image.id) {
-        <div class="aspect-square overflow-hidden rounded bg-gray-100" (click)="openDetailView(imageExt)">
-          <img class="h-full w-full object-cover" [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
-        </div>
+    </header>
+    <div class="moment-strip">
+      @for (moment of momentsByDay(); track moment.day) {
+        <button
+          type="button"
+          class="moment-tile"
+          (click)="openMomentView(moment)"
+          [title]="moment.poster().image.name"
+          aria-haspopup="dialog"
+        >
+          <img [alt]="moment.poster().image.name" [blobSrc]="moment.poster().thumbnail$ | async" />
+          <div class="moment-caption">
+            <span class="moment-day">{{ moment.day }}</span>
+            <span class="moment-month">{{ moment.poster().image.takenAt.date | date: 'MMMM' }}</span>
+          </div>
+          <span class="moment-count">{{ moment.images.length }}</span>
+        </button>
       }
     </div>
-  </cdk-virtual-scroll-viewport>
+  }
+  <header class="section-heading photos-heading">
+    <div>
+      <span class="section-kicker">Fotothek</span>
+      <h2>Galerie</h2>
+    </div>
+    <div class="gallery-status" role="status">
+      @if (service.loading()) {
+        <span class="loading-ring" aria-label="Fotos werden geladen"></span>
+      }
+      <span class="quiet-count">{{ imageCount() }} Fotos</span>
+    </div>
+  </header>
+  <div class="gallery-body">
+    @if (!images().length) {
+      @if (service.loading()) {
+        <div class="gallery-placeholder" aria-hidden="true">
+          @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
+            <div class="photo-placeholder"></div>
+          }
+        </div>
+      } @else {
+        <div class="gallery-empty">
+          <svg lucideImages aria-hidden="true"></svg>
+          <p>Noch keine Fotos.</p>
+        </div>
+      }
+    }
+    <cdk-virtual-scroll-viewport #gallery class="photo-viewport" [itemSize]="200">
+      <div
+        *cdkVirtualFor="let row of rows(); trackBy: trackByImageIds"
+        class="photo-row"
+        [style.gridTemplateColumns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
+      >
+        @for (imageExt of row; track imageExt.image.id) {
+          <button type="button" class="photo-tile" (click)="openDetailView(imageExt)" [title]="imageExt.image.name" aria-haspopup="dialog">
+            <img [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
+            <span class="photo-caption">{{ imageExt.image.takenAt.date | date: 'dd. MMM yyyy' }}</span>
+          </button>
+        }
+      </div>
+    </cdk-virtual-scroll-viewport>
+  </div>
 </div>

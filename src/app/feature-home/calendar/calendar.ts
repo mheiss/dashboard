@@ -5,12 +5,13 @@ import { getPercentageOfDay } from '../../ms-graph/calendar.model';
 import { CalendarService } from '../../ms-graph/calendar.service';
 import { LayoutService } from '../../utils/layout.service';
 import { AgendaView } from './agenda-view/agenda-view';
+import { LucideCalendarDays } from '@lucide/angular';
 
 @Component({
   selector: 'app-calendar',
   templateUrl: './calendar.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [AgendaView],
+  imports: [AgendaView, LucideCalendarDays],
 })
 export class Calendar {
   readonly layout = inject(LayoutService);

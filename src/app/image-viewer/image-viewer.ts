@@ -18,13 +18,14 @@ import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
 import { delay, first } from 'rxjs';
 import { BlobSrcDirective } from './blob.directive';
 import { ImageViewerData, ViewerImage } from './image-viewer.model';
+import { LucideX, LucideChevronLeft, LucideChevronRight } from '@lucide/angular';
 
 @Component({
   selector: 'app-image-viewer',
   templateUrl: './image-viewer.html',
   changeDetection: ChangeDetectionStrategy.Eager,
   host: { class: 'block h-full min-h-0 w-full' },
-  imports: [DatePipe, AsyncPipe, BlobSrcDirective, ScrollingModule],
+  imports: [DatePipe, AsyncPipe, BlobSrcDirective, ScrollingModule, LucideX, LucideChevronLeft, LucideChevronRight],
 })
 export class ImageViewerComponent implements OnInit, OnDestroy {
   readonly dialogRef = inject(DialogRef);

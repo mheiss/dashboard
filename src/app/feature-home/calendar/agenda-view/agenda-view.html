@@ -1,52 +1,39 @@
-<div class="flex flex-col gap-3">
-  @for (day of events(); track day.day.getTime(); ) {
-    <section class="overflow-hidden rounded-2xl border bg-white shadow-sm" [ngClass]="isToday(day.day) ? 'border-amber-300 shadow-amber-100/80' : 'border-stone-200'">
-      <div class="flex items-center justify-between gap-4 border-b px-4 py-3" [ngClass]="isToday(day.day) ? 'border-amber-200 bg-amber-50' : 'border-stone-200 bg-stone-50'">
-        <div>
-          <div class="text-3xl font-bold" [ngClass]="isToday(day.day) ? 'text-amber-700' : 'text-stone-900'">{{ day.day | date: 'dd' }}</div>
-          <div class="text-sm" [ngClass]="isToday(day.day) ? 'text-amber-600' : 'text-stone-500'">{{ day.day | date: 'EEEE' }}</div>
+<div class="agenda">
+  @for (day of events(); track day.day.getTime()) {
+    <section class="agenda-day" [class.is-today]="isToday(day.day)">
+      <header class="agenda-date">
+        <time class="date-number" [attr.datetime]="day.day | date: 'yyyy-MM-dd'">{{ day.day | date: 'dd' }}</time>
+        <div class="min-w-0">
+          <div class="date-weekday">{{ day.day | date: 'EEEE' }}</div>
+          <div class="date-month">{{ day.day | date: 'MMMM yyyy' }}</div>
         </div>
-        <div class="text-xs font-medium uppercase tracking-[0.2em]" [ngClass]="isToday(day.day) ? 'text-amber-500' : 'text-stone-400'">
-          @let numEvents = day.events.length + day.allDay.length;
-          @if(numEvents === 0) {
-            Keine Termine
-          } @else if (numEvents === 1) {
-            1 Termin
-          } @else {
-            {{ numEvents }} Termine
-          }
-        </div>
-      </div>
-
-      @if (day.allDay.length > 0) {
-        <div class="border-b border-stone-100 bg-stone-50/60 px-3 py-2">
-          <div class="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-stone-400">Ganztägig</div>
-          <div class="flex flex-wrap gap-2">
+        @if (isToday(day.day)) {
+          <span class="today-label">Heute</span>
+        }
+      </header>
+      <div class="agenda-day-events">
+        @if (day.allDay.length > 0) {
+          <div class="all-day-events">
             @for (event of day.allDay; track event.id) {
-              <div class="rounded-full border border-blue-300 bg-blue-100 px-3 py-1 text-xs text-stone-900" [ngClass]="event.myConfig.tailwindClasses">
-                {{ event.subject }}
+              <div class="agenda-event all-day-event border-blue-300 bg-blue-100" [ngClass]="event.myConfig.tailwindClasses">
+                <span class="event-subject">{{ event.subject }}</span>
+                <span class="event-time">Ganztägig</span>
               </div>
             }
           </div>
-        </div>
-      }
-
-      <div class="p-2">
-        @if (agendaEvents()[$index].length === 0) {
-          <div class="rounded-xl border border-dashed border-stone-200 px-4 py-5 text-sm text-stone-400">Keine Termine</div>
         }
         @for (event of agendaEvents()[$index]; track event.id) {
-          <div
-            class="m-1 min-h-14 overflow-hidden rounded-xl border border-b border-l-8 border-blue-300 bg-blue-100 px-3 py-3 text-xs"
-            [ngClass]="event.tailwindClasses"
-          >
-            <div class="text-base font-bold text-stone-900">
-              {{ event.subject }}
-            </div>
-            <div class="mt-2 text-sm text-stone-500">{{ event.start | date: 'HH:mm' }} - {{ event.end | date: 'HH:mm' }}</div>
+          <div class="agenda-event border-blue-300 bg-blue-100" [ngClass]="event.tailwindClasses">
+            <span class="event-subject">{{ event.subject }}</span>
+            <span class="event-time">{{ event.start | date: 'HH:mm' }} - {{ event.end | date: 'HH:mm' }}</span>
           </div>
+        }
+        @if (day.allDay.length === 0 && agendaEvents()[$index].length === 0) {
+          <p class="agenda-empty">Keine Termine</p>
         }
       </div>
     </section>
+  } @empty {
+    <p class="agenda-empty">Keine Termine verfügbar.</p>
   }
 </div>

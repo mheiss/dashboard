@@ -1,31 +1,35 @@
-<app-popup title="PIN Code Eingeben">
-  <div class="mt-8 flex h-[25%] items-center justify-center">
-    <div class="flex gap-10">
+<app-popup title="PIN eingeben">
+  <div class="pin-content">
+    <div class="pin-indicators" role="status" aria-label="PIN-Eingabe">
       @for (value of values(); track $index) {
         <div
-          class="flex h-10 w-10 items-center justify-center rounded-full"
+          class="pin-indicator"
           [ngClass]="{
-            'bg-amber-500': value,
-            'bg-amber-500 opacity-50': value && isVerifying(),
-            'bg-stone-300': !value,
+            'is-filled': value,
+            'opacity-50': value && isVerifying(),
             'animate-slide-and-fade bg-rose-700': value && isInvalid(),
           }"
         ></div>
       }
     </div>
-  </div>
-
-  <div class="mt-10 grid h-[75%] cursor-default grid-cols-3 grid-rows-4 place-items-center gap-2 px-15 select-none">
-    @for (key of keys(); track key) {
-      <div [ngClass]="key.position">
-        <div (click)="keyPressed(key)" class="flex h-20 w-20 items-center justify-center rounded-full bg-stone-300">
-          @if (key.icon) {
-            <img src="assets/{{ key.icon }}.svg" class="h-7 w-7" />
-          } @else {
-            {{ key.text }}
-          }
+    <div class="pin-keypad">
+      @for (key of keys(); track key) {
+        <div [ngClass]="key.position">
+          <button
+            type="button"
+            (click)="keyPressed(key)"
+            class="pin-key"
+            [disabled]="isVerifying()"
+            [attr.aria-label]="key.icon ? 'Letzte Ziffer löschen' : key.text"
+          >
+            @if (key.icon) {
+              <svg lucideDelete aria-hidden="true"></svg>
+            } @else {
+              {{ key.text }}
+            }
+          </button>
         </div>
-      </div>
-    }
+      }
+    </div>
   </div>
 </app-popup>

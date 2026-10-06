@@ -1,6 +1,12 @@
 <div class="flex h-full min-h-0 flex-col">
-  <div class="px-1 py-2 text-2xl font-bold text-stone-900">Kalender</div>
-  <div class="flex-1 overflow-y-scroll px-1 pb-2" [style.margin-right.px]="layout.scrollbarSize()">
+  <header class="section-heading calendar-heading">
+    <div>
+      <span class="section-kicker">Im Blick</span>
+      <h1>Kalender</h1>
+    </div>
+    <svg lucideCalendarDays class="section-symbol" aria-hidden="true"></svg>
+  </header>
+  <div class="agenda-scroll min-h-0 flex-1 overflow-y-auto">
     <app-agenda-view [events]="events()" />
   </div>
 </div>

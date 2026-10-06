@@ -20,8 +20,10 @@ The Home screen is the default landing page. It is protected by Microsoft sign-i
 On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. Both new routes use the same Microsoft sign-in guard as Home.
 
 - The calendar column shows events from the configured calendars for the next few days.
+- Compact day headers highlight today; all-day and timed events stay together without nested day cards.
 - Calendar colors are controlled by the `tailwindClasses` values in the selected environment config.
 - The gallery column displays photos from configured OneDrive folders.
+- Memory tiles show same-day photos from previous years. The photo grid uses two columns on mobile and smaller tablets, and three on larger screens.
 - Gallery images are cached locally in the browser with IndexedDB so repeat loads are faster.
 - The gallery refreshes periodically and loads more images as you scroll.
 - Detail view opens a larger image viewer for an individual photo or a same-day memory group.

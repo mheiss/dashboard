@@ -1,7 +1,14 @@
-<div class="flex h-full min-h-0 flex-col overflow-auto bg-gray-200">
+<div class="camera-screen">
+  <header class="screen-heading">
+    <div>
+      <span class="section-kicker">Sicherheit</span>
+      <h1>Kameras</h1>
+    </div>
+    <span class="quiet-count">{{ cameras().length }} Kameras</span>
+  </header>
   @if (layout.mobile$()) {
-    <div class="flex w-full shrink-0 flex-col items-center p-2">
-      <div class="w-full space-y-2">
+    <div class="flex w-full shrink-0 flex-col items-center px-4 pb-4">
+      <div class="w-full space-y-3">
         @for (camera of mobileCameras(); track camera.camera) {
           <div class="relative overflow-hidden rounded-md">
             <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" />
@@ -11,9 +18,9 @@
       </div>
     </div>
   } @else {
-    <div class="flex min-h-0 flex-1 flex-row gap-2 p-2">
-      <div class="h-full w-52 shrink-0 overflow-y-auto">
-        <div class="flex flex-col gap-2">
+    <div class="flex min-h-0 flex-1 flex-row gap-4 px-4 pb-4">
+      <div class="h-full w-48 shrink-0 overflow-y-auto">
+        <div class="flex flex-col gap-3">
           @for (camera of cameras(); track camera.camera) {
             <button
               type="button"
@@ -37,9 +44,9 @@
       </div>
     </div>
   }
-  <section class="flex shrink-0 items-center gap-2 border-t border-gray-300 bg-white px-2 py-2 min-h-36">
+  <section class="motion-filmstrip" aria-label="Letzte Bewegungen">
     @if (motion.snapshots().length) {
-      <div class="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1">
+      <div class="flex min-w-0 flex-1 gap-3 overflow-x-auto py-1">
         @for (snapshot of motion.snapshots(); track snapshot.id) {
           <button
             type="button"

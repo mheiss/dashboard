@@ -9,12 +9,14 @@ import { confettiSequence } from '../../utils/confetti';
 import { pinActor } from './pin.actor';
 import { backspaceEvent, keyEvent, verifyResponse } from './pin.machine';
 import { Key } from './pin.model';
+import { LucideDelete } from '@lucide/angular';
 
 @Component({
   selector: 'app-pin',
   templateUrl: './pin.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [Popup, NgClass],
+  host: { class: 'pin-panel' },
+  imports: [Popup, NgClass, LucideDelete],
 })
 export class Pin implements OnInit {
   readonly dialogRef = inject(DialogRef);

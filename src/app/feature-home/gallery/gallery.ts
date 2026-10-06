@@ -1,5 +1,5 @@
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, OnInit, signal, Signal, viewChild, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter, interval, map, tap } from 'rxjs';
@@ -13,12 +13,13 @@ import { BlobSrcDirective } from '../../image-viewer/blob.directive';
 import { ImageViewerComponent } from '../../image-viewer/image-viewer';
 import { ImageViewerData, ViewerImage } from '../../image-viewer/image-viewer.model';
 import { Moment, toMoment } from './gallery.model';
+import { LucideImages } from '@lucide/angular';
 
 @Component({
   selector: 'app-gallery',
   templateUrl: './gallery.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [ScrollingModule, AsyncPipe, BlobSrcDirective],
+  imports: [ScrollingModule, AsyncPipe, DatePipe, BlobSrcDirective, LucideImages],
 })
 export class GalleryComponent implements OnInit {
   readonly dialog = inject(PopupService);
@@ -45,10 +46,7 @@ export class GalleryComponent implements OnInit {
    * Computes the number of columns depending on the viewport size
    */
   readonly columns = computed(() => {
-    if (this.layout.mobile$()) {
-      return 1;
-    }
-    return 4;
+    return this.layout.desktop$() ? 3 : 2;
   });
 
   /**

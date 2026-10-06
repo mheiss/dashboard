@@ -1,12 +1,13 @@
 import { DIALOG_DATA, DialogModule, DialogRef } from '@angular/cdk/dialog';
 import { Component, inject, input, ChangeDetectionStrategy } from '@angular/core';
 import { DialogOptions } from './popup.service';
+import { LucideX } from '@lucide/angular';
 
 @Component({
   selector: 'app-popup',
   templateUrl: './popup.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [DialogModule],
+  imports: [DialogModule, LucideX],
 })
 export class Popup {
   readonly data = inject(DIALOG_DATA) as DialogOptions;

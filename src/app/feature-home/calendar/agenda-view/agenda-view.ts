@@ -33,7 +33,7 @@ export class AgendaView {
         const end = graphToDate(event.end);
         let tailwindClasses = event.myConfig.tailwindClasses;
         if (now > end) {
-          tailwindClasses = tailwindClasses + ' opacity-50';
+          tailwindClasses = tailwindClasses + ' opacity-75';
         }
         return { id, subject, start, end, tailwindClasses } as AgendaEvent;
       });

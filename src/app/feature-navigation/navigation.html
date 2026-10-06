@@ -1,25 +1,29 @@
-<div class="flex w-full items-center justify-around gap-1 px-1 text-stone-300 md:justify-center md:gap-8">
+<div class="navigation-links">
   @for (item of elements(); track item.path) {
     <a
       [routerLink]="item.path"
       [attr.aria-label]="item.name"
       [attr.aria-current]="highlightedPath() === item.path ? 'page' : null"
       [title]="item.name"
-      class="flex h-14 min-w-0 max-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-md hover:bg-amber-600 hover:text-white focus-visible:outline-2 focus-visible:outline-white md:h-auto md:max-w-none md:flex-none md:flex-row md:p-2"
+      class="navigation-link"
+      [class.is-active]="highlightedPath() === item.path"
       (mouseover)="item.hover.set(true)"
       (mouseleave)="item.hover.set(false)"
-      [ngClass]="{
-        'shadow-2xs shadow-amber-500 text-amber-400': highlightedPath() === item.path,
-      }"
     >
       @if (item.path === '/calendar') {
-        <svg lucideCalendarDays class="h-7 w-7" aria-hidden="true"></svg>
+        <svg lucideCalendarDays aria-hidden="true"></svg>
       } @else if (item.path === '/gallery') {
-        <svg lucideImages class="h-7 w-7" aria-hidden="true"></svg>
+        <svg lucideImages aria-hidden="true"></svg>
+      } @else if (item.path === '/home') {
+        <svg lucideHouse aria-hidden="true"></svg>
+      } @else if (item.path === '/openhab') {
+        <svg lucidePanelsTopLeft aria-hidden="true"></svg>
+      } @else if (item.path === '/evcc') {
+        <svg lucideZap aria-hidden="true"></svg>
       } @else {
-        <img class="h-7 w-7" [src]="item.icon()" alt="" />
+        <svg lucideCctv aria-hidden="true"></svg>
       }
-      <span class="text-[10px] leading-none md:pl-3 md:text-3xl">{{ item.name }}</span>
+      <span>{{ item.name }}</span>
     </a>
   }
 </div>

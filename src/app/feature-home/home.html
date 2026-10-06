@@ -1,12 +1,12 @@
-<div class="grid h-full min-h-0 w-full grid-cols-1 gap-3 bg-gray-100 p-2 sm:grid-cols-2 sm:p-4 lg:grid-cols-[380px_minmax(0,1fr)]">
+<div class="home-layout">
   @if (!layout.mobile$() || routeData()['mobileView'] !== 'gallery') {
-    <div class="min-h-0 min-w-0 rounded bg-white p-1">
+    <section class="home-calendar" aria-label="Kalender">
       <app-calendar class="block h-full min-h-0" />
-    </div>
+    </section>
   }
   @if (!layout.mobile$() || routeData()['mobileView'] === 'gallery') {
-    <div class="min-h-0 min-w-0 rounded bg-white p-1">
+    <section class="home-gallery" aria-label="Fotogalerie">
       <app-gallery class="block h-full min-h-0" />
-    </div>
+    </section>
   }
 </div>
