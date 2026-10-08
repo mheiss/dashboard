@@ -89,8 +89,8 @@ body {
   .app-nav {
     flex-shrink: 0;
     padding: 8px 16px max(8px, env(safe-area-inset-bottom));
-    border-top: 1px solid var(--line);
-    background: var(--surface);
+    border-top: 1px solid #34413c;
+    background: var(--ink);
   }
   .navigation-links {
     display: flex;
@@ -109,7 +109,7 @@ body {
     gap: 10px;
     padding: 10px 22px;
     border-radius: 8px;
-    color: var(--muted);
+    color: #cad4d2;
     font-size: 16px;
     font-weight: 700;
     transition:
@@ -123,11 +123,14 @@ body {
     stroke-width: 1.75;
   }
   .navigation-link:hover {
-    color: var(--ink);
-    background: var(--canvas);
+    color: white;
+    background: #34413c;
+  }
+  .navigation-link:focus-visible {
+    outline-color: #99dfc8;
   }
   .navigation-link.is-active {
-    color: var(--accent);
+    color: #126b59;
     background: var(--accent-soft);
   }
   .home-layout {
@@ -323,7 +326,7 @@ body {
     margin-top: 5px;
     font-size: 12px;
   }
-  .moment-count {
+  .photo-count {
     position: absolute;
     top: 10px;
     right: 10px;
