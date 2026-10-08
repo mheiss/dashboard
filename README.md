@@ -4,6 +4,27 @@ An Angular dashboard for a wall-mounted smart home tablet. It combines family ca
 
 The app is designed for an always-on display in the living room. It keeps the main flows large and simple, embeds the existing openHAB controls, and pauses camera/gallery work when the tablet screen is off.
 
+## Project Layout
+
+- `server/`: Quarkus application, Java sources and tests, and the Gradle wrapper.
+- `ui/`: Angular application, npm dependencies, frontend configuration, and deployment scripts.
+
+Quinoa builds and serves the Angular application from `../ui`, relative to `server/`. The UI remains hosted at `/quinoa`; the folder layout does not change its URL.
+
+Open `dashboard.code-workspace` for the Backend and Frontend workspace folders. From the repository root, build the combined application with:
+
+```powershell
+./server/gradlew.bat -p server build
+```
+
+Start Quarkus development mode, including the Quinoa-managed Angular dev server, with:
+
+```powershell
+./server/gradlew.bat -p server quarkusDev
+```
+
+For frontend-only development, run `npm start` from `ui/`. Run the frontend configuration and deployment commands below from `ui/` as well.
+
 ## Main Screens
 
 On tablets and larger screens, the dashboard has four primary sections in the navigation bar. On mobile (below 640px), Home is replaced by separate Kalender and Galerie buttons.

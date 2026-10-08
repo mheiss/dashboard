@@ -1,11 +1,11 @@
 {
     "folders": [
         {
-            "path": ".",
+            "path": "server",
             "name": "Backend",
         },
         {
-            "path": "src/main/webui",
+            "path": "ui",
             "name": "Frontend",
         },
     ],
