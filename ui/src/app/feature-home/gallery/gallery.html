@@ -7,7 +7,7 @@
       </div>
     </header>
     <div class="moment-strip">
-      @for (moment of momentsByDay(); track moment.day) {
+      @for (moment of momentsByDay(); track moment.date) {
         <button
           type="button"
           class="moment-tile"
@@ -38,6 +38,9 @@
     </div>
   </header>
   <div class="gallery-body">
+    @if (service.error()) {
+      <p class="agenda-empty" role="status">{{ service.error() }}</p>
+    }
     @if (!images().length) {
       @if (service.loading()) {
         <div class="gallery-placeholder" aria-hidden="true">

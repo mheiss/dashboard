@@ -1,0 +1,26 @@
+# Copy to config/application.properties on the deployment machine, then replace
+# every REPLACE_ value. Never commit or distribute the active file with secrets.
+
+quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/dashboard
+quarkus.datasource.username=dashboard
+quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
+
+dashboard.token-key=REPLACE_SAVED_TOKEN_KEY
+dashboard.admin-password=REPLACE_ADMIN_PASSWORD
+dashboard.allowed-origins=https://dashboard.home.arpa
+dashboard.ui-base-path=/
+dashboard.ui-config-file=config/config.json
+dashboard.media-directory=C:/dashboard-data/media
+dashboard.zone=Europe/Vienna
+
+dashboard.microsoft.client-id=REPLACE_MICROSOFT_CLIENT_ID
+dashboard.microsoft.client-secret=REPLACE_MICROSOFT_CLIENT_SECRET_VALUE
+dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/accounts/callback
+
+quarkus.http.host=127.0.0.1
+quarkus.http.port=8080
+quarkus.http.proxy.proxy-address-forwarding=true
+quarkus.http.proxy.allow-forwarded=false
+quarkus.http.proxy.allow-x-forwarded=true
+quarkus.http.proxy.trusted-proxies=127.0.0.1,::1
+quarkus.http.auth.session.encryption-key=REPLACE_SAVED_SESSION_KEY

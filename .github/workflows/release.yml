@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ github.event.release.tag_name }}
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download deployment package
+        uses: actions/download-artifact@v8.0.2
+        with:
+          name: dashboard
+          path: distribution
+
+      - name: Verify and attach release assets
+        working-directory: distribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          sha256sum --check SHA256SUMS
+          gh release upload "$RELEASE_TAG" dashboard-*.zip SHA256SUMS --clobber

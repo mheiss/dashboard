@@ -37,7 +37,7 @@ export class AgendaView {
         }
         return { id, subject, start, end, tailwindClasses } as AgendaEvent;
       });
-      return eventsByDay.sort((a, b) => a.start.getTime() - b.start.getTime());
+      return eventsByDay;
     });
   });
 }

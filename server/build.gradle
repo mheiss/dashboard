@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'io.quarkus'
+    id 'com.diffplug.spotless' version '8.10.3'
 }
 
 repositories {
@@ -15,16 +16,33 @@ dependencies {
     implementation 'io.quarkiverse.quinoa:quarkus-quinoa:2.9.2'
     implementation 'io.quarkus:quarkus-smallrye-graphql'
     implementation 'io.quarkus:quarkus-arc'
+    implementation 'io.quarkus:quarkus-jdbc-postgresql'
+    implementation 'io.quarkus:quarkus-jdbc-h2'
+    implementation 'io.quarkus:quarkus-hibernate-orm'
+    implementation 'io.quarkus:quarkus-liquibase'
+    implementation 'io.quarkus:quarkus-scheduler'
+    implementation 'io.quarkus:quarkus-security-jpa'
+    implementation 'io.quarkus:quarkus-smallrye-health'
+    implementation 'io.quarkus:quarkus-reactive-routes'
+    implementation 'com.microsoft.azure:msal4j:1.19.1'
     testImplementation 'io.quarkus:quarkus-junit'
     testImplementation 'io.rest-assured:rest-assured'
+    testImplementation 'io.quarkus:quarkus-junit-mockito'
 }
 
 group = 'cloud.heiss'
-version = '1.0.0-SNAPSHOT'
+version = providers.gradleProperty('releaseVersion').getOrElse('1.0.0-SNAPSHOT')
 
 java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        eclipse('4.37').configFile('etc/java_code_format.xml')
+    }
 }
 
 compileJava {
@@ -34,4 +52,63 @@ compileJava {
 
 compileTestJava {
     options.encoding = 'UTF-8'
+}
+
+tasks.register('prepareDevConfig') {
+    group = 'quarkus'
+    description = 'Creates missing local development configuration from the sample files.'
+    def configs = [
+        [source: file('examples/application-dev.properties.sample'), target: file('dev/config/application.properties')],
+        [source: file('examples/config.sample.json'), target: file('dev/config/config.json')]
+    ]
+    inputs.files(configs.collect { it.source })
+    doLast {
+        configs.each { config ->
+            def target = config.target.toPath()
+            if (!java.nio.file.Files.exists(target)) {
+                java.nio.file.Files.createDirectories(target.parent)
+                java.nio.file.Files.copy(config.source.toPath(), target)
+                logger.lifecycle('Created {}', config.target)
+            }
+        }
+    }
+}
+
+tasks.register('quarkusDevH2') {
+    group = 'quarkus'
+    description = 'Starts the backend in dev mode with persistent H2 and Quinoa disabled.'
+    dependsOn tasks.named('quarkusDev')
+}
+
+tasks.named('quarkusDev') {
+    dependsOn tasks.named('prepareDevConfig')
+    jvmArgs = (jvmArgs ?: []) + ["-Dquarkus.config.locations=${file('dev/config/application.properties').toURI()}"]
+    if (gradle.startParameter.taskNames.any { it.tokenize(':').last() == 'quarkusDevH2' }) {
+        jvmArgs = (jvmArgs ?: []) + ['-Dquarkus.profile=dev,h2', '-Dquarkus.quinoa=false']
+    }
+}
+
+tasks.register('distributionZip', Zip) {
+    group = 'distribution'
+    description = 'Archives the ready-to-run Quarkus application and deployment instructions.'
+    dependsOn tasks.named('quarkusBuild')
+    archiveBaseName = 'dashboard'
+    destinationDirectory = layout.buildDirectory.dir('distributions')
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+    from(layout.buildDirectory.dir('quarkus-app')) {
+        into 'quarkus-app'
+    }
+    from('../README.md')
+    from('README.md') {
+        rename { 'BACKEND.md' }
+    }
+    from('examples/config.sample.json') {
+        into 'examples'
+        rename { 'config.json' }
+    }
+    from('examples/application.properties.sample') {
+        into 'examples'
+        rename { 'application.properties' }
+    }
 }

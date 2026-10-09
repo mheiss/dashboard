@@ -33,11 +33,6 @@ export function graphToDate(timeWithZone: NullableOption<DateTimeTimeZone> | und
     throw new Error('Undefined date or timezone');
   }
 
-  //  Parse the dateTime into different objects
-  const [datePart, timePart] = timeWithZone.dateTime.split('T');
-  const [year, month, day] = datePart.split('-').map(Number);
-  const [hour, minute, second] = timePart.split(':').map(Number);
-
-  // Create a temporary date in local timezone
-  return new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const value = timeWithZone.dateTime;
+  return new Date(/[zZ]$|[+-]\d{2}:\d{2}$/.test(value) ? value : `${value}Z`);
 }

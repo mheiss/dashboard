@@ -1,0 +1,223 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  logicalFilePath="db/baseline.xml"
+                  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <property name="textType" value="VARCHAR" dbms="h2"/>
+    <property name="textType" value="TEXT"/>
+
+    <changeSet id="1-initial-dashboard-schema" author="dashboard">
+        <createTable tableName="appuser">
+            <column name="id" type="BIGINT" autoIncrement="true" generationType="BY DEFAULT">
+                <constraints primaryKey="true" primaryKeyName="appuserpk" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="appuserusernameuk"/>
+            </column>
+            <column name="password" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="roles" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createTable tableName="account">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="accountpk" nullable="false"/>
+            </column>
+            <column name="microsoft" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="accountmicrosoftuk"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cache" type="${textType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(40)" defaultValue="CONNECTED">
+                <constraints nullable="false"/>
+            </column>
+            <column name="error" type="VARCHAR(255)"/>
+            <column name="synced" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="requested" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lease" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="retry" type="TIMESTAMP WITH TIME ZONE"/>
+        </createTable>
+
+        <createTable tableName="source">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="sourcepk" nullable="false"/>
+            </column>
+            <column name="account" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="upstream" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="drive" type="VARCHAR(255)"/>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="theme" type="VARCHAR(30)" defaultValue="emerald">
+                <constraints nullable="false"/>
+            </column>
+            <column name="selected" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="delta" type="${textType}"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="source" baseColumnNames="account"
+                                 referencedTableName="account" referencedColumnNames="id"
+                                 constraintName="sourceaccountfk" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="source" columnNames="account,kind,upstream"
+                             constraintName="sourceupstreamuk"/>
+
+        <createTable tableName="event">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="eventpk" nullable="false"/>
+            </column>
+            <column name="source" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="upstream" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="subject" type="${textType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="starts" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ends" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="allday" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="startdate" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="enddate" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="event" baseColumnNames="source"
+                                 referencedTableName="source" referencedColumnNames="id"
+                                 constraintName="eventsourcefk" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="event" columnNames="source,upstream"
+                             constraintName="eventupstreamuk"/>
+        <createIndex tableName="event" indexName="eventstarts">
+            <column name="starts"/>
+            <column name="source"/>
+        </createIndex>
+
+        <createTable tableName="photo">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="photopk" nullable="false"/>
+            </column>
+            <column name="drive" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="upstream" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="${textType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="taken" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="takenday" type="INTEGER"/>
+            <column name="takenmonth" type="INTEGER"/>
+            <column name="takenyear" type="INTEGER"/>
+            <column name="modified" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="${textType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="photo" columnNames="drive,upstream"
+                             constraintName="photoupstreamuk"/>
+        <createIndex tableName="photo" indexName="phototaken">
+            <column name="taken" descending="true"/>
+            <column name="id" descending="true"/>
+        </createIndex>
+        <createIndex tableName="photo" indexName="photomoment">
+            <column name="takenmonth"/>
+            <column name="takenday"/>
+            <column name="takenyear"/>
+        </createIndex>
+
+        <createTable tableName="membership">
+            <column name="photo" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="membershippk" nullable="false"/>
+            </column>
+            <column name="source" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="membershippk" nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="membership" baseColumnNames="photo"
+                                 referencedTableName="photo" referencedColumnNames="id"
+                                 constraintName="membershipphotofk" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="membership" baseColumnNames="source"
+                                 referencedTableName="source" referencedColumnNames="id"
+                                 constraintName="membershipsourcefk" onDelete="CASCADE"/>
+
+        <createTable tableName="item">
+            <column name="source" type="UUID">
+                <constraints primaryKey="true" primaryKeyName="itempk" nullable="false"/>
+            </column>
+            <column name="upstream" type="VARCHAR(255)">
+                <constraints primaryKey="true" primaryKeyName="itempk" nullable="false"/>
+            </column>
+            <column name="parent" type="VARCHAR(255)"/>
+            <column name="payload" type="${textType}">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="item" baseColumnNames="source"
+                     referencedTableName="source" referencedColumnNames="id"
+                     constraintName="itemsourcefk" onDelete="CASCADE"/>
+
+        <createTable tableName="subscription">
+            <column name="id" type="VARCHAR(255)">
+                <constraints primaryKey="true" primaryKeyName="subscriptionpk" nullable="false"/>
+            </column>
+            <column name="account" type="UUID">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource" type="${textType}">
+                <constraints nullable="false"/>
+            </column>
+            <column name="state" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="expires" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="subscription" baseColumnNames="account"
+                     referencedTableName="account" referencedColumnNames="id"
+                     constraintName="subscriptionaccountfk" onDelete="CASCADE"/>
+        <addUniqueConstraint tableName="subscription" columnNames="account,resource"
+                     constraintName="subscriptionresourceuk"/>
+
+        <createTable tableName="revision">
+            <column name="id" type="INTEGER">
+            <constraints primaryKey="true" primaryKeyName="revisionpk" nullable="false"/>
+            </column>
+            <column name="revision" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <insert tableName="revision">
+            <column name="id" valueNumeric="1"/>
+            <column name="revision" valueNumeric="0"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

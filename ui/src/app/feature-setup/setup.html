@@ -1,0 +1,62 @@
+<section class="h-full overflow-auto p-6 max-sm:p-4 [&_svg]:size-5 [&_svg]:shrink-0 [&_button:disabled]:cursor-default [&_button:disabled]:opacity-50">
+  <div class="mx-auto max-w-240">
+    <header class="flex flex-wrap items-center justify-between gap-4 max-sm:items-start">
+      <h1 class="m-0 text-[26px] max-sm:text-[23px]">Microsoft-Konten</h1>
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white" (click)="connect()" [disabled]="busy()"><svg lucidePlus aria-hidden="true"></svg> Konto verbinden</button>
+        <button class="inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-(--line) bg-(--surface) p-2.5 text-(--ink)" title="Synchronisieren" aria-label="Synchronisieren" (click)="sync()" [disabled]="busy()"><svg lucideRefreshCw aria-hidden="true"></svg></button>
+        <button class="inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-(--line) bg-(--surface) p-2.5 text-(--ink)" title="Abmelden" aria-label="Abmelden" (click)="logout()"><svg lucideLogOut aria-hidden="true"></svg></button>
+      </div>
+    </header>
+    @if (error()) { <p role="alert" class="text-sm text-[#a52b3d] wrap-anywhere">{{ error() }}</p> }
+    @for (account of accounts(); track account.id) {
+      <article class="border-b border-(--line) py-6">
+        <header class="flex flex-wrap items-center justify-between gap-4">
+          <div class="min-w-0">
+            <h2 class="m-0 text-[19px] wrap-anywhere">{{ account.name }}</h2>
+            <p class="my-2 text-sm text-(--muted)">
+              @switch (account.status) {
+                @case ('SYNCING') { Synchronisierung läuft }
+                @case ('RECONNECT_REQUIRED') { Anmeldung erforderlich }
+                @case ('ERROR') { Synchronisierung fehlgeschlagen }
+                @default { Verbunden }
+              }
+              @if (account.lastSync) { · {{ account.lastSync | date: 'dd.MM.yyyy HH:mm' }} }
+            </p>
+            @if (account.error) { <p class="text-sm text-[#a52b3d] wrap-anywhere">{{ account.error }}</p> }
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            @if (account.status === 'RECONNECT_REQUIRED') { <button class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white" (click)="connect()" [disabled]="busy()">Erneut verbinden</button> }
+            <button class="inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-(--line) bg-(--surface) p-2.5 text-(--ink)" title="Kalender aktualisieren" aria-label="Kalender aktualisieren" (click)="discover(account)" [disabled]="busy()"><svg lucideRefreshCw aria-hidden="true"></svg></button>
+            <button class="inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-(--line) bg-(--surface) p-2.5 text-(--ink)" title="Konto entfernen" aria-label="Konto entfernen" (click)="pendingDisconnect.set(account.id)"><svg lucideTrash2 aria-hidden="true"></svg></button>
+          </div>
+        </header>
+        @if (pendingDisconnect() === account.id) {
+          <div class="flex flex-wrap items-center gap-3 py-3" role="alert">
+            <p>Konto und nicht mehr verwendete Daten entfernen?</p>
+            <button class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white" (click)="disconnect(account)" [disabled]="busy()">Entfernen</button>
+            <button class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--line) bg-(--surface) px-3.5 py-2.5 font-bold text-(--ink)" (click)="pendingDisconnect.set(null)">Abbrechen</button>
+          </div>
+        }
+        <div class="my-4">
+          @for (source of account.sources; track source.id) {
+            <div class="grid grid-cols-[minmax(0,1fr)_100px] items-center gap-4 py-2.5 max-sm:gap-2">
+              <label class="flex min-w-0 flex-wrap items-center gap-2.5 wrap-anywhere"><input class="size-5 shrink-0 accent-(--accent)" type="checkbox" [checked]="source.selected" (change)="select(source, $any($event.target).checked)" [disabled]="busy()" />{{ source.name }}<span class="text-xs text-(--muted)">{{ source.kind === 'CALENDAR' ? 'Kalender' : 'Fotos' }}</span></label>
+              @if (source.kind === 'CALENDAR') {
+                <select class="w-full min-w-0 rounded-md border border-(--line) bg-(--surface) px-3 py-2.5" [value]="source.theme" [attr.aria-label]="'Farbe für ' + source.name" (change)="select(source, source.selected, $any($event.target).value)" [disabled]="busy()">
+                  <option value="emerald">Grün</option><option value="rose">Rot</option><option value="sky">Blau</option><option value="amber">Gelb</option>
+                </select>
+              }
+            </div>
+          }
+        </div>
+        <form class="grid max-w-130 gap-2" (ngSubmit)="addFolder(account)">
+          <label [for]="'folder-' + account.id">OneDrive-Ordner</label>
+          <div class="flex gap-2"><input class="w-full min-w-0 rounded-md border border-(--line) bg-(--surface) px-3 py-2.5" [id]="'folder-' + account.id" name="folder" [(ngModel)]="folderPaths[account.id]" placeholder="Pictures/Camera Roll" />
+            <button class="inline-flex size-11 shrink-0 items-center justify-center rounded-md border border-(--line) bg-(--surface) p-2.5 text-(--ink)" type="submit" title="Ordner hinzufügen" aria-label="Ordner hinzufügen" [disabled]="busy() || !folderPaths[account.id]"><svg lucidePlus aria-hidden="true"></svg></button>
+          </div>
+        </form>
+      </article>
+    } @empty { <p class="my-2 text-sm text-(--muted)">Keine Microsoft-Konten verbunden.</p> }
+  </div>
+</section>

@@ -7,6 +7,7 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "test": "ng test --watch=false",
     "deploy": "npm run build && pwsh scripts/deploy.ps1",
     "prettier": "prettier --write '**/*.{ts,js,css,html}'"
   },
@@ -18,11 +19,10 @@
     "@angular/forms": "22.2.1",
     "@angular/platform-browser": "22.2.1",
     "@angular/router": "22.2.1",
-    "@azure/msal-angular": "6.2.2",
-    "@azure/msal-browser": "5.24.0",
     "@lucide/angular": "1.52.0",
     "@panzoom/panzoom": "4.6.2",
     "canvas-confetti": "1.9.4",
+    "graphql-ws": "^6.3.0",
     "idb": "8.0.3",
     "partysocket": "1.3.0",
     "rxjs": "7.8.2",
@@ -36,10 +36,12 @@
     "@microsoft/microsoft-graph-types": "2.43.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/canvas-confetti": "1.9.0",
+    "jsdom": "^30.1.2",
     "postcss": "8.5.29",
     "prettier": "3.9.9",
     "prettier-plugin-tailwindcss": "0.8.1",
     "tailwindcss": "4.3.3",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "^5.0.3"
   }
 }

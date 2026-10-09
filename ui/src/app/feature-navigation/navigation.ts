@@ -3,13 +3,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DefaultUrlSerializer, NavigationEnd, Router, RouterModule, UrlTree } from '@angular/router';
 import { entries } from './navigation.model';
 import { LayoutService } from '../utils/layout.service';
-import { LucideCalendarDays, LucideImages, LucideHouse, LucidePanelsTopLeft, LucideZap, LucideCctv } from '@lucide/angular';
+import { LucideCalendarDays, LucideImages, LucideHouse, LucidePanelsTopLeft, LucideZap, LucideCctv, LucideSettings } from '@lucide/angular';
 
 @Component({
   selector: 'app-navigation',
   templateUrl: './navigation.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [RouterModule, LucideCalendarDays, LucideImages, LucideHouse, LucidePanelsTopLeft, LucideZap, LucideCctv],
+  imports: [RouterModule, LucideCalendarDays, LucideImages, LucideHouse, LucidePanelsTopLeft, LucideZap, LucideCctv, LucideSettings],
 })
 export class Navigation {
   readonly router = inject(Router);

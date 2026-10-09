@@ -65,36 +65,16 @@ export class GalleryComponent implements OnInit {
   /**
    * Returns the moments grouped by day
    */
-  readonly momentsByDay: Signal<Moment[]> = computed(() => {
-    const moments = this.service.moments.asReadonly();
-    const grouped = new Map<number, DriveImageExt[]>();
-    for (const imageExt of moments()) {
-      const day = imageExt.image.takenAt.day;
-      let images = grouped.get(day);
-      if (!images) {
-        images = [];
-        grouped.set(day, images);
-      }
-      images.push(imageExt);
-    }
-    return Array.from(grouped.entries()).map(toMoment);
-  });
+  readonly momentsByDay = this.service.moments.asReadonly();
 
   constructor() {
-    const everyHour = 60 * 60 * 1000;
-    interval(everyHour)
-      .pipe(takeUntilDestroyed(), this.visibility.skipWhenHidden())
-      .subscribe(() => this.service.refreshImages());
-
     const every15Seconds = 15 * 1000;
     interval(every15Seconds)
       .pipe(takeUntilDestroyed(), this.visibility.skipWhenHidden())
       .subscribe(() => this.updateMomentPoster());
 
     // immediate refresh after resume to avoid stale data
-    this.visibility.screenOnAgain$.pipe(takeUntilDestroyed()).subscribe(async () => {
-      this.service.refreshImages();
-    });
+    this.visibility.screenOnAgain$.pipe(takeUntilDestroyed()).subscribe(() => void this.service.refreshImages());
   }
 
   ngOnInit(): void {

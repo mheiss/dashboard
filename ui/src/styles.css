@@ -1,6 +1,4 @@
 @import 'tailwindcss';
-@source '../public/config/development/config.json';
-@source '../public/config/production/config.json';
 
 @font-face {
   font-family: 'AtkinsonHyperlegible';

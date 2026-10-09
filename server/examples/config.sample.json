@@ -1,0 +1,21 @@
+{
+  "openhab": {
+    "sitemap": "https://openhab.example.lan/basicui/app",
+    "items": {
+      "security": "Security",
+      "pin": "Security_Pin",
+      "doorbell": "Entrance_Bell_Switch"
+    },
+    "doorbellCamera": "entry"
+  },
+  "evcc": {
+    "url": "https://evcc.example.lan"
+  },
+  "protect": {
+    "cameras": {
+      "entry": "Eingang",
+      "garden": "Garten",
+      "patio": "Terrasse"
+    }
+  }
+}

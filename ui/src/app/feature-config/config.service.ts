@@ -8,10 +8,4 @@ export class AppConfigService {
    */
   public readonly config = signal<AppConfig>({} as AppConfig);
 
-  /**
-   * The BASE endpoint for the current authenticated user.
-   */
-  graph() {
-    return `${this.config().graphUrl}`;
-  }
 }

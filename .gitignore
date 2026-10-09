@@ -33,6 +33,12 @@ nb-configuration.xml
 
 # Local environment
 .env
+/server/config/config.json
+/server/config/application.properties
+/server/config/development/
+/server/config/production/
+/server/data/
+/server/dev/
 
 # Plugin directory
 /server/.quarkus/cli/plugins/

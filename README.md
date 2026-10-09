@@ -1,359 +1,436 @@
 # Smart Home Dashboard
 
-An Angular dashboard for a wall-mounted smart home tablet. It combines family calendar data, a OneDrive photo gallery, a predefined openHAB sitemap, EVCC wallbox information, and UniFi Protect camera streams in one touch-friendly interface.
+A household dashboard for calendars, OneDrive photos, openHAB controls, EVCC charging information, and UniFi Protect cameras. The downloaded application includes both the backend and the browser interface. Microsoft synchronization and photo processing run on the backend.
 
-The app is designed for an always-on display in the living room. It keeps the main flows large and simple, embeds the existing openHAB controls, and pauses camera/gallery work when the tablet screen is off.
+## Start From A Downloaded Release
 
-## Project Layout
+This guide assumes you have downloaded the application ZIP from GitHub and have not configured the dashboard before. Examples use Windows and PowerShell 7, with the application, PostgreSQL, and Caddy on the same computer. Linux deployments need equivalent packages, paths, and environment settings.
 
-- `server/`: Quarkus application, Java sources and tests, and the Gradle wrapper.
-- `ui/`: Angular application, npm dependencies, frontend configuration, and deployment scripts.
+### 1. Install The Required Software
 
-Quinoa builds and serves the Angular application from `../ui`, relative to `server/`. The UI remains hosted at `/quinoa`; the folder layout does not change its URL.
+Install these separately; they are not included in the ZIP:
 
-Open `dashboard.code-workspace` for the Backend and Frontend workspace folders. From the repository root, build the combined application with:
+- **Java 25**: install a Java 25 runtime or JDK, for example [Eclipse Temurin](https://adoptium.net/temurin/releases/), and add Java to PATH.
+- **PostgreSQL**: install a supported version from [postgresql.org](https://www.postgresql.org/download/). Keep the administrator password chosen during installation. Leave the default port, `5432`, unless another installation already uses it.
+- **Caddy**: install [Caddy](https://caddyserver.com/docs/install) and add it to PATH. It provides HTTPS in front of the dashboard.
+- **PowerShell 7**: use [PowerShell](https://learn.microsoft.com/powershell/scripting/install/installing-powershell-on-windows) for these commands.
 
-```powershell
-./server/gradlew.bat -p server build
-```
-
-Start Quarkus development mode, including the Quinoa-managed Angular dev server, with:
+Open a new PowerShell window and check:
 
 ```powershell
-./server/gradlew.bat -p server quarkusDev
+java -version
+caddy version
+$PSVersionTable.PSVersion
 ```
 
-For frontend-only development, run `npm start` from `ui/`. Run the frontend configuration and deployment commands below from `ui/` as well.
+Java must report version 25. PostgreSQL must be running. The dashboard computer and client devices need internet access for Microsoft sign-in and synchronization.
 
-## Main Screens
+### 2. Extract The Application
 
-On tablets and larger screens, the dashboard has four primary sections in the navigation bar. On mobile (below 640px), Home is replaced by separate Kalender and Galerie buttons.
-
-- **Home**: Shows the configured Microsoft calendars next to a OneDrive photo gallery.
-- **OpenHAB**: Displays the predefined openHAB sitemap for smart home control.
-- **Wallbox**: Embeds the configured EVCC view for electric vehicle charging information.
-- **Kamera**: Shows the configured UniFi Protect camera streams.
-
-## Home Screen
-
-The Home screen is the default landing page. It is protected by Microsoft sign-in because it reads Microsoft Graph data.
-
-On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. Both new routes use the same Microsoft sign-in guard as Home.
-
-- The calendar column shows events from the configured calendars for the next few days.
-- Compact day headers highlight today; all-day and timed events stay together without nested day cards.
-- Calendar colors are controlled by the `tailwindClasses` values in the selected environment config.
-- The gallery column displays photos from configured OneDrive folders.
-- Memory tiles show same-day photos from previous years. The photo grid uses two columns on mobile and smaller tablets, and three on larger screens.
-- Gallery images are cached locally in the browser with IndexedDB so repeat loads are faster.
-- The gallery refreshes periodically and loads more images as you scroll.
-- Detail view opens a larger image viewer for an individual photo or a same-day memory group.
-
-### OpenHAB Screen
-
-The OpenHAB screen displays a predefined openHAB Basic UI sitemap. This is the main OpenHAB feature of the dashboard: users can operate the configured smart home controls directly inside the tablet interface without leaving the dashboard.
-
-The embedded sitemap URL is configured in the selected environment config under `openhab.sitemap`.
-
-## Wallbox Screen
-
-The Wallbox screen embeds the configured EVCC UI so charging information is available directly from the tablet dashboard.
-
-The embedded EVCC URL is configured in the selected environment config under `evcc.url`.
-
-## Camera Screen
-
-The camera screen shows UniFi Protect streams through a local WebRTC integration. Use [go2rtc](https://github.com/AlexxIT/go2rtc/) as the WebRTC streaming backend.
-
-- Supported cameras are configured in the selected environment config under `protect.cameras`.
-- Use the camera screen controls to move to the next or previous pinned camera.
-- The selected camera is mirrored in the URL query string, for example `?camera=entry`.
-- Streams are started with a short delay between cameras to reduce load on the streaming backend.
-- Streams stop when the tablet screen turns off and restart when it turns on again.
-
-Regular and smart motion items are derived from every configured camera ID by uppercasing its first character and appending `_Camera_Motion` or `_Camera_SmartMotion`. For example, `entry` registers `Entry_Camera_Motion` and `Entry_Camera_SmartMotion`. They capture a fresh camera snapshot on an OFF-to-ON transition, wake the tablet, and select that camera. Initial ON states and repeated ON updates do not trigger captures.
-
-The recent-detections filmstrip groups all cameras into 30-second windows starting with each window's first capture. Each window shows its latest smart snapshot when available, otherwise its latest regular snapshot. Opening a window shows all its images chronologically in the full-screen gallery, starting with the preferred image.
-
-
-## Tablet/Kiosk Behavior
-
-The dashboard is intended to run on a wall tablet in fullscreen mode. Use [Fully Kiosk Browser](https://www.fully-kiosk.com/) to launch the dashboard as the tablet start URL and keep it running as a fullscreen smart home display.
-
-- The app detects screen visibility changes and avoids unnecessary refresh/stream work while hidden.
-- The deploy script can also ask the Fully Kiosk device to clear cache, reload the start URL, and turn the screen on after deployment.
-
-## Configuration
-
-Runtime configuration is loaded from `config/config.json` during application startup. Angular serves or builds that file from the selected environment folder.
-
-Create your production/deployment runtime config from the sample file:
-
-```powershell
-Copy-Item public/config/config.sample.json public/config/production/config.json
-```
-
-For local development, create a separate config file:
-
-```powershell
-Copy-Item public/config/config.sample.json public/config/development/config.json
-```
-
-`npm start` uses `public/config/development/config.json` and serves it as `config/config.json`. Production builds and `npm run deploy` use `public/config/production/config.json`.
-
-The environment `config.json` files contain environment-specific URLs, calendar names, folder names, and Microsoft app registration details. They are ignored by Git. Keep publishable defaults in `public/config/config.sample.json`.
-
-Example structure:
-
-```json
-{
-	"graphUrl": "https://graph.microsoft.com/v1.0",
-	"openhab": {
-		"sitemap": "https://openhab.example.lan/basicui/app",
-		"items": {
-			"security": "Security",
-			"pin": "Security_Pin",
-			"doorbell": "Entrance_Bell_Switch"
-		},
-		"doorbellCamera": "entry"
-	},
-	"evcc": {
-		"url": "https://evcc.example.lan"
-	},
-	"protect": {
-		"cameras": {
-			"entry": "Eingang",
-			"garden": "Garten",
-			"patio": "Terrasse"
-		}
-	},
-	"folders": ["Pictures/#Uploads", "Familie - Ausflüge"],
-	"calendars": [
-		{
-			"name": "Familie",
-			"tailwindClasses": "border-emerald-600 bg-emerald-300"
-		}
-	],
-	"msalConfig": {
-		"clientId": "00000000-0000-0000-0000-000000000000",
-		"authority": "https://login.microsoftonline.com/consumers",
-		"scope": ["User.Read", "Calendars.Read", "Files.Read"]
-	}
-}
-```
-
-### Microsoft Graph Setup
-
-Create a Microsoft Entra ID app registration for the dashboard and put its client ID in `msalConfig.clientId`.
-
-Required delegated scopes:
-
-- `User.Read`
-- `Calendars.Read`
-- `Files.Read`
-
-The configured redirect URI should match where the dashboard is served. For local development, use the Angular dev server URL. For production, use the dashboard URL exposed to the tablet.
-
-The `calendars` entries must match the calendar names returned by Microsoft Graph. The `folders` entries are OneDrive paths from the drive root.
-
-### openHAB Setup
-
-Set `openhab.sitemap` in the selected environment config to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
-
-Set `openhab.items.security`, `openhab.items.pin`, and `openhab.items.doorbell` to the corresponding openHAB item names. These names control initial state requests, WebSocket updates, and PIN commands. Set `openhab.doorbellCamera` to a camera ID present in `protect.cameras`; this camera is selected when the doorbell rings, regardless of camera ordering.
-
-### EVCC Setup
-
-Set `evcc.url` in the selected environment config to the EVCC UI URL that should be embedded on the Wallbox screen. The URL must be reachable from the tablet browser.
-
-### Camera Setup
-
-Set `protect.cameras` to an object mapping UniFi Protect camera IDs to display labels, such as `{ "entry": "Eingang", "garden": "Garten", "patio": "Terrasse" }`. Property order controls display order. Labels appear on live cameras and motion snapshots, including tooltips. Camera IDs, not labels, determine stream names, query parameters, and derived openHAB motion item names. Stored detections from an unconfigured camera display its ID as a fallback.
-
-The WebRTC stream names are generated from each configured camera name:
-
-- high quality: `unifi_{camera}`
-- medium quality: `unifi_{camera}_medium`
-
-Make sure go2rtc exposes matching stream names.
-
-### Backend/Proxy Paths
-
-Use [Caddy](https://caddyserver.com/) as the production reverse proxy. Caddy should serve the built Angular files, route browser refreshes back to `index.html`, and expose the same-origin integration paths used by the dashboard.
-
-In development, `src/proxy/proxy.dev.json` forwards these paths to the configured smart home backend.
-
-Expected paths:
-
-- `/api/openhab/*`: proxies openHAB REST requests 
-- `/ws/openhab*`: proxies openHAB WebSocket requests
-- `/api/webrtc/*`: proxies WebRTC offers for camera streams.
-- `/api/webrtc/ws`: signaling channel for camera streams.
-
-Use [go2rtc](https://github.com/AlexxIT/go2rtc/) behind the `/api/webrtc*` route. Keep openHAB API tokens and other credentials out of committed documentation and configuration files.
-
-Sample Caddyfile:
-
-```caddyfile
-# Refer to the Caddy docs for more information:
-# https://caddyserver.com/docs/caddyfile
-:8080 {
-	# OpenHAB - WebSocket proxy
-	handle_path /ws/openhab* {
-		rewrite * /ws{path}
-		reverse_proxy openhab.example.lan:8080 {
-			header_up Sec-WebSocket-Protocol "org.openhab.ws.protocol.default, org.openhab.ws.accessToken.base64.<OPENHAB_ACCESS_TOKEN_BASE64>"
-		}
-	}
-
-	# OpenHAB - REST proxy
-	handle_path /api/openhab* {
-		rewrite * /rest{path}
-		reverse_proxy openhab.example.lan:8080 {
-			header_up Authorization "<OPENHAB_API_TOKEN>"
-		}
-	}
-
-	# go2rtc - HTTP API and WebSocket signaling
-	handle_path /api/webrtc* {
-		rewrite * /api{path}
-		reverse_proxy localhost:1984 {
-			header_up -Origin
-		}
-	}
-
-	# Everything else -> SPA
-	handle {
-		root * /srv/dashboard
-		file_server
-		try_files {path} /index.html
-	}
-
-	log {
-		output file /var/log/caddy/access.log
-		format console
-	}
-}
-```
-
-## Developer Documentation
-
-### Prerequisites
-
-- Node.js/npm compatible with the package manager recorded in `package.json`.
-- Angular CLI, usually through `npm run ng` or `npx ng`.
-- Access to Microsoft Graph through a configured Entra ID app registration.
-- Caddy for serving the dashboard and reverse proxying integration paths.
-- go2rtc for WebRTC camera streaming.
-- An openHAB Basic UI sitemap URL that the tablet can reach.
-- Fully Kiosk Browser for running the dashboard fullscreen on the wall tablet.
-- PowerShell remoting if you use the included deployment script.
-
-### Install and Run
-
-```powershell
-npm install
-Copy-Item public/config/config.sample.json public/config/production/config.json
-Copy-Item public/config/config.sample.json public/config/development/config.json
-Copy-Item src/proxy/proxy.dev.sample.json src/proxy/proxy.dev.json
-npm start
-```
-
-The development server uses `src/proxy/proxy.dev.json` by default. Update the `target` values in that local file for your backend before testing camera streaming or same-origin openHAB proxy paths. The local proxy config is ignored by Git; keep publishable defaults in `src/proxy/proxy.dev.sample.json`.
-
-### Build
-
-```powershell
-npm run build
-```
-
-The production build is written to `dist/Dashboard/browser`.
-
-### Format
-
-```powershell
-npm run prettier
-```
-
-This formats TypeScript, JavaScript, CSS, and HTML files with Prettier and the Tailwind CSS plugin.
-
-### Deployment
-
-Copy the deployment sample and edit it for your server and Fully Kiosk device:
-
-```powershell
-Copy-Item scripts/config.sample.json scripts/config.json
-```
-
-Then deploy:
-
-```powershell
-npm run deploy
-```
-
-The deploy script:
-
-- builds the Angular app;
-- opens a PowerShell remoting session to the configured host;
-- clears the configured remote destination directory;
-- copies the built files to that directory;
-- asks Fully Kiosk to clear cache, reload the start URL, and turn the screen on.
-
-`scripts/config.json` contains machine-specific values and should not be shared with secrets intact.
-
-### Project Structure
+Use the application ZIP from the GitHub Release's **Assets**, such as `dashboard-v1.0.0.zip`. Extract the application into a permanent directory, for example `C:\dashboard`. It should contain:
 
 ```text
-src/app/feature-home       Home screen, calendar, and OneDrive gallery
-src/app/feature-openhab    Embedded openHAB Basic UI sitemap screen
-src/app/feature-evcc       EVCC wallbox screen
-src/app/feature-protect    UniFi Protect camera screen and WebRTC streaming
-src/app/feature-config     Runtime configuration model and service
-src/app/image-viewer       Shared fullscreen image viewer, image model, and blob directive
-src/app/ms-graph           Microsoft Graph calendar/gallery services and IndexedDB cache
-src/app/utils              Shared visibility, layout, date, debug, and WebSocket helpers
-public/config              Runtime configuration copied into the built app
-src/proxy                  Angular development proxy configuration and sample
-scripts                   Deployment configuration and PowerShell deploy script
+C:\dashboard\
+  README.md
+  BACKEND.md
+    examples\
+        application.properties
+        config.json
+  quarkus-app\
+    quarkus-run.jar
+    app\
+    lib\
+    quarkus\
 ```
 
-### Architecture Notes
+Keep the **entire** `quarkus-app` directory together. The runner JAR cannot run by itself. Older releases may contain only the backend README; their archive layout and capabilities depend on that release.
 
-- `src/main.ts` loads `config/config.json` before creating MSAL providers, so runtime configuration can change without rebuilding TypeScript.
-- Routes are defined in `src/app/routes.ts`; Home, Calendar, and Gallery are guarded by MSAL because they need Microsoft Graph data.
-- `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
-- `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
-- `ImageService` uses Microsoft Graph delta queries and IndexedDB to cache OneDrive image metadata and thumbnails.
-- Home and Protect adapt their images to the provider-independent `ViewerImage` model for the shared fullscreen viewer.
-- `CalendarService` fetches configured calendars from all calendar groups, filters by configured name, and refreshes events periodically.
-- `Protect` reads the camera list from `protect.cameras` and passes configured camera names to `WebRTCService`.
-- `WebRTCService` owns camera stream lifecycle and reacts to screen visibility events to stop or restart streams.
+For the remaining commands, work from the extracted directory:
 
-### Adding or Changing Cameras
+```powershell
+Set-Location C:\dashboard
+```
 
-Camera IDs and labels are configured in the selected environment config under `protect.cameras`. To add, remove, rename, or reorder cameras, update that object and make sure go2rtc has matching stream names. OpenHAB motion items are registered automatically for each camera using the naming convention described above. Update `openhab.doorbellCamera` if the doorbell's assigned camera changes.
+### 3. Choose Your Dashboard Address
 
-The WebRTC stream names are generated as:
+This guide uses `https://dashboard.home.arpa`. Replace that hostname consistently if you choose another one.
 
-- high quality: `unifi_{camera}`
-- medium quality: `unifi_{camera}_medium`
+Configure your router's local DNS so `dashboard.home.arpa` resolves to the dashboard computer's LAN IP address. Give that computer a reserved/static LAN address. Every browser and tablet must be able to resolve the hostname. A hosts-file entry works for an individual computer, but does not configure your tablet.
 
-Make sure the backend exposes matching stream names.
+Check from a client computer:
 
-### Changing the openHAB Sitemap
+```powershell
+Resolve-DnsName dashboard.home.arpa
+```
 
-The OpenHAB screen is implemented as an iframe in `src/app/feature-openhab/openhab.html`. Change `openhab.sitemap` in the selected environment config when moving to another openHAB host, sitemap, or Basic UI path.
+Keep the dashboard on your household network. Do not forward its ports from your router to the internet. Microsoft account connection works through the browser and does not require a public dashboard server.
 
-### Changing the EVCC URL
+Dashboard viewing, calendar data, and photos require no authentication. Anyone who can reach the server can read them; restrict network access accordingly. Account/source setup remains protected by the local admin login.
 
-The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.html`. Change `evcc.url` in the selected environment config when moving to another EVCC host or path.
+### 4. Create The Database
 
-### Common Troubleshooting
+Open PostgreSQL's **SQL Shell (psql)** and connect to the local server as the administrator, usually `postgres`. Alternatively, if `psql` is on PATH:
 
-- **Blank Home screen or sign-in loop**: verify the Entra ID redirect URI, `clientId`, `authority`, and Graph scopes in the selected environment config.
-- **Calendars missing**: verify the configured calendar `name` values exactly match the Microsoft calendar names visible to the signed-in user.
-- **Gallery folders missing**: verify each configured OneDrive folder path starts at the drive root and is accessible to the signed-in user.
-- **OpenHAB screen is blank**: verify `openhab.sitemap` in the selected environment config is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
-- **Wallbox screen is blank**: verify `evcc.url` in the selected environment config is reachable from the tablet and allows embedding in an iframe.
-- **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` to go2rtc, and the generated `unifi_*` stream names are available there.
-- **Tablet does not wake or reload after deploy**: verify the Fully Kiosk URL and password in `scripts/config.json`.
+```powershell
+psql --host localhost --username postgres --dbname postgres
+```
+
+At the SQL prompt, run:
+
+```sql
+CREATE ROLE dashboard LOGIN;
+```
+
+Use psql's password prompt to choose a strong database password:
+
+```text
+\password dashboard
+```
+
+Create the database owned by the application role:
+
+```sql
+CREATE DATABASE dashboard OWNER dashboard;
+```
+
+Connect to that database before granting schema privileges:
+
+```text
+\connect dashboard
+```
+
+```sql
+GRANT USAGE, CREATE ON SCHEMA public TO dashboard;
+SELECT has_schema_privilege('dashboard', 'public', 'USAGE') AS can_use,
+       has_schema_privilege('dashboard', 'public', 'CREATE') AS can_create;
+```
+
+Both results must be `t` (true). Database privileges alone do not grant permission to create tables in a schema; Liquibase needs these schema privileges to initialize the application.
+
+If you already created the database and role using the earlier instructions, **do not recreate them**. Connect as the database administrator to the existing `dashboard` database and run only the schema grant and verification query above. This fixes `permission denied for schema public` without deleting data. Grant privileges to the application role, not to every user (`PUBLIC`), and do not make it a superuser.
+
+Exit psql with `\q`. Remember the new `dashboard` database password. The application creates its tables on first startup using Liquibase. Do not create tables manually or use the administrator database account for the application.
+
+### 5. Edit The Public UI Settings
+
+For a **first installation only**, create the active file from the included sample. Do not overwrite an existing configured file:
+
+```powershell
+New-Item -ItemType Directory -Force .\config | Out-Null
+Copy-Item .\examples\config.json .\config\config.json
+notepad .\config\config.json
+```
+
+For a first installation using **Method A** in step 7, you can instead copy the entire `examples` folder to `config` with `Copy-Item .\examples .\config -Recurse`, provided `config` does not already exist. No file renaming is needed. For **Method B**, copy only the public JSON as shown above; the example backend properties contain placeholders and would override some environment-based defaults if copied into the active configuration directory.
+
+Replace the sample values with your installation's settings:
+
+| Setting | What to enter |
+| --- | --- |
+| `openhab.sitemap` | The full openHAB Basic UI URL to display. |
+| `openhab.items.security`, `pin`, `doorbell` | Your corresponding openHAB item names. |
+| `openhab.doorbellCamera` | A camera ID from `protect.cameras`. |
+| `evcc.url` | The full URL of your EVCC interface. |
+| `protect.cameras` | Camera IDs mapped to display names; order determines display order. |
+
+Keep valid JSON: double-quoted strings, no comments, and no trailing commas.
+
+The browser fetches these settings through the backend's public `/config` endpoint. **Never put passwords, API tokens, or Microsoft secrets in this file.** Microsoft calendar and OneDrive selection happens in the admin setup screen later, not in this JSON.
+
+openHAB, EVCC, and go2rtc are separate applications, not installed by the dashboard. Their views will not work until those services and settings are configured. Embedded openHAB and EVCC URLs must be reachable from the tablet, allow iframe embedding, and use HTTPS when the dashboard uses HTTPS.
+
+### 6. Register A Microsoft Application
+
+To display calendars and OneDrive photos, register an application in the [Microsoft Entra admin center](https://entra.microsoft.com/):
+
+1. Open **App registrations**, select **New registration**, and name it, for example `Dashboard`. If your account cannot create registrations, you need access to an Entra tenant that permits it.
+2. Choose an account type including **personal Microsoft accounts**, such as organizational directories and personal accounts. This dashboard currently uses Microsoft's personal-account sign-in authority.
+3. Add a **Web** redirect URI: `https://dashboard.home.arpa/accounts/callback`. Do not choose the SPA platform; use this exact backend callback path.
+4. Copy the **Application (client) ID** from the overview.
+5. Under **Certificates & secrets**, create a client secret. Store its **Value**, not its Secret ID, in a password manager. The value is only shown when created; record its expiry and renew it before it expires.
+6. Under **API permissions**, add Microsoft Graph **delegated** permissions: `User.Read`, `Calendars.Read`, and `Files.Read`. Do not use application permissions. The dashboard also requests `offline_access` for background refresh.
+
+Use exactly the same callback URL in the registration and application configuration below. Each household owner will consent when connecting their Microsoft account.
+
+### 7. Configure The Application
+
+Choose **Method A (a file)** for a persistent, easy-to-maintain installation, or **Method B (environment variables)** if a service manager or secret manager supplies your settings. Both methods use the same launch command and need no rebuild.
+
+#### Method A: Configuration File (Recommended)
+
+Quarkus automatically reads `config/application.properties` relative to the directory where you start Java. The ZIP includes an inactive `examples/application.properties` with all the settings needed for this guide. Samples are kept outside `config` so Quarkus does not scan them as configuration sources.
+
+For a **first installation only**, copy the sample from the extracted directory and edit it. Do not overwrite an existing configured file:
+
+```powershell
+Set-Location C:\dashboard
+New-Item -ItemType Directory -Force .\config | Out-Null
+Copy-Item .\examples\application.properties .\config\application.properties
+notepad .\config\application.properties
+```
+
+Replace every `REPLACE_...` placeholder:
+
+| Sample value | What to enter |
+| --- | --- |
+| `REPLACE_DATABASE_PASSWORD` | The `dashboard` database password from step 4. |
+| `REPLACE_ADMIN_PASSWORD` | A new local admin password of at least 12 characters. |
+| `REPLACE_MICROSOFT_CLIENT_ID` | The Application (client) ID from step 6. |
+| `REPLACE_MICROSOFT_CLIENT_SECRET_VALUE` | The client secret **Value**, not its Secret ID. |
+| `REPLACE_SAVED_TOKEN_KEY`, `REPLACE_SAVED_SESSION_KEY` | Two independent keys, generated once as described below. |
+
+The sample uses property names, not environment-variable names. For example:
+
+```properties
+quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/dashboard
+quarkus.datasource.username=dashboard
+quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
+dashboard.allowed-origins=https://dashboard.home.arpa
+dashboard.ui-config-file=config/config.json
+dashboard.media-directory=C:/dashboard-data/media
+dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/accounts/callback
+```
+
+Adjust the hostname, database connection, timezone, and paths in the complete sample if needed. The local setup login is `admin`, not a Microsoft account. Dashboard viewing requires no login.
+
+For a **first installation only**, generate the two keys in a private PowerShell terminal:
+
+```powershell
+$tokenKey = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$sessionKey = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$tokenKey
+$sessionKey
+```
+
+Put the first value in `dashboard.token-key` and the second in `quarkus.http.auth.session.encryption-key`. Back them up securely and clear the terminal display. For an existing installation, use the **saved original keys**; never regenerate them just to switch configuration methods.
+
+Save as exactly `application.properties`, not `application.properties.txt`. Values are not surrounded by quotes. Use forward slashes for Windows paths as in the sample; backslashes are escape characters in Java properties files. Escape literal backslashes as `\\` and literal `${` as `\\${` when present in a value; `${...}` otherwise denotes a configuration expression.
+
+Create the sample's media directory:
+
+```powershell
+New-Item -ItemType Directory -Force C:\dashboard-data\media | Out-Null
+```
+
+The active file contains **plaintext secrets**. Restrict access to the account running Java and necessary administrators, keep it out of Git and shared folders, and back it up securely. It is separate from public `config/config.json` and is **not** returned by `/config`. Release archives include only the placeholder sample, never the active properties file.
+
+On later starts, Java reads the active file automatically; no environment assignments are needed. Restart Java after editing application properties. Public UI JSON edits still need only a browser reload.
+
+#### Method B: Environment Variables
+
+In the PowerShell window you will use to run Java, set the following values. Masked prompts do not echo passwords or put their values into command history:
+
+```powershell
+$env:DASHBOARD_DB_URL = 'jdbc:postgresql://localhost:5432/dashboard'
+$env:DASHBOARD_DB_USER = 'dashboard'
+$env:DASHBOARD_DB_PASSWORD = Read-Host 'Database password from step 4' -MaskInput
+
+$env:DASHBOARD_ADMIN_PASSWORD = Read-Host 'Choose the local admin password (at least 12 characters)' -MaskInput
+
+$env:DASHBOARD_ALLOWED_ORIGINS = 'https://dashboard.home.arpa'
+$env:DASHBOARD_UI_BASE_PATH = '/'
+$env:DASHBOARD_UI_CONFIG_FILE = 'C:\dashboard\config\config.json'
+$env:DASHBOARD_MEDIA_DIRECTORY = 'C:\dashboard-data\media'
+
+$env:MICROSOFT_CLIENT_ID = Read-Host 'Microsoft Application (client) ID'
+$env:MICROSOFT_CLIENT_SECRET = Read-Host 'Microsoft client secret VALUE' -MaskInput
+$env:MICROSOFT_REDIRECT_URI = 'https://dashboard.home.arpa/accounts/callback'
+
+$env:QUARKUS_HTTP_HOST = '127.0.0.1'
+$env:QUARKUS_HTTP_PORT = '8080'
+$env:QUARKUS_HTTP_PROXY_PROXY_ADDRESS_FORWARDING = 'true'
+$env:QUARKUS_HTTP_PROXY_ALLOW_FORWARDED = 'false'
+$env:QUARKUS_HTTP_PROXY_ALLOW_X_FORWARDED = 'true'
+$env:QUARKUS_HTTP_PROXY_TRUSTED_PROXIES = '127.0.0.1,::1'
+
+New-Item -ItemType Directory -Force $env:DASHBOARD_MEDIA_DIRECTORY | Out-Null
+```
+
+The database and admin passwords are separate credentials. The local setup username is `admin`, not a Microsoft account. Dashboard viewing requires no login.
+
+Generate two independent encryption keys **once, for the first installation**:
+
+```powershell
+$env:DASHBOARD_TOKEN_KEY = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+$env:DASHBOARD_SESSION_KEY = [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+```
+
+Record both generated values securely in a password manager. To view them for that purpose, use `$env:DASHBOARD_TOKEN_KEY` and `$env:DASHBOARD_SESSION_KEY` in a private terminal, then clear the display. Do not share terminal screenshots or put these values in the public JSON.
+
+These assignments last only in this PowerShell session. Before closing it, arrange to restore the same settings from protected configuration or a secret manager. On later starts, restore the keys rather than regenerating them:
+
+```powershell
+$env:DASHBOARD_TOKEN_KEY = Read-Host 'Saved token encryption key' -MaskInput
+$env:DASHBOARD_SESSION_KEY = Read-Host 'Saved session encryption key' -MaskInput
+```
+
+#### Shared Rules And Overrides
+
+For **either method**, losing or changing the token key makes stored Microsoft credentials unreadable. Changing the session key signs out all devices. Changing bootstrap password settings does not change passwords for users already created in the database.
+
+Avoid configuring the same setting in several places. Environment variables for the **same property** normally override the external file, which overrides bundled defaults. Java `-D` system properties have higher priority still. Some aliases in Method B only feed bundled defaults. To override these file properties explicitly, use:
+
+| File property | Direct environment override |
+| --- | --- |
+| `quarkus.datasource.jdbc.url` | `QUARKUS_DATASOURCE_JDBC_URL` |
+| `quarkus.datasource.username` | `QUARKUS_DATASOURCE_USERNAME` |
+| `quarkus.datasource.password` | `QUARKUS_DATASOURCE_PASSWORD` |
+| `quarkus.http.auth.session.encryption-key` | `QUARKUS_HTTP_AUTH_SESSION_ENCRYPTION_KEY` |
+| `dashboard.microsoft.client-id` | `DASHBOARD_MICROSOFT_CLIENT_ID` |
+| `dashboard.microsoft.client-secret` | `DASHBOARD_MICROSOFT_CLIENT_SECRET` |
+| `dashboard.microsoft.redirect-uri` | `DASHBOARD_MICROSOFT_REDIRECT_URI` |
+
+For example, `DASHBOARD_DB_PASSWORD` supplies the bundled password default; it does not replace an explicit `quarkus.datasource.password` in the external file. When switching methods, remove unused conflicting settings and retain the original encryption keys.
+
+Leave `dashboard.microsoft.webhook-url` absent in Method A, or `MICROSOFT_WEBHOOK_URL` unset in Method B. Scheduled synchronization works without a public webhook. The default timezone is `Europe/Vienna`; change `dashboard.zone` in the file or `DASHBOARD_ZONE` in the environment for another timezone.
+
+### 8. Set Up HTTPS With Caddy
+
+Create a file named `Caddyfile` in `C:\dashboard` with this content:
+
+```caddyfile
+dashboard.home.arpa {
+    tls internal
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+This serves the embedded UI at `/` and all dashboard endpoints through one HTTPS origin. Do not configure a separate frontend directory or rewrite/strip paths. Backend endpoints such as `/config`, `/graphql`, and `/accounts/callback` keep their existing paths.
+
+In a **second** PowerShell window, run:
+
+```powershell
+Set-Location C:\dashboard
+caddy validate --config .\Caddyfile --adapter caddyfile
+caddy run --config .\Caddyfile --adapter caddyfile
+```
+
+Keep this window open. Allow Caddy's HTTPS port `443` and HTTP redirect port `80` through the Windows firewall for the private household network only. Java's port `8080` is bound to loopback and must not be exposed.
+
+`tls internal` uses Caddy's local certificate authority. Install its **root certificate** in the trusted certificate store of every computer/tablet browser using the dashboard. It is in Caddy's data directory, typically `%APPDATA%\Caddy\pki\authorities\local\root.crt` for an interactive Windows installation. A service account may use a different directory. Copy only the public root certificate, never its private key.
+
+The browser must open the chosen HTTPS address without a certificate warning before Microsoft sign-in. Do not rely on clicking through certificate errors. An existing trusted HTTPS proxy or a domain with a publicly trusted certificate can replace this local CA setup.
+
+### 9. Start The Dashboard
+
+With Method A, open a PowerShell window; with Method B, return to the window where you set the environment. In either case, start from the extracted directory so Java finds `config/application.properties` and the default public JSON:
+
+```powershell
+Set-Location C:\dashboard
+java -jar .\quarkus-app\quarkus-run.jar
+```
+
+Leave it running. First startup connects to PostgreSQL, creates the schema, and creates the local administrator. Wait for the Quarkus startup message before opening the UI. Fix any startup error before continuing.
+
+From another PowerShell window, check:
+
+```powershell
+Invoke-RestMethod https://dashboard.home.arpa/config
+```
+
+It should return the public UI settings without requesting a login. This also checks HTTPS trust and proxy routing. Now open:
+
+```text
+https://dashboard.home.arpa/home
+```
+
+Click the settings icon and enter the local admin password from step 7 in the popup. No username is needed. After login, account setup opens. Do not enter a Microsoft password in this popup.
+
+### 10. Connect Accounts And Select Data
+
+Open `https://dashboard.home.arpa/setup` while signed in as admin:
+
+1. Select **Konto verbinden** (connect account).
+2. Sign in on Microsoft's page with the personal account holding your calendars/photos and accept the requested permissions.
+3. Back in setup, select the checkboxes for calendars to display and choose their colors with the adjacent selectors.
+4. Enter a OneDrive folder path relative to the account's drive root, such as `Pictures/Camera Roll`, and add it with the plus button. Enable its checkbox; new sources are disabled until selected.
+5. Repeat for other household members' personal Microsoft accounts if needed.
+6. Use the synchronize button, or wait for scheduled synchronization. It runs about every five minutes; a large initial photo collection can take longer.
+
+Open `https://dashboard.home.arpa/home` to check calendars and photos. Empty views before accounts are connected and sources selected are expected. Originals are downloaded only when requested; the backend caches photo data and media on disk.
+
+For the wall tablet, open `https://dashboard.home.arpa/home` without signing in. Account/source setup still requires the local admin login. If using Fully Kiosk Browser, use that URL as its start URL and install the Caddy root certificate on the tablet first.
+
+### 11. Enable Optional Smart-Home Integrations
+
+The minimal Caddyfile forwards everything to Quarkus. openHAB and camera controls additionally need paths routed to their respective services. If using those features, replace the Caddyfile with a configuration like this and substitute your upstream addresses:
+
+```caddyfile
+dashboard.home.arpa {
+    tls internal
+
+    handle_path /api/openhab/* {
+        rewrite * /rest{path}
+        reverse_proxy openhab.example.lan:8080
+    }
+
+    handle_path /ws/openhab* {
+        rewrite * /ws{path}
+        reverse_proxy openhab.example.lan:8080
+    }
+
+    handle_path /api/webrtc* {
+        rewrite * /api{path}
+        reverse_proxy 127.0.0.1:1984 {
+            header_up -Origin
+        }
+    }
+
+    handle {
+        reverse_proxy 127.0.0.1:8080
+    }
+}
+```
+
+Validate and reload after editing, in a terminal with access to Caddy's local administration endpoint:
+
+```powershell
+caddy validate --config C:\dashboard\Caddyfile --adapter caddyfile
+caddy reload --config C:\dashboard\Caddyfile --adapter caddyfile
+```
+
+If openHAB requires authentication, configure the proxy's REST authorization and WebSocket authentication headers according to your openHAB installation; this routing example does not supply credentials. Keep credentials on the proxy, not in public UI settings. Do not disable authentication to make the example work.
+
+Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) separately with stream names `unifi_<cameraId>` and `unifi_<cameraId>_medium`, for example `unifi_entry` and `unifi_entry_medium`. IDs must match `protect.cameras`. Set the EVCC and openHAB iframe URLs to their browser-reachable HTTPS addresses.
+
+Public JSON edits require only a browser reload. Application properties or environment changes require restarting Java with those settings. Proxy routing changes require reloading Caddy.
+
+## Restart, Backup, And Upgrade
+
+When upgrading from an older release hosted at `/quinoa/`, use a newly built root-hosted release and set `dashboard.ui-base-path=/` in your active properties file, or `DASHBOARD_UI_BASE_PATH=/` in the environment. Update bookmarks and kiosk URLs to `/home`. Changing only a runtime setting does not relocate an older binary's compiled UI assets. The Microsoft callback remains `/accounts/callback`; no prefix-stripping proxy rule is needed.
+
+- **Restart:** stop Java with Ctrl+C and run the same JAR command from the extracted directory. With Method A, retain `config/application.properties`; with Method B, restore the environment in the launch session. Keep the original keys; do not repeat first-install key generation. Restart Caddy separately if needed.
+- **Run continuously:** these terminal commands are an initial setup, not a Windows service. After confirming operation, configure a service manager to run Java and Caddy at boot with the same working directories and protected configuration. Method A requires the Java account to read the private properties file; Method B requires environment settings supplied to the service. Running accounts also need access to the database, public JSON, and media directory.
+- **Back up:** preserve PostgreSQL data, public JSON, Caddy configuration, and keys securely. Include the private `config/application.properties` for Method A. Cached media can be downloaded again. A database backup without the token key cannot restore Microsoft connections.
+- **Upgrade:** back up, stop Java, and extract the new release into a separate directory. Copy your existing public JSON and, for Method A, private `config/application.properties` into its `config` directory; do not overwrite them with samples. Keep the existing database, media directory, and keys; update configured paths if the installation directory changes. Start the new runner. Liquibase applies new schema changes automatically. Migrations may prevent switching back to an older binary; restore a matching database backup for rollback.
+- **Microsoft secret expiry:** create a replacement in Entra, update `dashboard.microsoft.client-secret` in the file or `MICROSOFT_CLIENT_SECRET` in the environment, and restart. If an account shows **Anmeldung erforderlich**, use **Erneut verbinden** to reconnect it.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| `java` not found or unsupported class version | Install Java 25, correct PATH, and open a new terminal. |
+| Missing database URL, session key, or allowed origins | Method A: check `config/application.properties`, access permissions, and Java's working directory. Method B: restore step 7 settings in the launch session/service. |
+| Database connection refused | PostgreSQL is running, host/port match the JDBC URL, and the database exists. |
+| Database password authentication failed | Use the `dashboard` role's password, not the administrator password. |
+| `permission denied for schema public` | As the database administrator, connect to the application database and run `GRANT USAGE, CREATE ON SCHEMA public TO dashboard;` (step 4). Database-level grants alone are insufficient. |
+| HTTPS name does not resolve | Fix local DNS on the device; the hostname must point to the dashboard computer. |
+| Certificate warning | Install Caddy's root certificate in the client's trusted certificate store. |
+| Caddy returns 502 | Java is running on `127.0.0.1:8080`; inspect its terminal. |
+| Blank page or `/config` returns 503 | The JSON exists at `dashboard.ui-config-file` / `DASHBOARD_UI_CONFIG_FILE`, is readable by Java, and contains a valid JSON object. |
+| Admin login fails | Use `admin` with the local admin password. Environment changes do not reset the existing database user's password. |
+| Requests return 403 | Use the exact origin in `dashboard.allowed-origins` / `DASHBOARD_ALLOWED_ORIGINS`, including scheme/port and no trailing slash. Do not mix hostnames and IP addresses. |
+| Microsoft callback returns 403 | The callback requires a local admin session and a GET redirect (`response_mode=query`). Older builds used MSAL's default `form_post`, which the browser request guard rejects. Deploy a corrected build and start a new account connection from setup; do not disable the guard or add Microsoft to the allowed origins. |
+| Microsoft redirect URI mismatch | Registered **Web** URI and `dashboard.microsoft.redirect-uri` / `MICROSOFT_REDIRECT_URI` match exactly: `/accounts/callback`. |
+| Calendar/gallery stays empty | Connect an account, enable source checkboxes, check sync status, and allow time for initial synchronization. |
+| Images fail with `Untrusted Microsoft media redirect` | Deploy a build that includes Microsoft's OneDrive `*.svc.ms` media hosts. If rejection persists, report only the hostname from the updated error, never the signed download URL. Keep redirect validation enabled; no account reconnection or metadata reset is needed. |
+| Token decryption fails | Restore the original `DASHBOARD_TOKEN_KEY`; generating a new key does not recover old credentials. |
+| openHAB, EVCC, or cameras fail | Check their separate services, public JSON, HTTPS/iframe compatibility, proxy authentication, and go2rtc stream names. |
+
+No public Microsoft webhook is necessary for this initial installation. Do not expose the whole dashboard to the internet to troubleshoot synchronization.
+
+## For Contributors
+
+The source repository contains `server/` (Quarkus) and `ui/` (Angular). Developer setup, formatting, tests, and builds are documented in [server/README.md](server/README.md) and [ui/README.md](ui/README.md). These source-directory links apply on GitHub, not in the extracted ZIP, which includes the backend reference as `BACKEND.md`.
+
+Every push and pull request runs **Build** and produces a downloadable deployment artifact. Publishing a GitHub Release builds its tag and attaches the application ZIP and `SHA256SUMS`. You do not need these pipelines to use a downloaded release.

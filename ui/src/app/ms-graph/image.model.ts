@@ -11,6 +11,8 @@ export interface DriveImage {
   takenAt: DateExt;
   lastModifiedAt: DateExt;
   thumbnailBlob?: Blob;
+  thumbnailUrl?: string;
+  originalUrl?: string;
 }
 
 /**

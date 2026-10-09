@@ -26,4 +26,7 @@
       <span>{{ item.name }}</span>
     </a>
   }
+  <a routerLink="/setup" class="navigation-link" title="Einstellungen" aria-label="Einstellungen" [class.is-active]="activePath() === '/setup'">
+    <svg lucideSettings aria-hidden="true"></svg><span class="max-sm:sr-only">Einstellungen</span>
+  </a>
 </div>

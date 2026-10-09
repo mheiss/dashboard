@@ -5,6 +5,7 @@ import { DriveImageExt } from '../../ms-graph/image.model';
  * A moment containing all images of a given day.
  */
 export interface Moment {
+  date: string;
   day: number;
   images: DriveImageExt[];
   poster: WritableSignal<DriveImageExt>;
@@ -12,4 +13,4 @@ export interface Moment {
 /**
  * Converts the given day and images into the moment structure
  */
-export const toMoment = ([day, images]: [number, DriveImageExt[]]) => ({ day, poster: signal(images[0]), images });
+export const toMoment = ([day, images]: [number, DriveImageExt[]]) => ({ date: String(day), day, poster: signal(images[0]), images });

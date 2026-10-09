@@ -15,17 +15,17 @@ On tablets and larger screens, the dashboard has four primary sections in the na
 
 ## Home Screen
 
-The Home screen is the default landing page. It is protected by Microsoft sign-in because it reads Microsoft Graph data.
+The Home screen is the default landing page and requires no login; the Quarkus backend owns Microsoft accounts and synchronization. Account/source setup requires the local admin login.
 
-On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. Both new routes use the same Microsoft sign-in guard as Home.
+On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. All three routes use the local session guard.
 
 - The calendar column shows events from the configured calendars for the next few days.
 - Compact day headers highlight today; all-day and timed events stay together without nested day cards.
-- Calendar colors are controlled by the `tailwindClasses` values in the selected environment config.
+- Calendar selection and colors are managed in the protected backend setup view.
 - The gallery column displays photos from configured OneDrive folders.
 - Memory tiles show same-day photos from previous years. The photo grid uses two columns on mobile and smaller tablets, and three on larger screens.
-- Gallery images are cached locally in the browser with IndexedDB so repeat loads are faster.
-- The gallery refreshes periodically and loads more images as you scroll.
+- Metadata and thumbnails are synchronized on the server. Originals are downloaded and cached there on demand; the existing camera-motion IndexedDB storage remains unchanged.
+- Backend GraphQL notifications refresh the gallery and agenda. The gallery requests server-paged images as you scroll.
 - Detail view opens a larger image viewer for an individual photo or a same-day memory group.
 
 ### OpenHAB Screen
@@ -64,29 +64,29 @@ The dashboard is intended to run on a wall tablet in fullscreen mode. Use [Fully
 
 ## Configuration
 
-Runtime configuration is loaded from `config/config.json` during application startup. Angular serves or builds that file from the selected environment folder.
+Angular requests runtime configuration from the backend at `GET /config` before application startup. Configuration files belong to the backend and are not copied into frontend builds.
 
-Create your production/deployment runtime config from the sample file:
-
-```powershell
-Copy-Item public/config/config.sample.json public/config/production/config.json
-```
-
-For local development, create a separate config file:
+From the frontend directory, create the backend's production configuration from its sample:
 
 ```powershell
-Copy-Item public/config/config.sample.json public/config/development/config.json
+New-Item -ItemType Directory -Force ../server/config
+Copy-Item ../server/examples/config.sample.json ../server/config/config.json
 ```
 
-`npm start` uses `public/config/development/config.json` and serves it as `config/config.json`. Production builds and `npm run deploy` use `public/config/production/config.json`.
+For local development, both backend dev tasks create missing local config files automatically without overwriting existing settings. To prepare them without starting the backend, run from the frontend directory:
 
-The environment `config.json` files contain environment-specific URLs, calendar names, folder names, and Microsoft app registration details. They are ignored by Git. Keep publishable defaults in `public/config/config.sample.json`.
+```powershell
+../server/gradlew.bat -p ../server prepareDevConfig
+```
+
+The dev tasks load `dev/config/application.properties`, which selects `dev/config/config.json`; production uses `config/config.json`. Paths resolve relative to the backend's working directory. Set `DASHBOARD_UI_CONFIG_FILE` to override the JSON path. Edit the generated files for your installation. `npm start` proxies `/config` to the running backend; `npm run build` and `npm run deploy` need no UI configuration file.
+
+The JSON contains only public smart-home integration URLs and camera settings. The endpoint is accessible before login; never include credentials. Microsoft credentials, source selection, and token caches belong to protected backend services. Local files are ignored by Git; keep publishable defaults in `server/examples/config.sample.json`. Edit the backend file and reload the browser to pick up changes without rebuilding.
 
 Example structure:
 
 ```json
 {
-	"graphUrl": "https://graph.microsoft.com/v1.0",
 	"openhab": {
 		"sitemap": "https://openhab.example.lan/basicui/app",
 		"items": {
@@ -105,35 +105,13 @@ Example structure:
 			"garden": "Garten",
 			"patio": "Terrasse"
 		}
-	},
-	"folders": ["Pictures/#Uploads", "Familie - Ausflüge"],
-	"calendars": [
-		{
-			"name": "Familie",
-			"tailwindClasses": "border-emerald-600 bg-emerald-300"
-		}
-	],
-	"msalConfig": {
-		"clientId": "00000000-0000-0000-0000-000000000000",
-		"authority": "https://login.microsoftonline.com/consumers",
-		"scope": ["User.Read", "Calendars.Read", "Files.Read"]
 	}
 }
 ```
 
 ### Microsoft Graph Setup
 
-Create a Microsoft Entra ID app registration for the dashboard and put its client ID in `msalConfig.clientId`.
-
-Required delegated scopes:
-
-- `User.Read`
-- `Calendars.Read`
-- `Files.Read`
-
-The configured redirect URI should match where the dashboard is served. For local development, use the Angular dev server URL. For production, use the dashboard URL exposed to the tablet.
-
-The `calendars` entries must match the calendar names returned by Microsoft Graph. The `folders` entries are OneDrive paths from the drive root.
+Configure the sibling Quarkus backend with PostgreSQL, Microsoft app credentials, independent encryption keys, a local admin password, and callback URLs. See the backend README for registration and deployment details. Click the settings icon and enter the admin password in the popup, connect each owner's personal Microsoft account, and select calendars/folders in `/setup`. Viewing devices open `/home` without login; they do not receive Microsoft tokens or run OneDrive delta synchronization.
 
 ### openHAB Setup
 
@@ -164,6 +142,9 @@ In development, `src/proxy/proxy.dev.json` forwards these paths to the configure
 
 Expected paths:
 
+- `/config`: public backend-owned runtime UI settings.
+- `/graphql`: backend queries and WebSocket subscriptions, preserving `graphql-transport-ws`.
+- `/accounts*`, `/session*`, `/j_security_check`, `/media/*`: same-origin backend setup, sessions, and binary images.
 - `/api/openhab/*`: proxies openHAB REST requests 
 - `/ws/openhab*`: proxies openHAB WebSocket requests
 - `/api/webrtc/*`: proxies WebRTC offers for camera streams.
@@ -177,6 +158,11 @@ Sample Caddyfile:
 # Refer to the Caddy docs for more information:
 # https://caddyserver.com/docs/caddyfile
 :8080 {
+	@dashboardApi path /config /graphql /graphql/* /accounts /accounts/* /session /session/* /j_security_check /media/*
+	handle @dashboardApi {
+		reverse_proxy localhost:8081
+	}
+
 	# OpenHAB - WebSocket proxy
 	handle_path /ws/openhab* {
 		rewrite * /ws{path}
@@ -221,7 +207,7 @@ Sample Caddyfile:
 
 - Node.js/npm compatible with the package manager recorded in `package.json`.
 - Angular CLI, usually through `npm run ng` or `npx ng`.
-- Access to Microsoft Graph through a configured Entra ID app registration.
+- A configured Quarkus backend for local sessions and synchronized Microsoft data.
 - Caddy for serving the dashboard and reverse proxying integration paths.
 - go2rtc for WebRTC camera streaming.
 - An openHAB Basic UI sitemap URL that the tablet can reach.
@@ -232,8 +218,7 @@ Sample Caddyfile:
 
 ```powershell
 npm install
-Copy-Item public/config/config.sample.json public/config/production/config.json
-Copy-Item public/config/config.sample.json public/config/development/config.json
+../server/gradlew.bat -p ../server prepareDevConfig
 Copy-Item src/proxy/proxy.dev.sample.json src/proxy/proxy.dev.json
 npm start
 ```
@@ -247,6 +232,8 @@ npm run build
 ```
 
 The production build is written to `dist/Dashboard/browser`.
+
+Run `npm test` for the Angular/Vitest adapter tests. Standalone and Quinoa-embedded production builds both use `/` as the base href and serve the UI from root. The frontend deployment script does not deploy the backend.
 
 ### Format
 
@@ -289,22 +276,24 @@ src/app/feature-evcc       EVCC wallbox screen
 src/app/feature-protect    UniFi Protect camera screen and WebRTC streaming
 src/app/feature-config     Runtime configuration model and service
 src/app/image-viewer       Shared fullscreen image viewer, image model, and blob directive
-src/app/ms-graph           Microsoft Graph calendar/gallery services and IndexedDB cache
+src/app/backend           GraphQL DTOs, subscriptions, and local session guards
+src/app/feature-setup      Admin login and protected Microsoft account/source setup
+src/app/ms-graph           Thin calendar/gallery display adapters and retained motion storage
 src/app/utils              Shared visibility, layout, date, debug, and WebSocket helpers
-public/config              Runtime configuration copied into the built app
+../server/config           Backend-owned runtime configuration and public sample
 src/proxy                  Angular development proxy configuration and sample
 scripts                   Deployment configuration and PowerShell deploy script
 ```
 
 ### Architecture Notes
 
-- `src/main.ts` loads `config/config.json` before creating MSAL providers, so runtime configuration can change without rebuilding TypeScript.
-- Routes are defined in `src/app/routes.ts`; Home, Calendar, and Gallery are guarded by MSAL because they need Microsoft Graph data.
+- `src/main.ts` requests `/config` from the backend before application startup; there are no MSAL providers or Microsoft HTTP interceptors.
+- Home, Calendar, and Gallery require a local session; Setup requires the admin role.
 - `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
 - `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
-- `ImageService` uses Microsoft Graph delta queries and IndexedDB to cache OneDrive image metadata and thumbnails.
+- `ImageService` reads server-paged GraphQL metadata and grouped moments, then fetches authenticated backend media as blobs.
 - Home and Protect adapt their images to the provider-independent `ViewerImage` model for the shared fullscreen viewer.
-- `CalendarService` fetches configured calendars from all calendar groups, filters by configured name, and refreshes events periodically.
+- `CalendarService` displays the server-grouped agenda. Filtering, grouping, sorting, sync, and source persistence happen in Quarkus.
 - `Protect` reads the camera list from `protect.cameras` and passes configured camera names to `WebRTCService`.
 - `WebRTCService` owns camera stream lifecycle and reacts to screen visibility events to stop or restart streams.
 
@@ -329,9 +318,9 @@ The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.htm
 
 ### Common Troubleshooting
 
-- **Blank Home screen or sign-in loop**: verify the Entra ID redirect URI, `clientId`, `authority`, and Graph scopes in the selected environment config.
-- **Calendars missing**: verify the configured calendar `name` values exactly match the Microsoft calendar names visible to the signed-in user.
-- **Gallery folders missing**: verify each configured OneDrive folder path starts at the drive root and is accessible to the signed-in user.
+- **Sign-in fails**: verify the backend is running, local users were bootstrapped, the session paths are proxied, and the browser origin is allowed.
+- **Calendars missing**: open Setup as admin, discover and enable the intended sources, then inspect account synchronization status.
+- **Gallery folders missing**: verify the selected server-side folder path is relative to the owner's drive root and accessible to that connected account.
 - **OpenHAB screen is blank**: verify `openhab.sitemap` in the selected environment config is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
 - **Wallbox screen is blank**: verify `evcc.url` in the selected environment config is reachable from the tablet and allows embedding in an iframe.
 - **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` to go2rtc, and the generated `unifi_*` stream names are available there.

@@ -1,4 +1,11 @@
 {
+  "/config": { "target": "http://localhost:8080" },
+  "/graphql": { "target": "http://localhost:8080", "ws": true },
+  "/accounts/**": { "target": "http://localhost:8080" },
+  "/session": { "target": "http://localhost:8080" },
+  "/session/**": { "target": "http://localhost:8080" },
+  "/j_security_check": { "target": "http://localhost:8080" },
+  "/media/**": { "target": "http://localhost:8080" },
   "/ws/openhab**": {
     "target": "http://localhost:8080",
     "changeOrigin": true,

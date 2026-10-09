@@ -1,8 +1,6 @@
 # See https://docs.github.com/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
 # Runtime configuration
-/public/config/development/config.json
-/public/config/production/config.json
 /src/proxy/proxy.dev.json
 
 # Compiled output

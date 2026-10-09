@@ -1,0 +1,12 @@
+# Dev
+%dev.dashboard.admin-password=${DASHBOARD_ADMIN_PASSWORD:}
+%dev.dashboard.media-directory=${DASHBOARD_MEDIA_DIRECTORY:./dev/data/onedrive}
+%dev.dashboard.ui-base-path=${DASHBOARD_UI_BASE_PATH:/}
+%dev.dashboard.ui-config-file=${DASHBOARD_UI_CONFIG_FILE:dev/config/config.json}
+
+# H2 Dev
+%h2.quarkus.datasource.db-kind=h2
+%h2.quarkus.datasource.devservices.enabled=false
+%h2.quarkus.datasource.jdbc.url=jdbc:h2:file:./dev/data/h2/dashboard;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE
+%h2.quarkus.datasource.password=sa
+%h2.quarkus.datasource.username=sa

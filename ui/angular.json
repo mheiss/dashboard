@@ -38,13 +38,7 @@
               "assets": [
                 {
                   "glob": "**/*",
-                  "input": "public",
-                  "ignore": ["config/**/*"]
-                },
-                {
-                  "glob": "config.json",
-                  "input": "public/config/production",
-                  "output": "/config/"
+                  "input": "public"
                 }
               ],
               "outputHashing": "all"
@@ -56,13 +50,7 @@
               "assets": [
                 {
                   "glob": "**/*",
-                  "input": "public",
-                  "ignore": ["config/**/*"]
-                },
-                {
-                  "glob": "config.json",
-                  "input": "public/config/development",
-                  "output": "/config/"
+                  "input": "public"
                 }
               ]
             }
