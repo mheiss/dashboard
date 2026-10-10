@@ -8,7 +8,7 @@ on:
       version:
         description: Version used in the deployment archive
         type: string
-        default: 1.0.0-SNAPSHOT
+        required: false
 
 permissions:
   contents: read
@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     env:
       CI: 'true'
-      BUILD_VERSION: ${{ inputs.version || '1.0.0-SNAPSHOT' }}
+      BUILD_VERSION: ${{ inputs.version || format('ci.{0}.{1}-{2}', github.run_number, github.run_attempt, github.sha) }}
       QUARKUS_QUINOA_PACKAGE_MANAGER_INSTALL: 'false'
     steps:
       - name: Check out source

@@ -40,6 +40,7 @@ java {
 
 spotless {
     java {
+        lineEndings 'UNIX'
         target 'src/*/java/**/*.java'
         eclipse('4.37').configFile('etc/java_code_format.xml')
     }
