@@ -130,11 +130,10 @@ public class GraphClient {
 
     public static void validateMediaRedirect(URI uri) {
         String host = uri.getHost();
-        if (!"https".equals(uri.getScheme()) || host == null || uri.getUserInfo() != null
-                || (uri.getPort() != -1 && uri.getPort() != 443)
-                || !(host.endsWith(".1drv.com") || host.endsWith(".files.1drv.com") || host.endsWith(".live.com")
-                        || host.endsWith(".sharepoint.com") || host.endsWith(".svc.ms"))) {
-            throw new IllegalArgumentException("Untrusted Microsoft media redirect host: " + (host == null ? "<invalid>" : host));
+        boolean secureOrigin = "https".equalsIgnoreCase(uri.getScheme()) && host != null && uri.getUserInfo() == null
+                && (uri.getPort() == -1 || uri.getPort() == 443);
+        if (!secureOrigin) {
+            throw new IllegalArgumentException("Invalid Microsoft media redirect host: " + (host == null ? "<invalid>" : host));
         }
     }
 
