@@ -4,7 +4,7 @@ A household dashboard for calendars, OneDrive photos, openHAB controls, EVCC cha
 
 ## Start From A Downloaded Release
 
-This guide assumes you have downloaded the application ZIP from GitHub and have not configured the dashboard before. Examples use Windows and PowerShell 7, with the application, PostgreSQL, and Caddy on the same computer. Linux deployments need equivalent packages, paths, and environment settings.
+This guide assumes you have downloaded the application ZIP from GitHub and have not configured the dashboard before. Examples use Windows and PowerShell 7, with the application, PostgreSQL, and Caddy on the same computer. For Linux directory layout and boot-time startup, see [Linux Service Setup](#linux-service-setup); the database, Microsoft registration, and HTTPS requirements below still apply.
 
 ### 1. Install The Required Software
 
@@ -395,7 +395,140 @@ Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) separately with stream na
 
 Public JSON edits require only a browser reload. Application properties or environment changes require restarting Java with those settings. Proxy routing changes require reloading Caddy.
 
+## Linux Service Setup
+
+Use systemd on Linux with a Java 25 runtime, PostgreSQL, and a separately configured HTTPS reverse proxy such as Caddy. No Gradle or Node.js is required on the deployment machine. Verify that `/usr/bin/java -version` reports Java 25; if Java is installed elsewhere, substitute its absolute path in the unit below.
+
+### Recommended Directories
+
+Keep binaries, configuration, and writable data separate:
+
+```text
+/opt/dashboard/
+    releases/
+        1.2.3/
+            examples/
+            quarkus-app/
+                quarkus-run.jar
+                app/
+                lib/
+                quarkus/
+    latest -> /opt/dashboard/releases/1.2.3
+/etc/dashboard/
+    application.properties
+    config.json
+/var/lib/dashboard/
+    media/
+```
+
+- `/opt/dashboard`: root-owned application installations, readable but not writable by the service account. Keep the entire `quarkus-app` directory together. Point `latest` at the extracted release directory, not at `quarkus-app` itself.
+- `/etc/dashboard`: root-managed configuration. The private properties file contains secrets; public `config.json` must not contain credentials. Neither file is generated or rewritten by the application.
+- `/var/lib/dashboard`: persistent writable application state. Cached media lives in `media`; PostgreSQL manages its own database storage separately. Logs go to the system journal, not this directory.
+
+The working directory only sets the base for relative paths; it does not itself cause writes. Use `/var/lib/dashboard`, not `/etc/dashboard`, as the working directory so relative data paths do not point into the configuration directory.
+
+### Account And Configuration
+
+For a first installation, create a dedicated account and directories. Skip `useradd` if the account already exists:
+
+```bash
+sudo useradd --system --user-group --home-dir /var/lib/dashboard --shell /usr/sbin/nologin dashboard
+sudo install -d -o root -g dashboard -m 0750 /etc/dashboard
+sudo install -d -o dashboard -g dashboard -m 0750 /var/lib/dashboard /var/lib/dashboard/media
+```
+
+Ensure the account can traverse and read the release directories and all application files. Extract releases as an administrator and do not give the service account write access to `/opt/dashboard`.
+
+For a **first installation only**, copy the inactive samples from the release. These commands replace destination files, so do not run them over an existing configuration:
+
+```bash
+sudo install -o root -g dashboard -m 0640 /opt/dashboard/latest/examples/application.properties /etc/dashboard/application.properties
+sudo install -o root -g dashboard -m 0640 /opt/dashboard/latest/examples/config.json /etc/dashboard/config.json
+sudoedit /etc/dashboard/application.properties
+sudoedit /etc/dashboard/config.json
+```
+
+Replace every backend placeholder using the database, admin, Microsoft, and encryption-key settings described above. For existing installations, preserve the original token and session keys. Set these Linux paths, replacing the sample's Windows media path:
+
+```properties
+dashboard.ui-config-file=/etc/dashboard/config.json
+dashboard.media-directory=/var/lib/dashboard/media
+```
+
+Keep `quarkus.http.host=127.0.0.1` when the HTTPS reverse proxy is on the same machine. Configure the actual dashboard origin and Microsoft redirect URI, and retain the sample's proxy trust settings only if they match your proxy deployment. The service does not inherit environment variables from your interactive shell; this setup supplies runtime settings through the protected properties file.
+
+### Systemd Unit
+
+Create `/etc/systemd/system/dashboard.service` with:
+
+```ini
+[Unit]
+Description=Smart Home Dashboard
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=dashboard
+Group=dashboard
+StateDirectory=dashboard
+StateDirectoryMode=0750
+WorkingDirectory=/var/lib/dashboard
+ExecStart=/usr/bin/java -Dquarkus.config.locations=/etc/dashboard/application.properties -jar /opt/dashboard/latest/quarkus-app/quarkus-run.jar
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
+```
+
+`quarkus.config.locations` explicitly loads `/etc/dashboard/application.properties`; it does not rely on automatic discovery under the working directory's `config/` subdirectory. `StateDirectory=dashboard` creates and assigns `/var/lib/dashboard` to the service account and keeps it writable despite `ProtectSystem=strict`. The installation and configuration remain read-only to the process. Temporary files use the service's private temporary directory.
+
+PostgreSQL must be available before the application can finish startup. `network-online.target` does not guarantee that the database is ready; `Restart=on-failure` retries failed starts. If using local PostgreSQL, you can add its distribution-specific systemd unit to `After=`. Manage Caddy separately and forward the dashboard origin to `127.0.0.1:8080`; do not expose the dashboard directly to the internet.
+
+Validate the unit, enable startup at boot, and inspect startup logs:
+
+```bash
+sudo systemd-analyze verify /etc/systemd/system/dashboard.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now dashboard
+sudo systemctl status dashboard
+sudo journalctl -u dashboard -f
+```
+
+Check the backend and then the HTTPS proxy:
+
+```bash
+curl --fail http://127.0.0.1:8080/q/health/ready
+curl --fail https://dashboard.home.arpa/config
+```
+
+Use your configured hostname and ensure the client's trust store includes the proxy's CA when using a private CA. First startup runs database migrations and creates the admin user; wait for successful startup before connecting Microsoft accounts.
+
+### Restart And Upgrade
+
+After editing backend properties, run `sudo systemctl restart dashboard`. Public JSON edits need only a browser reload. After editing the service unit, run `sudo systemctl daemon-reload` before restarting.
+
+For an upgrade, back up PostgreSQL, both configuration files, and the original encryption keys. Verify the downloaded archive's checksum and extract the full archive into a new root-owned release directory. Do not replace active configuration with samples. Once the new release is ready, stop the process before switching the symlink, for example:
+
+```bash
+sudo systemctl stop dashboard
+sudo ln -sfn /opt/dashboard/releases/1.2.4 /opt/dashboard/latest
+sudo systemctl start dashboard
+sudo journalctl -u dashboard -n 100 --no-pager
+```
+
+These commands assume `latest` is already a symlink. Keep the old installation until its process has stopped because Java may load classes lazily. Configuration and media stay outside releases and need no copying during upgrades. Database migrations may prevent reverting to an older binary without restoring a matching database backup.
+
 ## Restart, Backup, And Upgrade
+
+The commands below describe the interactive Windows installation. For Linux service operations and symlink-based upgrades, use [Linux Service Setup](#linux-service-setup).
 
 When upgrading from an older release hosted at `/quinoa/`, use a newly built root-hosted release and set `dashboard.ui-base-path=/` in your active properties file, or `DASHBOARD_UI_BASE_PATH=/` in the environment. Update bookmarks and kiosk URLs to `/home`. Changing only a runtime setting does not relocate an older binary's compiled UI assets. The Microsoft callback remains `/accounts/callback`; no prefix-stripping proxy rule is needed.
 
