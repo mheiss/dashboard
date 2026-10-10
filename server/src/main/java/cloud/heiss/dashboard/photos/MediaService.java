@@ -39,14 +39,23 @@ public class MediaService {
     GraphClient graph;
     private final Object[] stripes = java.util.stream.IntStream.range(0, 64).mapToObj(index -> new Object()).toArray();
     private final ExecutorService thumbnails = Executors.newSingleThreadExecutor();
+    private final ExecutorService thumbnailDownloads = Executors.newFixedThreadPool(4);
     private final java.util.Set<UUID> prefetching = ConcurrentHashMap.newKeySet();
     private final Object cacheLock = new Object();
     private final java.util.Map<Path, Integer> readers = new java.util.HashMap<>();
 
+    /**
+     * Returns the versioned cache path, downloading missing content first. Selects the original when {@code original} is true,
+     * otherwise the large thumbnail. The returned file is not protected from hourly cleanup; use {@link #open} for reading.
+     */
     public Path file(PhotoSnapshot photo, boolean original) {
         return file(photo, original, false);
     }
 
+    /**
+     * Opens cached content, downloading it first if necessary, and protects the file from cleanup until the stream is closed.
+     * Callers must close the returned stream to release that protection.
+     */
     public InputStream open(PhotoSnapshot photo, boolean original) {
         Path path = file(photo, original, true);
         try {
@@ -57,6 +66,11 @@ public class MediaService {
         }
     }
 
+    /**
+     * Reuses the current version or fully downloads it to a temporary file before publishing it in the cache. Striped locks
+     * prevent duplicate downloads for the same photo. Updates the last-used timestamp and optionally registers a reader under
+     * the cache lock. Enforces per-image download limits but leaves total cache-size enforcement to hourly cleanup.
+     */
     private Path file(PhotoSnapshot photo, boolean original, boolean pin) {
         synchronized (stripes[Math.floorMod(photo.id().hashCode(), stripes.length)]) {
             try {
@@ -97,7 +111,6 @@ public class MediaService {
                         } catch (java.nio.file.AtomicMoveNotSupportedException exception) {
                             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING);
                         }
-                        evict(path);
                         if (pin) {
                             readers.merge(path, 1, Integer::sum);
                         }
@@ -114,13 +127,17 @@ public class MediaService {
         }
     }
 
+    /**
+     * Queues thumbnail warming for an account's selected sources, ignoring duplicate queued or running requests for that account.
+     * Processes pages of 100 photos with up to four concurrent downloads. Individual failures are skipped; HTTP 429 stops queued
+     * downloads and further pages after already running tasks finish. This method returns without waiting for downloads.
+     */
     public void prefetch(UUID account) {
         if (!prefetching.add(account)) {
             return;
         }
         thumbnails.submit(() -> {
             try {
-                prune();
                 UUID after = null;
                 while (!Thread.currentThread().isInterrupted()) {
                     var photos = store
@@ -132,33 +149,44 @@ public class MediaService {
                     if (photos.isEmpty()) {
                         break;
                     }
-                    for (var photo : photos) {
-                        try {
-                            file(photo, false);
-                        } catch (RuntimeException exception) {
-                            if (exception instanceof GraphFailure failure && failure.status == 429) {
-                                return;
+                    var throttled = new java.util.concurrent.atomic.AtomicBoolean();
+                    thumbnailDownloads.invokeAll(photos.stream().<java.util.concurrent.Callable<Void>> map(photo -> () -> {
+                        if (!throttled.get() && !Thread.currentThread().isInterrupted()) {
+                            try {
+                                file(photo, false);
+                            } catch (RuntimeException exception) {
+                                if (exception instanceof GraphFailure failure && failure.status == 429) {
+                                    throttled.set(true);
+                                }
                             }
                         }
+                        return null;
+                    }).toList());
+                    if (throttled.get()) {
+                        return;
                     }
                     after = photos.getLast().id();
                 }
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
             } finally {
                 prefetching.remove(account);
             }
         });
     }
 
+    /** Removes one reader pin when a stream closes or fails to open, without running cache cleanup. */
     private void release(Path path) {
         synchronized (cacheLock) {
             readers.computeIfPresent(path, (key, count) -> count == 1 ? null : count - 1);
-            try {
-                evict(null);
-            } catch (IOException ignored) {
-            }
         }
     }
 
+    /**
+     * Runs hourly to remove outdated or unselected photo versions and temporary downloads older than 24 hours, then enforce both
+     * cache-size limits. Files with active readers are retained. Cache sizes may exceed their limits between runs or while files
+     * remain protected.
+     */
     @Scheduled(every = "1h", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     public void prune() {
         var visible = store
@@ -188,14 +216,19 @@ public class MediaService {
                         }
                     }
                 }
-                evict(null);
+                evict();
             } catch (IOException exception) {
                 throw new IllegalStateException("Image cache cleanup unavailable", exception);
             }
         }
     }
 
-    private void evict(Path keep) throws IOException {
+    /**
+     * Deletes least recently used, unpinned files until the separate original and thumbnail cache limits are met, if possible.
+     * Called only by cleanup while holding {@code cacheLock}; active readers and failed deletions can leave a cache over its
+     * limit.
+     */
+    private void evict() throws IOException {
         Path directory = Path.of(config.mediaDirectory()).toAbsolutePath().normalize();
         for (String suffix : java.util.List.of("-original", "-thumbnail")) {
             try (var stream = Files.list(directory)) {
@@ -205,12 +238,12 @@ public class MediaService {
                 for (var path : files) {
                     bytes += Files.size(path);
                 }
+                long limit = suffix.equals("-original") ? config.originalCacheBytes() : config.thumbnailCacheBytes();
                 for (var path : files) {
-                    long limit = suffix.equals("-original") ? config.originalCacheBytes() : config.thumbnailCacheBytes();
                     if (bytes <= limit) {
                         break;
                     }
-                    if (!path.equals(keep) && !readers.containsKey(path)) {
+                    if (!readers.containsKey(path)) {
                         try {
                             long size = Files.size(path);
                             if (Files.deleteIfExists(path)) {
@@ -224,6 +257,7 @@ public class MediaService {
         }
     }
 
+    /** Hashes the upstream version as SHA-256 hexadecimal text for a stable, filesystem-safe cache filename. */
     private static String versionHash(String version) {
         try {
             return HexFormat.of()
@@ -233,6 +267,7 @@ public class MediaService {
         }
     }
 
+    /** Returns the cache file's last-used timestamp, or zero on read failure so cleanup considers it oldest. */
     private static long lastUsed(Path path) {
         try {
             return Files.getLastModifiedTime(path).toMillis();
@@ -241,8 +276,10 @@ public class MediaService {
         }
     }
 
+    /** Requests cancellation of queued prefetch work and interrupts running coordinator and download tasks on shutdown. */
     @PreDestroy
     void stop() {
         thumbnails.shutdownNow();
+        thumbnailDownloads.shutdownNow();
     }
 }

@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, debounceTime, filter, of } from 'rxjs';
+import { catchError, debounceTime, filter, of, shareReplay } from 'rxjs';
 import { BackendImage, BackendMoment, IMAGE_FIELDS, ImagePage } from '../backend/backend.model';
 import { BackendService } from '../backend/backend.service';
 import { Moment } from '../feature-home/gallery/gallery.model';
@@ -48,10 +48,17 @@ export class ImageService {
         `query { moments { date images { ${IMAGE_FIELDS} } } }`,
       );
       if (version !== this.version) return;
-      const existing = new Map(this.images().map((image) => [image.image.id, image]));
+      const existing = new Map([
+        ...this.moments().flatMap((moment) => moment.images), ...this.images(),
+      ].map((image) => [image.image.id, image]));
       this.images.set(collected.map((image) => this.adapt(image, existing.get(image.id))));
+      for (const image of this.images()) existing.set(image.image.id, image);
       this.moments.set(result.moments.filter((moment) => moment.images.length > 0).map((moment) => {
-        const images = moment.images.map((image) => this.adapt(image));
+        const images = moment.images.map((image) => {
+          const adapted = this.adapt(image, existing.get(image.id));
+          existing.set(image.id, adapted);
+          return adapted;
+        });
         return { date: moment.date, day: Number(moment.date.slice(-2)), images, poster: signal(images[0]) };
       }));
       this.cursor = page.endCursor;
@@ -101,7 +108,9 @@ export class ImageService {
     if (existing?.image.thumbnailUrl === source.thumbnailUrl && existing.image.name === source.name) return existing;
     const taken = new Date(source.takenAt ?? source.modifiedAt);
     const modified = new Date(source.modifiedAt);
-    const blob = (url: string) => this.http.get(url, { responseType: 'blob' }).pipe(catchError(() => of(null)));
+    const blob = (url: string) => this.http.get(url, { responseType: 'blob' }).pipe(
+      shareReplay({ bufferSize: 1, refCount: true }), catchError(() => of(null)),
+    );
     return {
       image: {
         id: source.id, driveId: '', name: source.name,

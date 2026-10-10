@@ -7,6 +7,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.CacheControl;
 import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.Request;
@@ -25,6 +26,8 @@ public class MediaResource {
     MediaService media;
     @Context
     Request request;
+    @QueryParam("v")
+    String version;
 
     @GET
     @Path("/thumbnail")
@@ -43,7 +46,7 @@ public class MediaResource {
         var tag = new EntityTag(id + "-" + Integer.toUnsignedString(photo.version().hashCode()) + (original ? "-o" : "-t"));
         var cache = new CacheControl();
         cache.setPrivate(true);
-        cache.setMaxAge(0);
+        cache.setMaxAge(Integer.toUnsignedString(photo.version().hashCode()).equals(version) ? 300 : 0);
         cache.setMustRevalidate(true);
         var precondition = request.evaluatePreconditions(tag);
         if (precondition != null) {

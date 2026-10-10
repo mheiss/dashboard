@@ -1,4 +1,5 @@
 import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -22,10 +23,47 @@ describe('Backend image presentation', () => {
     query.mockReset();
     query.mockImplementation(async (operation: string) => operation.includes('query Images')
       ? { images: page([image('first')]) } : { moments: [] });
-    TestBed.configureTestingModule({ providers: [provideHttpClient(), { provide: BackendService, useValue: { changed, query } }] });
+    TestBed.configureTestingModule({ providers: [provideHttpClient(), provideHttpClientTesting(), { provide: BackendService, useValue: { changed, query } }] });
   });
 
-  afterEach(() => TestBed.resetTestingModule());
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+    TestBed.resetTestingModule();
+  });
+
+  it('shares image downloads across concurrent and later subscribers', async () => {
+    query.mockImplementation(async (operation: string) => operation.includes('query Images')
+      ? { images: page([image('first')]) } : { moments: [{ date: '2020-10-08', images: [image('first')] }] });
+    const service = TestBed.inject(ImageService);
+    await vi.waitFor(() => expect(service.loading()).toBe(false));
+    const http = TestBed.inject(HttpTestingController);
+    const thumbnail = service.images()[0].thumbnail$;
+    const received: (Blob | null)[] = [];
+    thumbnail.subscribe((blob) => received.push(blob));
+    service.moments()[0].images[0].thumbnail$.subscribe((blob) => received.push(blob));
+    const blob = new Blob(['image'], { type: 'image/jpeg' });
+    http.expectOne(image('first').thumbnailUrl).flush(blob);
+    thumbnail.subscribe((blob) => received.push(blob));
+    http.expectNone(image('first').thumbnailUrl);
+    expect(received).toEqual([blob, blob, blob]);
+    await service.refreshImages();
+    expect(service.moments()[0].images[0]).toBe(service.images()[0]);
+    expect(service.moments()[0].images[0].thumbnail$).toBe(thumbnail);
+  });
+
+  it('retries failed downloads on a later subscription', async () => {
+    const service = TestBed.inject(ImageService);
+    await vi.waitFor(() => expect(service.loading()).toBe(false));
+    const http = TestBed.inject(HttpTestingController);
+    const thumbnail = service.images()[0].thumbnail$;
+    const received: (Blob | null)[] = [];
+    thumbnail.subscribe((blob) => received.push(blob));
+    http.expectOne(image('first').thumbnailUrl).flush(null, { status: 503, statusText: 'Unavailable' });
+    thumbnail.subscribe((blob) => received.push(blob));
+    const blob = new Blob(['image'], { type: 'image/jpeg' });
+    http.expectOne(image('first').thumbnailUrl).flush(blob);
+    expect(received).toEqual([null, blob]);
+  });
 
   it('reuses unchanged images and retains the last good page on failure', async () => {
     const service = TestBed.inject(ImageService);
