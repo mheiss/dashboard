@@ -101,6 +101,9 @@ tasks.register('distributionZip', Zip) {
         into 'quarkus-app'
     }
     from('../README.md')
+    from('../docs/images') {
+        into 'docs/images'
+    }
     from('README.md') {
         rename { 'BACKEND.md' }
     }
