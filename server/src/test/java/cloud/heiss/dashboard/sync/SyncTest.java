@@ -7,7 +7,6 @@ import cloud.heiss.dashboard.persistence.entity.DashboardSource;
 import cloud.heiss.dashboard.persistence.DashboardStore;
 import cloud.heiss.dashboard.microsoft.GraphClient;
 import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-import cloud.heiss.dashboard.persistence.entity.Photo;
 import cloud.heiss.dashboard.photos.PhotoSync;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -16,16 +15,24 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.quarkus.test.InjectMock;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,19 +120,52 @@ class SyncTest {
     }
 
     @Test
+    void initialRevisionSurvivesDelayedSubscriberDemand() {
+        var tasks = new ArrayDeque<Runnable>();
+        var worker = mock(ScheduledExecutorService.class);
+        doAnswer(invocation -> {
+            tasks.add(invocation.getArgument(0));
+            return null;
+        }).when(worker).execute(any(Runnable.class));
+        try (var infrastructure = mockStatic(Infrastructure.class, CALLS_REAL_METHODS)) {
+            infrastructure.when(Infrastructure::getDefaultWorkerPool).thenReturn(worker);
+            var received = new ArrayList<Change>();
+            var subscription = notifications.stream().subscribe().with(received::add);
+            try {
+                while (!tasks.isEmpty()) {
+                    tasks.remove().run();
+                }
+                assertEquals(1, received.size());
+                assertEquals("ALL", received.getFirst().dataset());
+                assertEquals(store.revision(), received.getFirst().revision());
+            } finally {
+                subscription.cancel();
+            }
+        }
+    }
+
+    @Test
     void subscribersReceiveAnInitialRevisionAndUnsubscribeCleanly() throws Exception {
         var received = new java.util.concurrent.CopyOnWriteArrayList<Change>();
         var initial = new java.util.concurrent.CountDownLatch(1);
+        var calendar = new java.util.concurrent.CountDownLatch(1);
         var subscription = notifications.stream().subscribe().with(change -> {
             received.add(change);
-            initial.countDown();
+            if (change.dataset().equals("ALL"))
+                initial.countDown();
+            if (change.dataset().equals("CALENDAR"))
+                calendar.countDown();
         });
-        org.junit.jupiter.api.Assertions.assertTrue(initial.await(5, java.util.concurrent.TimeUnit.SECONDS));
-        assertEquals("ALL", received.getFirst().dataset());
-        assertEquals(store.revision(), received.getFirst().revision());
-        notifications.publish("CALENDAR", store.revision());
-        assertEquals(2, received.size());
-        subscription.cancel();
+        try {
+            org.junit.jupiter.api.Assertions.assertTrue(initial.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals("ALL", received.getFirst().dataset());
+            assertEquals(store.revision(), received.getFirst().revision());
+            notifications.publish("CALENDAR", store.revision());
+            org.junit.jupiter.api.Assertions.assertTrue(calendar.await(5, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(2, received.size());
+        } finally {
+            subscription.cancel();
+        }
         notifications.publish("IMAGES", store.revision());
         assertEquals(2, received.size());
     }

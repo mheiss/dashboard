@@ -4,7 +4,6 @@ import cloud.heiss.dashboard.persistence.DashboardStore;
 
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
-import io.smallrye.mutiny.subscription.BackPressureStrategy;
 import io.smallrye.mutiny.subscription.MultiEmitter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
@@ -29,6 +28,6 @@ public class DashboardChanges {
             subscribers.add(subscriber);
             subscriber.onTermination(() -> subscribers.remove(subscriber));
             subscriber.emit(new Change("ALL", store.revision()));
-        }, BackPressureStrategy.DROP).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        }, 64).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }
