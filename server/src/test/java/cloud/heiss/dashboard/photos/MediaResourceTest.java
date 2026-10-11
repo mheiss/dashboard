@@ -8,7 +8,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import jakarta.ws.rs.core.CacheControl;
 import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.Request;
 import jakarta.ws.rs.core.Response;
@@ -38,10 +37,10 @@ class MediaResourceTest {
     void matchingVersionCanBeCachedPrivatelyForFiveMinutes() {
         resource.version = Integer.toUnsignedString(photo.version().hashCode());
         try (var response = resource.thumbnail(photo.id())) {
-            var cache = CacheControl.valueOf(response.getHeaderString("Cache-Control"));
-            assertEquals(300, cache.getMaxAge());
-            assertTrue(cache.isPrivate());
-            assertTrue(cache.isMustRevalidate());
+            String cache = response.getHeaderString("Cache-Control");
+            assertMaxAge(cache, 300);
+            assertTrue(cache.contains("private"));
+            assertTrue(cache.contains("must-revalidate"));
         }
     }
 
@@ -50,7 +49,7 @@ class MediaResourceTest {
         for (String version : new String[] { null, "outdated" }) {
             resource.version = version;
             try (var response = resource.thumbnail(photo.id())) {
-                assertEquals(0, CacheControl.valueOf(response.getHeaderString("Cache-Control")).getMaxAge());
+                assertMaxAge(response.getHeaderString("Cache-Control"), 0);
             }
         }
     }
@@ -61,8 +60,20 @@ class MediaResourceTest {
         when(resource.request.evaluatePreconditions(any(EntityTag.class))).thenReturn(Response.notModified());
         try (var response = resource.thumbnail(photo.id())) {
             assertEquals(304, response.getStatus());
-            assertEquals(300, CacheControl.valueOf(response.getHeaderString("Cache-Control")).getMaxAge());
+            assertMaxAge(response.getHeaderString("Cache-Control"), 300);
             verifyNoInteractions(resource.media);
         }
+    }
+
+    private static void assertMaxAge(String cacheControl, int expected) {
+        int maxAge = -1;
+        for (String directive : cacheControl.split(",")) {
+            String trimmed = directive.trim();
+            if (trimmed.startsWith("max-age=")) {
+                maxAge = Integer.parseInt(trimmed.substring("max-age=".length()));
+                break;
+            }
+        }
+        assertEquals(expected, maxAge);
     }
 }

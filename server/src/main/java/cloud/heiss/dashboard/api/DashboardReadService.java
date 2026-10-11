@@ -20,7 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -30,7 +29,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-/** Builds agenda, image, moment, and sync-status responses from persisted data without calling Microsoft. */
+/**
+ * Builds agenda, image, moment, and sync-status responses from persisted data
+ * without calling Microsoft.
+ */
 @ApplicationScoped
 public class DashboardReadService {
 

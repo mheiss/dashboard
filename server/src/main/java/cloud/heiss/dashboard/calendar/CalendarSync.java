@@ -1,17 +1,5 @@
 package cloud.heiss.dashboard.calendar;
 
-import cloud.heiss.dashboard.persistence.entity.CalendarEvent;
-import cloud.heiss.dashboard.sync.DashboardChanges;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
-import cloud.heiss.dashboard.microsoft.GraphClient;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.persistence.LockModeType;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -21,7 +9,23 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.UUID;
 
-/** Reconciles selected Microsoft calendars into transactional cached snapshots and publishes changes. */
+import com.fasterxml.jackson.databind.JsonNode;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.microsoft.GraphClient;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.CalendarEvent;
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
+import cloud.heiss.dashboard.sync.DashboardChanges;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.LockModeType;
+
+/**
+ * Reconciles selected Microsoft calendars into transactional cached snapshots
+ * and publishes changes.
+ */
 @ApplicationScoped
 public class CalendarSync {
 
@@ -46,7 +50,8 @@ public class CalendarSync {
                 .map(event -> occurrence(source.id(), event, zone)).sorted(Comparator.comparing(event -> event.id().toString()))
                 .toList();
         long revision = store.inTransaction(manager -> {
-            var active = manager.find(DashboardSource.class, source.id(), LockModeType.PESSIMISTIC_WRITE);
+
+            DashboardSource active = manager.find(DashboardSource.class, source.id(), LockModeType.PESSIMISTIC_WRITE);
             if (active == null || !active.selected) {
                 return -1L;
             }

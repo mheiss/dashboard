@@ -19,7 +19,10 @@ import org.eclipse.microprofile.graphql.GraphQLApi;
 import org.eclipse.microprofile.graphql.Name;
 import org.eclipse.microprofile.graphql.Query;
 
-/** Exposes public GraphQL queries for cached data and subscriptions for dataset changes. */
+/**
+ * Exposes public GraphQL queries for cached data and subscriptions for dataset
+ * changes.
+ */
 @GraphQLApi
 @PermitAll
 public class DashboardApi {

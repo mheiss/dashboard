@@ -4,7 +4,6 @@ import cloud.heiss.dashboard.microsoft.GraphFailure;
 import cloud.heiss.dashboard.calendar.CalendarSync;
 import cloud.heiss.dashboard.config.DashboardConfig;
 import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.microsoft.GraphClient;
 import cloud.heiss.dashboard.microsoft.GraphSubscriptions;
 import cloud.heiss.dashboard.photos.MediaService;
 import cloud.heiss.dashboard.photos.PhotoSync;
@@ -26,7 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Coordinates leased background account syncs, retries, webhook renewal, and media prefetching. */
+/**
+ * Coordinates leased background account syncs, retries, webhook renewal, and
+ * media prefetching.
+ */
 @Path("/accounts/sync")
 @ApplicationScoped
 public class SyncCoordinator {

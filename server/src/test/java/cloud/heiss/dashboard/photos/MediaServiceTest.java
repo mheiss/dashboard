@@ -33,7 +33,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Verifies versioned media reuse, active-reader eviction protection, and orphan cache cleanup. */
+/**
+ * Verifies versioned media reuse, active-reader eviction protection, and orphan
+ * cache cleanup.
+ */
 class MediaServiceTest {
 
     @TempDir
@@ -143,6 +146,8 @@ class MediaServiceTest {
         }).toList();
         when(store.<Photo> list(anyString(), any())).thenReturn(visible);
         try (var firstInput = media.open(first, true); var secondInput = media.open(second, true)) {
+            assertArrayEquals(new byte[] { 1, 2, 3, 4, 5, 6 }, firstInput.readAllBytes());
+            assertArrayEquals(new byte[] { 1, 2, 3, 4, 5, 6 }, secondInput.readAllBytes());
             try (var files = Files.list(directory)) {
                 assertTrue(files.count() == 2);
             }
