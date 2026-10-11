@@ -57,10 +57,11 @@ compileTestJava {
 
 tasks.register('prepareDevConfig') {
     group = 'quarkus'
-    description = 'Creates missing local development configuration from the sample files.'
+    description = 'Creates missing backend and UI development configuration from sample files.'
     def configs = [
         [source: file('examples/application-dev.properties.sample'), target: file('dev/config/application.properties')],
-        [source: file('examples/config.sample.json'), target: file('dev/config/config.json')]
+        [source: file('examples/config.sample.json'), target: file('dev/config/config.json')],
+        [source: file('../ui/src/proxy/proxy.dev.sample.json'), target: file('../ui/src/proxy/proxy.dev.json')]
     ]
     inputs.files(configs.collect { it.source })
     doLast {
@@ -75,18 +76,13 @@ tasks.register('prepareDevConfig') {
     }
 }
 
-tasks.register('quarkusDevH2') {
-    group = 'quarkus'
-    description = 'Starts the backend in dev mode with persistent H2 and Quinoa disabled.'
-    dependsOn tasks.named('quarkusDev')
-}
-
 tasks.named('quarkusDev') {
     dependsOn tasks.named('prepareDevConfig')
-    jvmArgs = (jvmArgs ?: []) + ["-Dquarkus.config.locations=${file('dev/config/application.properties').toURI()}"]
-    if (gradle.startParameter.taskNames.any { it.tokenize(':').last() == 'quarkusDevH2' }) {
-        jvmArgs = (jvmArgs ?: []) + ['-Dquarkus.profile=dev,h2', '-Dquarkus.quinoa=false']
-    }
+    jvmArgs = (jvmArgs ?: []) + [
+        "-Dquarkus.config.locations=${file('dev/config/application.properties').toURI()}",
+        '-Dquarkus.profile=dev,h2',
+        '-Dquarkus.quinoa=false'
+    ]
 }
 
 tasks.register('distributionZip', Zip) {

@@ -23,6 +23,7 @@
             "calendarview",
             "cameraroll",
             "diesem",
+            "Dquarkus",
             "Eingang",
             "Ereignisse",
             "erkannt",
@@ -78,5 +79,6 @@
             "Ziffer"
         ],
         "java.configuration.updateBuildConfiguration": "interactive",
+        "java.compile.nullAnalysis.mode": "automatic",
     },
 }

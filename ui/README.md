@@ -73,13 +73,13 @@ New-Item -ItemType Directory -Force ../server/config
 Copy-Item ../server/examples/config.sample.json ../server/config/config.json
 ```
 
-For local development, both backend dev tasks create missing local config files automatically without overwriting existing settings. To prepare them without starting the backend, run from the frontend directory:
+For local development, backend dev tasks create missing backend config files and the UI proxy config automatically without overwriting existing settings. To prepare them without starting the backend, run from the frontend directory:
 
 ```powershell
 ../server/gradlew.bat -p ../server prepareDevConfig
 ```
 
-The dev tasks load `dev/config/application.properties`, which selects `dev/config/config.json`; production uses `config/config.json`. Paths resolve relative to the backend's working directory. Set `DASHBOARD_UI_CONFIG_FILE` to override the JSON path. Edit the generated files for your installation. `npm start` proxies `/config` to the running backend; `npm run build` and `npm run deploy` need no UI configuration file.
+The dev tasks load `dev/config/application.properties`, which selects `dev/config/config.json`; production uses `config/config.json`. Paths resolve relative to the backend's working directory. Set `DASHBOARD_UI_CONFIG_FILE` to override the JSON path. Edit the generated files for your installation. `npm start` proxies `/config` to the running backend; `npm run build` and `npm run deploy` do not use the development proxy config.
 
 The JSON contains only public smart-home integration URLs and camera settings. The endpoint is accessible before login; never include credentials. Microsoft credentials, source selection, and token caches belong to protected backend services. Local files are ignored by Git; keep publishable defaults in `server/examples/config.sample.json`. Edit the backend file and reload the browser to pick up changes without rebuilding.
 
@@ -138,7 +138,7 @@ Make sure go2rtc exposes matching stream names.
 
 Use [Caddy](https://caddyserver.com/) as the production reverse proxy. Caddy should serve the built Angular files, route browser refreshes back to `index.html`, and expose the same-origin integration paths used by the dashboard.
 
-In development, `src/proxy/proxy.dev.json` forwards these paths to the configured smart home backend.
+In development, `src/proxy/proxy.dev.json` forwards these paths to the configured smart home backend. `prepareDevConfig` creates this ignored local file from `src/proxy/proxy.dev.sample.json` when it does not exist.
 
 Expected paths:
 
@@ -219,7 +219,6 @@ Sample Caddyfile:
 ```powershell
 npm install
 ../server/gradlew.bat -p ../server prepareDevConfig
-Copy-Item src/proxy/proxy.dev.sample.json src/proxy/proxy.dev.json
 npm start
 ```
 

@@ -86,7 +86,7 @@ Reconnect accounts marked `RECONNECT_REQUIRED` from setup. Failed syncs retain l
 
 ## Development
 
-Both `quarkusDev` and `quarkusDevH2` explicitly load `dev/config/application.properties`. Before starting, they run `prepareDevConfig` to create missing `dev/config/application.properties` and `dev/config/config.json` from their samples in `examples/`. Existing files are never overwritten. All local development configuration and data live under `dev/`, which is ignored by Git. Samples live under `examples/`, outside Quarkus's automatic `config/` scan.
+`quarkusDev` explicitly loads `dev/config/application.properties`. Before starting, it runs `prepareDevConfig` to create missing `dev/config/application.properties` and `dev/config/config.json` from their samples in `examples/`, and the UI's `src/proxy/proxy.dev.json` from `src/proxy/proxy.dev.sample.json`. Existing files are never overwritten. Backend development configuration and data live under `dev/`, which is ignored by Git; the UI proxy file is also ignored. Backend samples live under `examples/`, outside Quarkus's automatic `config/` scan.
 
 To generate the local files without starting the backend:
 
@@ -94,30 +94,22 @@ To generate the local files without starting the backend:
 .\gradlew.bat prepareDevConfig
 ```
 
-Edit the local properties and JSON files, or set their supported environment variables. With the standalone Angular dev server on port 4200, register `http://localhost:4200/accounts/callback`, set that as `MICROSOFT_REDIRECT_URI`, and set `DASHBOARD_UI_BASE_PATH=/`.
+Edit the local properties, JSON, and UI proxy files, or set their supported environment variables. With the standalone Angular dev server on port 4200, register `http://localhost:4200/accounts/callback`, set that as `MICROSOFT_REDIRECT_URI`, and set `DASHBOARD_UI_BASE_PATH=/`.
 
-For a quick local backend without PostgreSQL or Docker, run from the backend directory:
-
-```powershell
-.\gradlew.bat quarkusDevH2
-```
-
-The `quarkusDevH2` shortcut runs the normal `quarkusDev` task with the `dev,h2` profiles and Quinoa disabled. Plain `quarkusDev` does not select H2 or disable Quinoa. The opt-in `h2` profile in the local properties file uses `jdbc:h2:file:./dev/data/h2/dashboard;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE` with local database credentials `sa` / `sa`, disables datasource Dev Services, and keeps the normal `dev` settings. Liquibase initializes the schema and Hibernate validates it. Data persists across restarts in `dev/data/h2/dashboard.mv.db`; OneDrive originals and thumbnails use `dev/data/onedrive`. Paths are relative to the backend working directory. The backend listens at `http://localhost:8080`. Quinoa is disabled by the shortcut so it does not start a second frontend server.
-
-Admin and Microsoft settings are unchanged: supply `DASHBOARD_ADMIN_PASSWORD` (at least 12 characters) to create the local administrator, and the Microsoft credentials and token/session keys for account connection. Keep the same token key when reusing a database containing Microsoft accounts. No default admin password or Microsoft credentials are introduced by the H2 profile. Production still uses PostgreSQL, and tests still use their isolated in-memory H2 database. If an external properties file or direct datasource environment variables override the datasource, remove those overrides for this local H2 launch.
-
-For PostgreSQL development, supply its JDBC URL and credentials and omit the `h2` profile:
+The standard dev task uses the `dev,h2` profiles and disables Quinoa by default:
 
 ```powershell
-.\gradlew.bat quarkusDev "-Dquarkus.quinoa=false"
+.\gradlew.bat quarkusDev
 ```
 
-Run `npm start` in the sibling UI directory. Its HTTP and WebSocket proxy forwards the dashboard endpoints to port 8080. Add another browser origin to `DASHBOARD_ALLOWED_ORIGINS` if the frontend uses another port. Existing openHAB/go2rtc proxy targets still need your local configuration.
+H2 data persists across restarts in `dev/data/h2/dashboard.mv.db`; OneDrive originals and thumbnails use `dev/data/onedrive`. Paths are relative to the backend working directory. The backend listens at `http://localhost:8080`. Supply `DASHBOARD_ADMIN_PASSWORD` (at least 12 characters) to create the local administrator. Tests continue to use their isolated in-memory H2 database.
+
+Run `npm start` in the sibling UI directory for the Angular dev server. Its HTTP and WebSocket proxy forwards the dashboard endpoints to port 8080. Add another browser origin to `DASHBOARD_ALLOWED_ORIGINS` if the frontend uses another port. Existing openHAB/go2rtc proxy targets still need your local configuration. For PostgreSQL development, configure its JDBC URL and credentials and change the dev JVM profiles in `build.gradle` to `dev`.
 
 ## Build And Test
 
 ```powershell
-.\gradlew.bat test "-Dquarkus.quinoa.enabled=false"
+.\gradlew.bat test
 .\gradlew.bat build
 java -jar build/quarkus-app/quarkus-run.jar
 ```
