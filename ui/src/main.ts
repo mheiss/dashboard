@@ -23,7 +23,7 @@ export const appConfig: ApplicationConfig = {
       const appService = inject(AppConfigService);
       const httpClient = inject(HttpClient);
 
-      const config = await firstValueFrom(httpClient.get<AppConfig>('/config'));
+      const config = await firstValueFrom(httpClient.get<AppConfig>('/api/config'));
       appService.config.set(config);
       return Promise.resolve();
     }),

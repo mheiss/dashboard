@@ -15,7 +15,7 @@ import java.io.IOException;
 
 /** Serves public UI settings from a backend-owned runtime file before sign-in. */
 @ApplicationScoped
-@Path("/config")
+@Path("/api/config")
 @Produces(MediaType.APPLICATION_JSON)
 @PermitAll
 public class UiConfigResource {

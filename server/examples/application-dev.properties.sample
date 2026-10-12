@@ -4,6 +4,11 @@
 %dev.dashboard.ui-base-path=${DASHBOARD_UI_BASE_PATH:/}
 %dev.dashboard.ui-config-file=${DASHBOARD_UI_CONFIG_FILE:dev/config/config.json}
 
+# Optional integrations use the backend in development as well.
+# %dev.dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+# %dev.dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
+# %dev.dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
+
 # H2 Dev
 %h2.quarkus.datasource.db-kind=h2
 %h2.quarkus.datasource.devservices.enabled=false

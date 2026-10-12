@@ -38,7 +38,7 @@ export class WebRTCStream {
     private camera: string,
     private debug: DebugService,
   ) {
-    this.webSocket = new WebSocket(getWebSocketUrl('/api/webrtc/ws?src=' + camera));
+    this.webSocket = new WebSocket(getWebSocketUrl('/api/ws/webrtc?src=' + encodeURIComponent(camera)));
     this.webSocket.onopen = async () => this.onWebSocketOpen();
     this.webSocket.onclose = async (e) => this.onWebSocketClose(e);
     this.webSocket.onmessage = (e) => this.onWebSocketMessage(e);

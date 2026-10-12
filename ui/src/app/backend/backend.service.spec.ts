@@ -29,18 +29,19 @@ describe('Public dashboard backend', () => {
 
   it('subscribes to changes without loading a session', () => {
     expect(createClient).toHaveBeenCalledOnce();
+    expect(new URL(vi.mocked(createClient).mock.calls[0][0].url as string).pathname).toBe('/api/graphql');
     expect(subscribe).toHaveBeenCalledWith(
       { query: 'subscription { dashboardChanged { dataset revision timestamp } }' },
       expect.any(Object),
     );
-    http.expectNone('/session');
+    http.expectNone('/api/session');
   });
 
   it('queries data without authentication', async () => {
     const result = service.query<{ calendars: unknown[] }>('{ calendars { id } }');
-    const request = http.expectOne('/graphql');
+    const request = http.expectOne('/api/graphql');
     expect(request.request.method).toBe('POST');
-    expect(request.request.headers.get('X-Dashboard-Request')).toBe('true');
+    expect(request.request.headers.keys()).toEqual([]);
     request.flush({ data: { calendars: [] } });
     await expect(result).resolves.toEqual({ calendars: [] });
   });

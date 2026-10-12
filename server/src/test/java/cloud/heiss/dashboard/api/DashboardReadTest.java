@@ -74,6 +74,9 @@ class DashboardReadTest {
             var second = reads.images(2, first.endCursor());
             assertEquals(2, first.items().size());
             assertEquals(1, second.items().size());
+            var image = first.items().getFirst();
+            assertTrue(image.thumbnailUrl().startsWith("/api/media/images/" + image.id() + "/thumbnail?"));
+            assertTrue(image.originalUrl().startsWith("/api/media/images/" + image.id() + "/original?"));
             assertTrue(first.hasNextPage());
             assertFalse(second.hasNextPage());
             assertFalse(first.items().stream().anyMatch(photo -> photo.id().equals(second.items().getFirst().id())));

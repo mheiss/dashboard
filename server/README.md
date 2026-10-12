@@ -38,6 +38,7 @@ Backend sources live under `cloud.heiss.dashboard`, grouped by responsibility:
 - `persistence.entity`: one entity or composite ID class per file, including local dashboard users.
 - `persistence.model`: account, source, and photo snapshot records, separate from managed entities.
 - `photos`: OneDrive synchronization and binary media caching/serving.
+- `proxy`: streaming HTTP forwarding and dedicated openHAB/go2rtc WebSocket bridges.
 - `security`: local sessions, browser request checks, and token encryption.
 - `sync`: background coordination and dashboard change notifications.
 
@@ -54,23 +55,25 @@ Configure runtime settings either in a protected `config/application.properties`
 | `DASHBOARD_TOKEN_KEY` | Base64-encoded, cryptographically random 32-byte AES key for persisted Microsoft token caches. |
 | `DASHBOARD_SESSION_KEY` | Independent random session-encryption secret, at least 32 characters. Required in production. |
 | `DASHBOARD_ADMIN_PASSWORD` | Bootstrap password for `admin`, at least 12 characters. |
-| `DASHBOARD_ALLOWED_ORIGINS` | Comma-separated exact browser origins, including scheme and port, with no trailing slash. Required in production. |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Confidential application's client ID and secret. |
-| `MICROSOFT_REDIRECT_URI` | Exact registered Web callback, e.g. `https://dashboard.example.lan/accounts/callback`. |
-| `MICROSOFT_WEBHOOK_URL` | Public `https://.../graph/webhook`; omit to use scheduled reconciliation only. |
+| `MICROSOFT_REDIRECT_URI` | Exact registered Web callback, e.g. `https://dashboard.example.lan/api/accounts/callback`. |
+| `MICROSOFT_WEBHOOK_URL` | Public `https://.../api/graph/webhook`; omit to use scheduled reconciliation only. |
 | `DASHBOARD_MEDIA_DIRECTORY` | Persistent cache directory; defaults to `./data/media`, or `./dev/data/onedrive` with the local dev configuration. |
 | `DASHBOARD_ORIGINAL_CACHE_BYTES` | Original-cache quota; defaults to 10 GiB. Individual originals are limited to the smaller of this quota and 512 MiB. |
 | `DASHBOARD_THUMBNAIL_CACHE_BYTES` | Thumbnail-cache quota; defaults to 1 GiB. Individual thumbnails are limited to 20 MiB. |
 | `DASHBOARD_UI_BASE_PATH` | UI return path; defaults to `/` for both embedded and separately served Angular builds. |
 | `DASHBOARD_UI_CONFIG_FILE` | Backend-owned public UI JSON file. Defaults to `config/config.json`, or `dev/config/config.json` with the local dev configuration. Relative paths resolve from the backend's working directory. |
+| `DASHBOARD_OPENHAB_URL` | Optional openHAB HTTP(S) origin reachable from the backend, e.g. `http://openhab.example.lan:8080`. Requires `DASHBOARD_OPENHAB_TOKEN`. |
+| `DASHBOARD_OPENHAB_TOKEN` | Private openHAB API token used for both REST and WebSocket authentication; never put it in public UI JSON. |
+| `DASHBOARD_GO2RTC_URL` | Optional go2rtc HTTP(S) origin reachable from the backend, e.g. `http://127.0.0.1:1984`. |
 
 `dashboard.zone` defaults to `Europe/Vienna`; override with `DASHBOARD_ZONE`. Reconciliation defaults to five minutes; override with `DASHBOARD_SYNC_EVERY`, such as `5m` or `PT5M`. Workers check the durable queue every ten seconds. Retry-After and bounded backoff delay failing accounts without stopping other accounts.
 
-Liquibase migrates the database at startup using `src/main/resources/db/changelog.xml`. Hibernate maps the dashboard tables and validates the migrated schema; application persistence uses managed entities, HQL, and JTA transactions rather than direct JDBC SQL. Bootstrap passwords create missing users only; changing the environment does not overwrite existing password hashes. For an administrative password reset, remove only that user's row through a trusted database connection, set the replacement bootstrap password, and restart. Rotate the session key and restart to invalidate existing cookies/connections. Never rotate the token key without re-encrypting the stored caches or reconnecting Microsoft accounts.
+Liquibase applies the database changelog at startup using `src/main/resources/db/changelog.xml`. Hibernate maps the dashboard tables and validates the resulting schema; application persistence uses managed entities, HQL, and JTA transactions rather than direct JDBC SQL. Bootstrap passwords create missing users only; changing the environment does not overwrite existing password hashes. For an administrative password reset, remove only that user's row through a trusted database connection, set the replacement bootstrap password, and restart. Rotate the session key and restart to invalidate existing cookies/connections. Never rotate the token key without re-encrypting the stored caches or reconnecting Microsoft accounts.
 
-## Schema Migrations
+## Schema Initialization
 
-Fresh databases are initialized automatically. The root Liquibase changelog includes `db/baseline.xml`, which defines tables, constraints, indexes, and the initial revision row using native XML changes in the immutable `1-initial-dashboard-schema` changeset. Liquibase generates and applies the database-specific SQL at startup; no handwritten SQL file is needed. Add future changesets to the root changelog; do not edit the baseline after deployment. Hibernate schema generation remains disabled in favor of validation.
+Fresh databases are initialized automatically. The root Liquibase changelog includes `db/baseline.xml`, which defines tables, constraints, indexes, and the initial revision row using native XML changes in the immutable `1-initial-dashboard-schema` changeset. Liquibase generates and applies the database-specific SQL at startup; no handwritten SQL file is needed. Hibernate schema generation remains disabled in favor of validation.
 
 Application tables use short, lowercase singular names: `appuser`, `account`, `source`, `event`, `photo`, `membership`, `item`, `subscription`, and `revision`. Columns use concise lowercase names without underscores, retaining compounds such as `startdate` and `takenday` where needed for clarity. `appuser` avoids the reserved SQL name `user`. Java field names remain independent through explicit Hibernate mappings.
 
@@ -94,7 +97,7 @@ To generate the local files without starting the backend:
 .\gradlew.bat prepareDevConfig
 ```
 
-Edit the local properties, JSON, and UI proxy files, or set their supported environment variables. With the standalone Angular dev server on port 4200, register `http://localhost:4200/accounts/callback`, set that as `MICROSOFT_REDIRECT_URI`, and set `DASHBOARD_UI_BASE_PATH=/`.
+Edit the local properties, JSON, and UI proxy files, or set their supported environment variables. With the standalone Angular dev server on port 4200, register `http://localhost:4200/api/accounts/callback`, set that as `MICROSOFT_REDIRECT_URI`, and set `DASHBOARD_UI_BASE_PATH=/`.
 
 The standard dev task uses the `dev,h2` profiles and disables Quinoa by default:
 
@@ -104,7 +107,7 @@ The standard dev task uses the `dev,h2` profiles and disables Quinoa by default:
 
 H2 data persists across restarts in `dev/data/h2/dashboard.mv.db`; OneDrive originals and thumbnails use `dev/data/onedrive`. Paths are relative to the backend working directory. The backend listens at `http://localhost:8080`. Supply `DASHBOARD_ADMIN_PASSWORD` (at least 12 characters) to create the local administrator. Tests continue to use their isolated in-memory H2 database.
 
-Run `npm start` in the sibling UI directory for the Angular dev server. Its HTTP and WebSocket proxy forwards the dashboard endpoints to port 8080. Add another browser origin to `DASHBOARD_ALLOWED_ORIGINS` if the frontend uses another port. Existing openHAB/go2rtc proxy targets still need your local configuration. For PostgreSQL development, configure its JDBC URL and credentials and change the dev JVM profiles in `build.gradle` to `dev`.
+Run `npm start` in the sibling UI directory for the Angular dev server. Its single `/api/**` proxy rule forwards all dashboard APIs, including WebSockets, to the backend on port 8080. It must not target openHAB or go2rtc directly. Configure those upstreams in `dev/config/application.properties` or through the environment as described below. The browser uses the Angular server's origin for both the UI and APIs; no separate origin configuration is needed. Local UI proxy files use `/api/**`, targeting `http://localhost:8080` with `ws: true`. Preserve the browser-facing host rather than enabling `changeOrigin`. Angular continues to serve SPA routes, assets, and development hot reload. For PostgreSQL development, configure its JDBC URL and credentials and change the dev JVM profiles in `build.gradle` to `dev`.
 
 ## Build And Test
 
@@ -114,19 +117,21 @@ Run `npm start` in the sibling UI directory for the Angular dev server. Its HTTP
 java -jar build/quarkus-app/quarkus-run.jar
 ```
 
-Quinoa builds the sibling UI with `/` as its base href, hosts it at the HTTP root, and serves SPA deep links. Backend endpoints keep their root-level paths. No deployment-specific UI configuration is needed at build time. Angular requests `GET /config` from the backend before startup. To serve Angular separately, build it normally and proxy the APIs below (including `/config`).
+Quinoa builds the sibling UI with `/` as its base href, hosts it at the HTTP root, and serves SPA deep links. All dashboard backend endpoints live under `/api`; unknown API routes return HTTP 404 instead of the SPA page. No deployment-specific UI configuration is needed at build time. Angular requests `GET /api/config` from the backend before startup. To serve Angular separately, build it normally and proxy `/api/**` to the backend, including WebSocket upgrades.
 
-Automated tests use H2 in PostgreSQL compatibility mode, mocked Graph responses, and an actual Quarkus HTTP/WebSocket test server. Test-only fixture passwords/keys are not production defaults. Real PostgreSQL migrations, live Microsoft refresh/subscriptions/shared-folder capabilities, and multi-device deployment still require an environment integration test.
+Automated tests use H2 in PostgreSQL compatibility mode, mocked Graph responses, and an actual Quarkus HTTP/WebSocket test server. Test-only fixture passwords/keys are not production defaults. Real PostgreSQL schema initialization, live Microsoft refresh/subscriptions/shared-folder capabilities, and multi-device deployment still require an environment integration test.
 
 ## Deployment Packages And Releases
+
+Release packages currently cover fresh installations only. Updating existing installations between releases is not yet supported or documented.
 
 GitHub Actions runs frontend tests, backend tests, Spotless, and the combined production build on every push and pull request. Download the `dashboard` artifact from the successful **Build** run. It contains `dashboard-1.0.0-SNAPSHOT.zip` and `SHA256SUMS` and is retained for 14 days.
 
 Publish a GitHub Release for a tag such as `v1.0.0` to run the **Release** pipeline. It checks out that exact tag, runs the same checks, and attaches `dashboard-v1.0.0.zip` and `SHA256SUMS` to the release. Tag names must start with a letter or digit and contain only letters, digits, dots, underscores, and hyphens. The workflow files must be present in the tagged commit. Release assets remain available independently of the temporary Actions artifacts.
 
-Every archive includes the committed public UI configuration sample as `examples/config.json`. On first installation, create the `config` directory and copy the sample to `config/config.json`, then edit it for your openHAB, EVCC, and camera settings, or set `DASHBOARD_UI_CONFIG_FILE` to an external file. Do not overwrite existing active configuration during upgrades. Local configuration files are never included in the archive. The backend rereads the file for each request, so browser reloads pick up changes without rebuilding or restarting. The endpoint is public to allow login-page bootstrap: never include credentials in this file. Private backend settings are supplied at runtime through the properties file or environment and are not needed during the build.
+Every archive includes the committed public UI configuration sample as `examples/config.json`. On first installation, create the `config` directory and copy the sample to `config/config.json`, then edit it for your openHAB, EVCC, and camera settings, or set `DASHBOARD_UI_CONFIG_FILE` to an external file. Local configuration files are never included in the archive. The backend rereads the file for each request, so browser reloads pick up changes without rebuilding or restarting. The endpoint is public to allow login-page bootstrap: never include credentials in this file. Private backend settings are supplied at runtime through the properties file or environment and are not needed during the build.
 
-The archive also includes `examples/application.properties` for private backend settings. On a first file-based installation, the entire `examples` folder can be copied to `config` without renaming files; replace all backend placeholders before starting. For an environment-based installation, copy only the public JSON. Samples are outside Quarkus's scanned `config` directory. Only the samples are shipped; active configuration is excluded. Protect the active file and preserve it, your original keys, and your public JSON during upgrades. Changes to backend properties require restarting Java.
+The archive also includes `examples/application.properties` for private backend settings. On a first file-based installation, the entire `examples` folder can be copied to `config` without renaming files; replace all backend placeholders before starting. For an environment-based installation, copy only the public JSON. Samples are outside Quarkus's scanned `config` directory. Only the samples are shipped; active configuration is excluded. Protect the active file, encryption keys, and public JSON. Changes to backend properties require restarting Java.
 
 Build the same archive locally from the backend directory:
 
@@ -140,30 +145,95 @@ The archive is written to `build/distributions/`. Extract it on the target machi
 java -jar quarkus-app/quarkus-run.jar
 ```
 
-The embedded UI is served at `/`, with account setup at `/setup`. The settings icon opens a password-only admin login popup when needed; direct visits to `/setup` use the same popup, and `/login` redirects to that flow for compatibility. Configure your same-origin reverse proxy for HTTPS and the openHAB/go2rtc paths; these integrations are not packaged with the application. Existing deployments must change any old `DASHBOARD_UI_BASE_PATH` or `dashboard.ui-base-path` override to `/` when using a root-hosted release.
+The embedded UI is served at `/`, with account setup at `/setup`. The settings icon opens a password-only admin login popup when needed; direct visits to `/setup` use the same popup, and `/login` opens that flow. Configure your same-origin reverse proxy for HTTPS and forward requests unchanged to the backend, including WebSocket upgrades. The backend hosts the openHAB/go2rtc proxy routes; the upstream services themselves are not packaged with the application.
+
+## Smart-Home Proxy
+
+Quarkus forwards openHAB REST requests, camera snapshots, and WebSocket signaling through Vert.x. Browsers use the dashboard origin only for these integrations; no extra integration proxy layer or browser-held openHAB token is required. openHAB and go2rtc continue to run as separate services.
+
+### Private Configuration
+
+Set these properties in the protected runtime properties file, or use the environment variables listed above:
+
+```properties
+dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+dashboard.proxy.openhab-token=REPLACE_OPENHAB_API_TOKEN
+dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
+dashboard.proxy.connect-timeout-ms=5000
+dashboard.proxy.request-timeout-ms=30000
+```
+
+Both URLs must be HTTP(S) origins with no credentials, query, fragment, or path other than an optional trailing `/`. Do not append `/rest`, `/ws`, or `/api`; the backend supplies these paths. Addresses resolve from the backend process: in a container, `127.0.0.1` refers to that container, not the host or a separate go2rtc container. HTTPS upstreams must present certificates trusted by the backend.
+
+Settings are optional and unset by default. openHAB needs both its URL and token; go2rtc needs its URL. Missing settings return HTTP 503 on the corresponding integration routes without disabling the rest of the dashboard. Restart the backend after changing properties. The connection timeout defaults to 5,000 ms and also bounds the upstream WebSocket handshake; the HTTP request timeout defaults to 30,000 ms. The HTTP timeout does not limit an established WebSocket's lifetime.
+
+### Routes And Forwarding
+
+| Browser route | Upstream route | Transport |
+| --- | --- | --- |
+| `/api/openhab` and `/api/openhab/*` | `/rest` and `/rest/*` | HTTP |
+| `/api/ws/openhab` | `/ws` | WebSocket |
+| `/api/webrtc` and `/api/webrtc/*` | `/api` and `/api/*` | HTTP |
+| `/api/ws/webrtc?src=unifi_entry` | `/api/ws?src=unifi_entry` | WebSocket |
+
+Query strings are preserved. HTTP forwarding streams request and response bodies and preserves upstream status codes and end-to-end headers. WebSocket bridges forward text, binary, and fragmented messages with backpressure and propagate connection closure. Ping/pong control frames are handled locally on each connection.
+
+For openHAB HTTP requests, the backend replaces `Authorization` with the configured token. For openHAB WebSockets, it offers `org.openhab.ws.protocol.default` and derives the access-token subprotocol from the same token. The upstream authentication subprotocol is not exposed to the browser. For go2rtc, the backend removes `Origin` for HTTP and disables its generation during the upstream WebSocket handshake.
+
+The integration proxy accepts WebSocket upgrades only at `/api/ws/openhab` and `/api/ws/webrtc`. Upgrades on the integration HTTP routes `/api/openhab` and `/api/webrtc` (including their subpaths) return HTTP 400; ordinary HTTP requests to the two WebSocket routes return HTTP 426. GraphQL independently supports WebSocket subscriptions at `/api/graphql`.
+
+### Security And Media Boundaries
+
+These routes do not require an admin session. Anyone able to reach the dashboard can access the proxied APIs, camera images, and openHAB commands using the server's token. Restrict the dashboard to the trusted household network and scope the openHAB token's permissions where supported. Origin checking is a browser safeguard, not authentication for non-browser clients.
+
+The UI and APIs share one public scheme, host, and port. No configured origin list or application-specific request header is needed. The backend compares standard browser `Origin` headers with the request's public origin and rejects mismatches, including on WebSocket upgrades. For unsafe HTTP methods and WebSocket upgrades, Fetch Metadata and a supplied `Referer` also reject cross-origin requests when applicable. Non-browser clients can call APIs without browser metadata; origin checks are not authentication. The public webhook is exempt, and cross-site OAuth callback navigation remains supported.
+
+Ensure the reverse proxy preserves the public host and conveys the public scheme and port through trusted forwarding headers. Trust only your proxy addresses; incorrect forwarding can make valid same-origin requests fail. Browser cookies, browser authorization, forwarded headers, and hop-by-hop headers are not sent upstream; upstream `Set-Cookie` headers are not returned to browsers. Keep tokens in protected backend configuration, never in `/api/config`, frontend proxy files, committed examples, or logs.
+
+The camera bridge proxies WebRTC signaling, not the WebRTC media connection. Configure go2rtc streams as `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching public `protect.cameras` IDs. Clients still need connectivity to the media candidates advertised by go2rtc; configure ICE/TURN and network access as appropriate. Embedded openHAB sitemap and EVCC pages remain separate URLs and must be reachable directly from the browser over HTTPS with iframe embedding allowed.
+
+### Deployment
+
+Keep the outer HTTPS reverse proxy, with WebSocket support and suitable idle timeouts. Forward all dashboard requests to the backend without stripping integration prefixes. Quinoa already serves the production UI and SPA fallback. For a same-machine deployment, terminate HTTPS for `dashboard.home.arpa` at the proxy and forward requests unchanged to `http://127.0.0.1:8080`.
+
+Verify initial openHAB states, live item updates, commands, camera snapshots, and live video through the dashboard origin. Backend restarts interrupt both integration WebSockets.
+
+### Troubleshooting And Tests
+
+| Symptom | Check |
+| --- | --- |
+| HTTP 503 | Required upstream URL/token is unset. |
+| HTTP 502 or failed WebSocket handshake | Upstream availability, backend DNS/network access, TLS trust, and openHAB token validity. |
+| HTTP 403 | UI and APIs use the same public scheme, host, and port; the reverse proxy preserves that origin through trusted forwarding headers. |
+| HTTP 400 on upgrade or HTTP 426 | Use the exact `/api/ws/openhab` or `/api/ws/webrtc` route with a WebSocket upgrade, not an integration HTTP route. |
+| Upstream HTTP 401/403 | Verify token permissions and upstream access policies; upstream HTTP statuses are preserved. |
+| Snapshots work but live video does not | Matching stream names, WebSocket support at the outer proxy, and go2rtc media/ICE connectivity. |
+
+`IntegrationProxy` owns routing, validation, header filtering, and HTTP streaming. `OpenhabWebSocketProxy` and `Go2rtcWebSocketProxy` supply integration-specific handshake settings; their shared `WebSocketProxy` base owns client lifecycle, frame forwarding, backpressure, and cleanup.
+
+Run the focused fixture tests from the backend directory:
+
+```powershell
+.\gradlew.bat test --tests cloud.heiss.dashboard.proxy.IntegrationProxyTest
+```
+
+The tests use local upstream fixtures and an artificial token to verify HTTP forwarding, credential isolation, origin rejection, and WebSocket messages and closure. They do not validate live openHAB/go2rtc services or WebRTC media connectivity.
 
 ## API And Proxy
 
-- `GET /config`: public UI configuration from the backend-owned runtime file, with `Cache-Control: no-store`; unavailable or invalid files return HTTP 503.
-- `POST /graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries.
-- `WS /graphql`: public `dashboardChanged`; an initial revision is emitted after subscriber registration.
-- `GET /media/images/{opaque-id}/thumbnail` and `/original`: public access, private ETag caching, streamed bytes.
-- `/accounts` and its source/connect/sync endpoints: admin-only setup operations. OAuth remains HTTP rather than GraphQL.
-- `/session`, `/session/logout`, and `/j_security_check`: local admin session management. Unsafe browser API requests must send `X-Dashboard-Request: true`; unapproved Origin values are rejected, including on WebSocket upgrades.
-- `POST /graph/webhook`: public validation challenge or validated subscription/client-state notification; only durable queueing happens in the callback.
+All dashboard HTTP APIs and WebSockets share the `/api` namespace; SPA navigation remains at `/`, `/home`, `/setup`, and the other UI routes. The outer production proxy can still forward everything to port 8080 unchanged. Angular development needs only a `/api/**` proxy rule with `ws: true`.
 
-For a separately served frontend, preserve the API paths at the LAN proxy and support WebSocket upgrades. Do not expose the following LAN server wholesale to the Internet. A public Caddy listener should forward only the exact callback:
+Register the Microsoft Web redirect URI and set `MICROSOFT_REDIRECT_URI` to the public `/api/accounts/callback` URL. If using Microsoft webhooks, configure `MICROSOFT_WEBHOOK_URL` and its public proxy rule for `/api/graph/webhook`.
 
-```caddyfile
-notifications.example.com {
-    handle /graph/webhook {
-        reverse_proxy dashboard-backend:8080
-    }
-    handle {
-        respond 404
-    }
-}
-```
+- `GET /api/config`: public UI configuration from the backend-owned runtime file, with `Cache-Control: no-store`; unavailable or invalid files return HTTP 503.
+- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries.
+- `WS /api/graphql`: public `dashboardChanged`; an initial revision is emitted after subscriber registration.
+- `GET /api/media/images/{opaque-id}/thumbnail` and `/original`: public access, private ETag caching, streamed bytes.
+- `/api/accounts` and its source/connect/sync endpoints: admin-only setup operations. OAuth remains HTTP rather than GraphQL.
+- `/api/session`, `/api/session/logout`, and `/api/j_security_check`: local admin session management. No application-specific request header is required; standard browser metadata rejects cross-origin requests, including WebSocket upgrades.
+- `POST /api/graph/webhook`: public validation challenge or validated subscription/client-state notification; only durable queueing happens in the callback.
+
+For a separately served frontend, preserve the API paths at the LAN proxy and support WebSocket upgrades. Do not expose the LAN server wholesale to the Internet. If using public Microsoft webhooks, configure a separate HTTPS listener, such as `notifications.example.com`, to forward only the exact `/api/graph/webhook` path unchanged to `http://dashboard-backend:8080`. Return HTTP 404 for all other paths on that public listener.
 
 Terminate LAN HTTPS at a trusted proxy, configure forwarding headers only for trusted proxy addresses, and ensure session cookies are Secure on the deployed HTTPS origin. Avoid logging OAuth callback query strings and upstream token/download URLs. Rate-limit the public callback at the edge.
 

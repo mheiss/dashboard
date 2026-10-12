@@ -2,7 +2,6 @@ package cloud.heiss.dashboard.config;
 
 import io.smallrye.config.ConfigMapping;
 import java.util.Optional;
-import java.util.List;
 
 /** Maps dashboard settings for timezone, the local administrator, media storage, Microsoft access, and synchronization. */
 @ConfigMapping(prefix = "dashboard")
@@ -27,6 +26,4 @@ public interface DashboardConfig {
     MicrosoftConfig microsoft();
 
     SyncConfig sync();
-
-    List<String> allowedOrigins();
 }

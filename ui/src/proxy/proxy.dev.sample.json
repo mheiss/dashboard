@@ -1,26 +1,6 @@
 {
-  "/config": { "target": "http://localhost:8080" },
-  "/graphql": { "target": "http://localhost:8080", "ws": true },
-  "/accounts/**": { "target": "http://localhost:8080" },
-  "/session": { "target": "http://localhost:8080" },
-  "/session/**": { "target": "http://localhost:8080" },
-  "/j_security_check": { "target": "http://localhost:8080" },
-  "/media/**": { "target": "http://localhost:8080" },
-  "/ws/openhab**": {
+  "/api/**": {
     "target": "http://localhost:8080",
-    "changeOrigin": true,
-    "secure": false,
-    "ws": true
-  },
-  "/api/openhab/**": {
-    "target": "http://localhost:8080",
-    "changeOrigin": true,
-    "secure": false
-  },
-  "/api/webrtc/**": {
-    "target": "http://localhost:8080",
-    "changeOrigin": true,
-    "secure": false,
     "ws": true
   }
 }

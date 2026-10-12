@@ -9,7 +9,7 @@ export class SessionService {
 
   async load() {
     try {
-      this.session.set(await firstValueFrom(this.http.get<{ username: string; admin: boolean }>('/session')));
+      this.session.set(await firstValueFrom(this.http.get<{ username: string; admin: boolean }>('/api/session')));
       return true;
     } catch {
       this.session.set(null);
@@ -19,14 +19,14 @@ export class SessionService {
 
   async login(password: string) {
     const body = new URLSearchParams({ j_username: 'admin', j_password: password });
-    await firstValueFrom(this.http.post('/j_security_check', body.toString(), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Dashboard-Request': 'true' }, responseType: 'text',
+    await firstValueFrom(this.http.post('/api/j_security_check', body.toString(), {
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, responseType: 'text',
     }));
     if (!(await this.load())) throw new Error('Sign-in failed');
   }
 
   async logout() {
-    await firstValueFrom(this.http.post('/session/logout', {}, { headers: { 'X-Dashboard-Request': 'true' } }));
+    await firstValueFrom(this.http.post('/api/session/logout', {}));
     this.session.set(null);
   }
 }

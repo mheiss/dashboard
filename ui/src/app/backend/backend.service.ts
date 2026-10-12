@@ -11,7 +11,7 @@ export class BackendService {
   readonly connected = signal(false);
 
   constructor() {
-    const endpoint = new URL('/graphql', window.location.href);
+    const endpoint = new URL('/api/graphql', window.location.href);
     endpoint.protocol = endpoint.protocol === 'https:' ? 'wss:' : 'ws:';
     const client = createClient({
       url: endpoint.toString(),
@@ -58,9 +58,8 @@ export class BackendService {
   async query<Result>(query: string, variables: Record<string, unknown> = {}): Promise<Result> {
     const response = await firstValueFrom(
       this.http.post<{ data?: Result; errors?: { message: string; extensions?: { code?: string } }[] }>(
-        '/graphql',
+        '/api/graphql',
         { query, variables },
-        { headers: { 'X-Dashboard-Request': 'true' } },
       ),
     );
     if (response.errors?.length || !response.data) {

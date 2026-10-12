@@ -99,7 +99,7 @@ export class OpenHABService {
   }
 
   private createWebSocket() {
-    const ws = new WebSocket(getWebSocketUrl('/ws/openhab'), 'org.openhab.ws.protocol.default');
+    const ws = new WebSocket(getWebSocketUrl('/api/ws/openhab'), 'org.openhab.ws.protocol.default');
     ws.addEventListener('open', () => this.onOpen());
     ws.addEventListener('error', (e) => this.onError(e));
     ws.addEventListener('message', (e) => this.onMessage(e));

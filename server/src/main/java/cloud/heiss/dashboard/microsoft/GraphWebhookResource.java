@@ -17,7 +17,7 @@ import java.security.MessageDigest;
 import java.time.Instant;
 
 /** Public webhook endpoint that answers validation challenges and queues sync for verified notifications. */
-@Path("/graph/webhook")
+@Path("/api/graph/webhook")
 @PermitAll
 public class GraphWebhookResource {
 

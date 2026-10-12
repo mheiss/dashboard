@@ -23,12 +23,18 @@ class UiHostingTest {
 
     @Test
     void publicConfigurationRemainsAnApiResponse() {
-        given().when().get("/config").then().statusCode(200).contentType("application/json").body("openhab.items.security",
+        given().when().get("/api/config").then().statusCode(200).contentType("application/json").body("openhab.items.security",
                 equalTo("Security"));
     }
 
     @Test
     void sessionEndpointStillRequiresAuthentication() {
-        given().when().get("/session").then().statusCode(401);
+        given().when().get("/api/session").then().statusCode(401);
+    }
+
+    @Test
+    void apiNamespaceDoesNotFallBackToTheSpa() {
+        given().when().get("/api/missing").then().statusCode(404);
+        given().when().get("/api").then().statusCode(404);
     }
 }

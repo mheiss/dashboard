@@ -9,7 +9,7 @@ import { ImageService } from './image.service';
 
 const image = (id: string): BackendImage => ({
   id, name: `${id}.jpg`, takenAt: '2020-10-08T10:00:00Z', modifiedAt: '2020-10-08T10:00:00Z',
-  thumbnailUrl: `/media/images/${id}/thumbnail?v=1`, originalUrl: `/media/images/${id}/original?v=1`,
+  thumbnailUrl: `/api/media/images/${id}/thumbnail?v=1`, originalUrl: `/api/media/images/${id}/original?v=1`,
 });
 const page = (items: BackendImage[], hasNextPage = false): ImagePage => ({
   revision: 1, totalCount: hasNextPage ? 26 : items.length, endCursor: 'opaque-cursor', hasNextPage, items,

@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /** Admin endpoints for connecting Microsoft accounts and discovering, selecting, or removing their sources. */
-@Path("/accounts")
+@Path("/api/accounts")
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed("admin")
 public class AccountsResource {

@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
  * Coordinates leased background account syncs, retries, webhook renewal, and
  * media prefetching.
  */
-@Path("/accounts/sync")
+@Path("/api/accounts/sync")
 @ApplicationScoped
 public class SyncCoordinator {
 

@@ -24,7 +24,7 @@ class MicrosoftAuthTest {
         var config = mock(DashboardConfig.class, RETURNS_DEEP_STUBS);
         when(config.microsoft().clientId()).thenReturn(Optional.of("11111111-1111-1111-1111-111111111111"));
         when(config.microsoft().clientSecret()).thenReturn(Optional.of("fixture-secret"));
-        when(config.microsoft().redirectUri()).thenReturn("https://dashboard.heiss.cloud/accounts/callback");
+        when(config.microsoft().redirectUri()).thenReturn("https://dashboard.heiss.cloud/api/accounts/callback");
         var auth = new MicrosoftAuth();
         auth.config = config;
         auth.cipher = mock(TokenCipher.class);
@@ -33,7 +33,7 @@ class MicrosoftAuthTest {
         String parameters = URLDecoder.decode(url.getRawQuery(), StandardCharsets.UTF_8);
         assertTrue(parameters.contains("response_mode=query"));
         assertTrue(parameters.contains("response_type=code"));
-        assertTrue(parameters.contains("redirect_uri=https://dashboard.heiss.cloud/accounts/callback"));
+        assertTrue(parameters.contains("redirect_uri=https://dashboard.heiss.cloud/api/accounts/callback"));
         assertTrue(parameters.contains("code_challenge_method=S256"));
         assertTrue(parameters.matches("(?s).*\\bcode_challenge=[^&]+.*"));
         assertTrue(parameters.matches("(?s).*\\bstate=[^&]+.*"));

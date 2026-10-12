@@ -7,15 +7,19 @@ quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
 
 dashboard.token-key=REPLACE_SAVED_TOKEN_KEY
 dashboard.admin-password=REPLACE_ADMIN_PASSWORD
-dashboard.allowed-origins=https://dashboard.home.arpa
 dashboard.ui-base-path=/
 dashboard.ui-config-file=config/config.json
 dashboard.media-directory=C:/dashboard-data/media
 dashboard.zone=Europe/Vienna
 
+# Optional integrations; configure private upstreams here, not in public config.json.
+# dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+# dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
+# dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
+
 dashboard.microsoft.client-id=REPLACE_MICROSOFT_CLIENT_ID
 dashboard.microsoft.client-secret=REPLACE_MICROSOFT_CLIENT_SECRET_VALUE
-dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/accounts/callback
+dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/api/accounts/callback
 
 quarkus.http.host=127.0.0.1
 quarkus.http.port=8080

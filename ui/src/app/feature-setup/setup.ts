@@ -26,7 +26,6 @@ export class Setup {
   readonly error = signal<string | null>(null);
   readonly pendingDisconnect = signal<string | null>(null);
   readonly folderPaths: Record<string, string> = {};
-  private readonly headers = { 'X-Dashboard-Request': 'true' };
 
   constructor() {
     this.backend.changed.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(() => void this.reload());
@@ -35,7 +34,7 @@ export class Setup {
 
   async reload() {
     try {
-      this.accounts.set(await firstValueFrom(this.http.get<AccountView[]>('/accounts')));
+      this.accounts.set(await firstValueFrom(this.http.get<AccountView[]>('/api/accounts')));
     } catch {
       this.error.set('Konten konnten nicht geladen werden.');
     }
@@ -43,20 +42,20 @@ export class Setup {
 
   async connect() {
     await this.run(async () => {
-      const response = await firstValueFrom(this.http.post<{ url: string }>('/accounts/connect', {}, { headers: this.headers }));
+      const response = await firstValueFrom(this.http.post<{ url: string }>('/api/accounts/connect', {}));
       window.location.assign(response.url);
     });
   }
 
   async discover(account: AccountView) {
     await this.run(async () => {
-      this.accounts.set(await firstValueFrom(this.http.post<AccountView[]>(`/accounts/${account.id}/discover`, {}, { headers: this.headers })));
+      this.accounts.set(await firstValueFrom(this.http.post<AccountView[]>(`/api/accounts/${account.id}/discover`, {})));
     });
   }
 
   async select(source: SourceView, selected: boolean, theme = source.theme) {
     await this.run(async () => {
-      this.accounts.set(await firstValueFrom(this.http.put<AccountView[]>(`/accounts/sources/${source.id}`, { selected, theme }, { headers: this.headers })));
+      this.accounts.set(await firstValueFrom(this.http.put<AccountView[]>(`/api/accounts/sources/${source.id}`, { selected, theme })));
     });
   }
 
@@ -64,14 +63,14 @@ export class Setup {
     const path = this.folderPaths[account.id]?.trim();
     if (!path) return;
     await this.run(async () => {
-      this.accounts.set(await firstValueFrom(this.http.post<AccountView[]>(`/accounts/${account.id}/folders`, { path }, { headers: this.headers })));
+      this.accounts.set(await firstValueFrom(this.http.post<AccountView[]>(`/api/accounts/${account.id}/folders`, { path })));
       this.folderPaths[account.id] = '';
     });
   }
 
   async disconnect(account: AccountView) {
     await this.run(async () => {
-      await firstValueFrom(this.http.delete(`/accounts/${account.id}`, { headers: this.headers }));
+      await firstValueFrom(this.http.delete(`/api/accounts/${account.id}`));
       this.pendingDisconnect.set(null);
       await this.reload();
     });
@@ -79,7 +78,7 @@ export class Setup {
 
   async sync() {
     await this.run(async () => {
-      await firstValueFrom(this.http.post('/accounts/sync', {}, { headers: this.headers }));
+      await firstValueFrom(this.http.post('/api/accounts/sync', {}));
       await this.reload();
     });
   }

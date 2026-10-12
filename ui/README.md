@@ -64,7 +64,7 @@ The dashboard is intended to run on a wall tablet in fullscreen mode. Use [Fully
 
 ## Configuration
 
-Angular requests runtime configuration from the backend at `GET /config` before application startup. Configuration files belong to the backend and are not copied into frontend builds.
+Angular requests runtime configuration from the backend at `GET /api/config` before application startup. Configuration files belong to the backend and are not copied into frontend builds.
 
 From the frontend directory, create the backend's production configuration from its sample:
 
@@ -79,7 +79,7 @@ For local development, backend dev tasks create missing backend config files and
 ../server/gradlew.bat -p ../server prepareDevConfig
 ```
 
-The dev tasks load `dev/config/application.properties`, which selects `dev/config/config.json`; production uses `config/config.json`. Paths resolve relative to the backend's working directory. Set `DASHBOARD_UI_CONFIG_FILE` to override the JSON path. Edit the generated files for your installation. `npm start` proxies `/config` to the running backend; `npm run build` and `npm run deploy` do not use the development proxy config.
+The dev tasks load `dev/config/application.properties`, which selects `dev/config/config.json`; production uses `config/config.json`. Paths resolve relative to the backend's working directory. Set `DASHBOARD_UI_CONFIG_FILE` to override the JSON path. Edit the generated files for your installation. `npm start` proxies `/api/config` to the running backend; `npm run build` and `npm run deploy` do not use the development proxy config.
 
 The JSON contains only public smart-home integration URLs and camera settings. The endpoint is accessible before login; never include credentials. Microsoft credentials, source selection, and token caches belong to protected backend services. Local files are ignored by Git; keep publishable defaults in `server/examples/config.sample.json`. Edit the backend file and reload the browser to pick up changes without rebuilding.
 
@@ -136,70 +136,38 @@ Make sure go2rtc exposes matching stream names.
 
 ### Backend/Proxy Paths
 
-Use [Caddy](https://caddyserver.com/) as the production reverse proxy. Caddy should serve the built Angular files, route browser refreshes back to `index.html`, and expose the same-origin integration paths used by the dashboard.
+The Quarkus backend owns the openHAB and go2rtc integration routes through Vert.x HTTP/WebSocket forwarding. Production Quinoa builds serve Angular and SPA deep links from the backend. Keep the outer HTTPS reverse proxy forwarding requests unchanged to Quarkus, with WebSocket support; no integration-specific proxy rewrites or credential headers are needed.
 
-In development, `src/proxy/proxy.dev.json` forwards these paths to the configured smart home backend. `prepareDevConfig` creates this ignored local file from `src/proxy/proxy.dev.sample.json` when it does not exist.
+All dashboard backend calls use `/api`. In development, `src/proxy/proxy.dev.json` forwards that namespace to Quarkus, not directly to openHAB or go2rtc. `prepareDevConfig` creates this ignored local file from `src/proxy/proxy.dev.sample.json` only when it does not exist. The development proxy configuration is:
 
-Expected paths:
-
-- `/config`: public backend-owned runtime UI settings.
-- `/graphql`: backend queries and WebSocket subscriptions, preserving `graphql-transport-ws`.
-- `/accounts*`, `/session*`, `/j_security_check`, `/media/*`: same-origin backend setup, sessions, and binary images.
-- `/api/openhab/*`: proxies openHAB REST requests 
-- `/ws/openhab*`: proxies openHAB WebSocket requests
-- `/api/webrtc/*`: proxies WebRTC offers for camera streams.
-- `/api/webrtc/ws`: signaling channel for camera streams.
-
-Use [go2rtc](https://github.com/AlexxIT/go2rtc/) behind the `/api/webrtc*` route. Keep openHAB API tokens and other credentials out of committed documentation and configuration files.
-
-Sample Caddyfile:
-
-```caddyfile
-# Refer to the Caddy docs for more information:
-# https://caddyserver.com/docs/caddyfile
-:8080 {
-	@dashboardApi path /config /graphql /graphql/* /accounts /accounts/* /session /session/* /j_security_check /media/*
-	handle @dashboardApi {
-		reverse_proxy localhost:8081
-	}
-
-	# OpenHAB - WebSocket proxy
-	handle_path /ws/openhab* {
-		rewrite * /ws{path}
-		reverse_proxy openhab.example.lan:8080 {
-			header_up Sec-WebSocket-Protocol "org.openhab.ws.protocol.default, org.openhab.ws.accessToken.base64.<OPENHAB_ACCESS_TOKEN_BASE64>"
-		}
-	}
-
-	# OpenHAB - REST proxy
-	handle_path /api/openhab* {
-		rewrite * /rest{path}
-		reverse_proxy openhab.example.lan:8080 {
-			header_up Authorization "<OPENHAB_API_TOKEN>"
-		}
-	}
-
-	# go2rtc - HTTP API and WebSocket signaling
-	handle_path /api/webrtc* {
-		rewrite * /api{path}
-		reverse_proxy localhost:1984 {
-			header_up -Origin
-		}
-	}
-
-	# Everything else -> SPA
-	handle {
-		root * /srv/dashboard
-		file_server
-		try_files {path} /index.html
-	}
-
-	log {
-		output file /var/log/caddy/access.log
-		format console
+```json
+{
+	"/api/**": {
+		"target": "http://localhost:8080",
+		"ws": true
 	}
 }
 ```
+
+Restart `npm start` after changing the proxy file. Angular still serves SPA navigation, assets, and development hot reload; unknown backend API routes return HTTP 404 rather than the SPA page. The browser uses one origin, normally `http://localhost:4200`, for both UI and APIs. Preserve the browser-facing host in proxy requests; do not enable `changeOrigin`. No separate origin configuration or application-specific request header is needed.
+
+Expected paths:
+
+- `/api/config`: public backend-owned runtime UI settings.
+- `/api/graphql`: backend queries and WebSocket subscriptions, preserving `graphql-transport-ws`.
+- `/api/accounts*`, `/api/session*`, `/api/j_security_check`, `/api/media/*`: same-origin backend setup, sessions, and binary images.
+- `/api/openhab/*`: backend proxy for openHAB REST requests, including initial item states.
+- `/api/ws/openhab`: backend WebSocket bridge for openHAB events and commands.
+- `/api/webrtc/*`: backend HTTP proxy for go2rtc, including `frame.jpeg?src=unifi_<cameraId>` snapshots.
+- `/api/ws/webrtc?src=unifi_<cameraId>`: backend WebSocket bridge for camera signaling.
+
+The integration proxy accepts WebSocket upgrades only on the exact `/api/ws/openhab` and `/api/ws/webrtc` paths; its `/api/openhab/*` and `/api/webrtc/*` routes are HTTP-only. GraphQL also supports subscriptions at `/api/graphql`. The backend automatically rejects cross-origin browser API requests using standard browser metadata. The integration routes do not require an admin session; network access to the dashboard also grants access to camera data and proxied openHAB commands.
+
+Configure `dashboard.proxy.openhab-url`, `dashboard.proxy.openhab-token`, and `dashboard.proxy.go2rtc-url` in the backend's protected runtime properties, or use `DASHBOARD_OPENHAB_URL`, `DASHBOARD_OPENHAB_TOKEN`, and `DASHBOARD_GO2RTC_URL`. Do not put upstream credentials in public `/api/config` JSON or the frontend proxy file. The backend authenticates openHAB REST and WebSockets with the same private token and strips go2rtc's upstream `Origin` header. Missing upstream settings return HTTP 503. See [the backend proxy reference](../server/README.md#smart-home-proxy) for configuration, deployment, and troubleshooting.
+
+Camera media still uses go2rtc's advertised WebRTC network candidates; signaling through the backend does not replace media connectivity or ICE/TURN configuration. The embedded openHAB sitemap and EVCC URLs remain directly browser-accessible pages outside these integration routes.
+
+For the embedded production UI, configure the HTTPS reverse proxy for `dashboard.home.arpa` with a certificate trusted by viewing devices. Forward all requests unchanged to the Quarkus backend, normally `http://127.0.0.1:8080` on the same machine, and support WebSocket upgrades with suitable idle timeouts.
 
 ## Developer Documentation
 
@@ -208,7 +176,7 @@ Sample Caddyfile:
 - Node.js/npm compatible with the package manager recorded in `package.json`.
 - Angular CLI, usually through `npm run ng` or `npx ng`.
 - A configured Quarkus backend for local sessions and synchronized Microsoft data.
-- Caddy for serving the dashboard and reverse proxying integration paths.
+- A trusted HTTPS reverse proxy for production. Integration forwarding is provided by Quarkus.
 - go2rtc for WebRTC camera streaming.
 - An openHAB Basic UI sitemap URL that the tablet can reach.
 - Fully Kiosk Browser for running the dashboard fullscreen on the wall tablet.
@@ -222,7 +190,7 @@ npm install
 npm start
 ```
 
-The development server uses `src/proxy/proxy.dev.json` by default. Update the `target` values in that local file for your backend before testing camera streaming or same-origin openHAB proxy paths. The local proxy config is ignored by Git; keep publishable defaults in `src/proxy/proxy.dev.sample.json`.
+The development server uses `src/proxy/proxy.dev.json` by default. All `target` values should point to the Quarkus backend. Configure actual openHAB/go2rtc addresses and the openHAB token in `../server/dev/config/application.properties` or through backend environment variables. No separate local reverse proxy is required. The local proxy config is ignored by Git; keep publishable defaults in `src/proxy/proxy.dev.sample.json`.
 
 ### Build
 
@@ -286,7 +254,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 
 ### Architecture Notes
 
-- `src/main.ts` requests `/config` from the backend before application startup; there are no MSAL providers or Microsoft HTTP interceptors.
+- `src/main.ts` requests `/api/config` from the backend before application startup; there are no MSAL providers or Microsoft HTTP interceptors.
 - Home, Calendar, and Gallery require a local session; Setup requires the admin role.
 - `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
 - `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
@@ -322,5 +290,5 @@ The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.htm
 - **Gallery folders missing**: verify the selected server-side folder path is relative to the owner's drive root and accessible to that connected account.
 - **OpenHAB screen is blank**: verify `openhab.sitemap` in the selected environment config is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.
 - **Wallbox screen is blank**: verify `evcc.url` in the selected environment config is reachable from the tablet and allows embedding in an iframe.
-- **Camera stream does not start**: verify `protect.cameras` contains the expected camera names, Caddy routes `/api/webrtc/*` to go2rtc, and the generated `unifi_*` stream names are available there.
+- **Camera stream does not start**: verify `protect.cameras`, the backend's `DASHBOARD_GO2RTC_URL`, `/api/ws/webrtc` WebSocket connectivity, and matching `unifi_*` streams in go2rtc. If signaling succeeds, check WebRTC media/ICE connectivity separately.
 - **Tablet does not wake or reload after deploy**: verify the Fully Kiosk URL and password in `scripts/config.json`.

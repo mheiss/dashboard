@@ -22,7 +22,7 @@ import jakarta.ws.rs.core.Response;
 import java.util.Map;
 
 /** Bootstraps the local administrator and exposes admin session information and cookie-based logout. */
-@Path("/session")
+@Path("/api/session")
 @ApplicationScoped
 @Produces(MediaType.APPLICATION_JSON)
 public class SessionResource {

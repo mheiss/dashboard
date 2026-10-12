@@ -57,9 +57,11 @@ Sample photographs are from [Unsplash](https://unsplash.com/license). Original i
 
 ## Linux Setup
 
-Run the downloaded release as a systemd service, with PostgreSQL and an HTTPS reverse proxy on the same machine. You need **Java 25**, **PostgreSQL**, **unzip**, **OpenSSL**, and **Caddy** (or an existing HTTPS proxy). No Gradle, Node.js, or frontend build is needed.
+Release packages currently cover fresh installations only. Updating existing installations between releases is not yet supported or documented.
 
-Install these using your distribution's packages or the official [Java](https://adoptium.net/temurin/releases/), [PostgreSQL](https://www.postgresql.org/download/), and [Caddy](https://caddyserver.com/docs/install) instructions. Check that `/usr/bin/java -version` reports Java 25; substitute its actual path in the service if needed.
+Run the downloaded release as a systemd service, with PostgreSQL and an HTTPS reverse proxy on the same machine. You need **Java 25**, **PostgreSQL**, **unzip**, **OpenSSL**, and an **HTTPS reverse proxy**. No Gradle, Node.js, or frontend build is needed.
+
+Install these using your distribution's packages or the official [Java](https://adoptium.net/temurin/releases/) and [PostgreSQL](https://www.postgresql.org/download/) instructions. Follow your reverse proxy's installation guide. Check that `/usr/bin/java -version` reports Java 25; substitute its actual path in the service if needed.
 
 This guide uses `https://dashboard.home.arpa`. Set up local DNS for that hostname and use it consistently in the proxy and Microsoft settings. **Keep the dashboard on your household network:** calendar and photo viewing are public to anyone who can reach it; only account setup requires the admin login.
 
@@ -96,14 +98,14 @@ GRANT USAGE, CREATE ON SCHEMA public TO dashboard;
 \q
 ```
 
-Choose a database password at the prompt. If the role and database already exist, skip creating them. The schema grant is required for startup migrations; do not use a PostgreSQL superuser as the application's database account.
+Choose a database password at the prompt. If the role and database already exist, skip creating them. The schema grant is required for startup schema initialization; do not use a PostgreSQL superuser as the application's database account.
 
 ### 3. Register With Microsoft
 
 In the [Microsoft Entra admin center](https://entra.microsoft.com/), create an app registration:
 
 1. Choose an account type that includes **personal Microsoft accounts**.
-2. Add the **Web** redirect URI `https://dashboard.home.arpa/accounts/callback` (not SPA).
+2. Add the **Web** redirect URI `https://dashboard.home.arpa/api/accounts/callback` (not SPA).
 3. Record the client ID and create a client secret; keep its **Value**, not its Secret ID.
 4. Add Microsoft Graph **delegated** permissions: `User.Read`, `Calendars.Read`, and `Files.Read`. The app also requests `offline_access` for background refresh.
 
@@ -126,20 +128,21 @@ sudoedit /etc/dashboard/application.properties
 sudoedit /etc/dashboard/config.json
 ```
 
-In `application.properties`, replace every `REPLACE_...` placeholder with your database password, an admin password of at least 12 characters, Microsoft client ID/secret, and two independent encryption keys. For a first installation, generate each key in a private terminal with `openssl rand -base64 32`: one for `dashboard.token-key`, another for `quarkus.http.auth.session.encryption-key`. Save them securely and **reuse the original keys during upgrades**.
+In `application.properties`, replace every `REPLACE_...` placeholder with your database password, an admin password of at least 12 characters, Microsoft client ID/secret, and two independent encryption keys. Generate each key in a private terminal with `openssl rand -base64 32`: one for `dashboard.token-key`, another for `quarkus.http.auth.session.encryption-key`. Save them securely; the token key is required to decrypt saved Microsoft token caches.
 
 Change the sample's paths and hostname as needed:
 
 ```properties
 dashboard.ui-config-file=/etc/dashboard/config.json
 dashboard.media-directory=/var/lib/dashboard/media
-dashboard.allowed-origins=https://dashboard.home.arpa
-dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/accounts/callback
+dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/api/accounts/callback
 ```
 
 Keep `quarkus.http.host=127.0.0.1` and the loopback proxy trust settings for this same-machine deployment. Leave `dashboard.microsoft.webhook-url` unset; scheduled synchronization needs no public webhook.
 
-`config.json` holds the openHAB, EVCC, and camera settings, not Microsoft source selections. It is served publicly by `/config`; **never put credentials in it**. The properties file contains private secrets and must stay out of Git. Advanced runtime settings and environment overrides are covered in the backend reference: [server/README.md](server/README.md) on GitHub, or `BACKEND.md` in the release ZIP.
+All dashboard APIs use `/api`; UI navigation stays at the HTTP root. Register the Microsoft Web redirect URI at `/api/accounts/callback`. If using public webhooks, configure the webhook URL and its public proxy rule for `/api/graph/webhook`.
+
+`config.json` holds the openHAB, EVCC, and camera settings, not Microsoft source selections. It is served publicly by `/api/config`; **never put credentials in it**. The properties file contains private secrets and must stay out of Git. Advanced runtime settings and environment overrides are covered in the backend reference: [server/README.md](server/README.md) on GitHub, or `BACKEND.md` in the release ZIP.
 
 ### 5. Start With Systemd
 
@@ -181,26 +184,13 @@ sudo systemctl enable --now dashboard
 sudo journalctl -u dashboard -f
 ```
 
-First startup migrates the database and creates the admin user. Check readiness with `curl --fail http://127.0.0.1:8080/q/health/ready`.
+First startup initializes the database schema and creates the admin user. Check readiness with `curl --fail http://127.0.0.1:8080/q/health/ready`.
 
 ### 6. Set Up HTTPS And Connect Accounts
 
-With Caddy installed as a service, add this site to `/etc/caddy/Caddyfile`:
+Configure your HTTPS reverse proxy for `dashboard.home.arpa` with a certificate trusted by your viewing devices. Forward all requests unchanged to `http://127.0.0.1:8080`, including WebSocket upgrades, and use suitable WebSocket idle timeouts. Validate and reload the proxy configuration using its own tooling.
 
-```caddyfile
-dashboard.home.arpa {
-    tls internal
-    reverse_proxy 127.0.0.1:8080
-}
-```
-
-```bash
-sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-sudo systemctl enable --now caddy
-sudo systemctl reload caddy
-```
-
-Install Caddy's root CA certificate in every client device's trust store. For the standard Linux Caddy service it is usually `/var/lib/caddy/.local/share/caddy/pki/authorities/local/root.crt`. Copy only the public certificate, never the CA's private key. An existing trusted HTTPS proxy can replace Caddy. Allow HTTPS on the LAN, keep port 8080 on loopback, and do not forward the dashboard to the internet.
+If using a private certificate authority, install its public root CA certificate in every client device's trust store; never distribute the CA's private key. Allow HTTPS on the LAN, keep port 8080 on loopback, and do not forward the dashboard to the internet.
 
 Open `https://dashboard.home.arpa/home` without certificate warnings. Click settings, enter the local admin password, and connect each owner's Microsoft account. Select calendars and enable OneDrive folders such as `Pictures/Camera Roll` in `/setup`. Synchronization normally runs every five minutes. Use `/home` as the wall tablet's start URL.
 
@@ -209,32 +199,21 @@ Open `https://dashboard.home.arpa/home` without certificate warnings. Click sett
 
 openHAB, EVCC, and go2rtc run separately. Configure their URLs and camera IDs in `/etc/dashboard/config.json`. Embedded views must be reachable from the tablet over HTTPS and allow iframe embedding.
 
-For openHAB and cameras, replace the site's simple proxy with this routing example, substituting your upstream addresses:
+The backend hosts the openHAB HTTP/WebSocket and go2rtc snapshot/signaling proxy routes. Keep the HTTPS proxy forwarding requests unchanged; do not add path rewrites or openHAB credentials to it. Configure upstream access in the **private** `/etc/dashboard/application.properties`, not the publicly served JSON:
 
-```caddyfile
-dashboard.home.arpa {
-    tls internal
-    handle_path /api/openhab/* {
-        rewrite * /rest{path}
-        reverse_proxy openhab.example.lan:8080
-    }
-    handle_path /ws/openhab* {
-        rewrite * /ws{path}
-        reverse_proxy openhab.example.lan:8080
-    }
-    handle_path /api/webrtc* {
-        rewrite * /api{path}
-        reverse_proxy 127.0.0.1:1984 {
-            header_up -Origin
-        }
-    }
-    handle {
-        reverse_proxy 127.0.0.1:8080
-    }
-}
+```properties
+dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+dashboard.proxy.openhab-token=REPLACE_OPENHAB_API_TOKEN
+dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
 ```
 
-Keep required openHAB authentication on the proxy; this example does not supply credentials. Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `protect.cameras`. Validate the Caddyfile and reload the Caddy service after changes.
+Use HTTP(S) origins without API paths or embedded credentials, reachable from the backend. Restart the dashboard after changing properties. Environment alternatives are `DASHBOARD_OPENHAB_URL`, `DASHBOARD_OPENHAB_TOKEN`, and `DASHBOARD_GO2RTC_URL`. Unconfigured integrations return HTTP 503; the rest of the dashboard remains available.
+
+The browser uses `/api/openhab/*` for REST and `/api/ws/openhab` for events and commands. Camera snapshots use `/api/webrtc/*`; signaling uses `/api/ws/webrtc`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. These integration routes do not require admin login, so anyone able to reach the dashboard can access cameras and issue openHAB commands. Keep the deployment on the trusted household network and protect the private token.
+
+Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `protect.cameras`. WebRTC media still connects using go2rtc's advertised network candidates; the backend proxies signaling, not media. Embedded openHAB and EVCC pages still require direct browser access.
+
+Verify initial openHAB states, live item updates, commands, camera snapshots, and live video through the dashboard origin. The backend reference's **Smart-Home Proxy** section covers timeouts, troubleshooting, and tests: [server/README.md](server/README.md#smart-home-proxy) on GitHub, or `BACKEND.md` in the release ZIP.
 
 </details>
 
@@ -248,16 +227,7 @@ sudo systemctl restart dashboard
 
 Restart after changing backend properties. After changing the unit, run `sudo systemctl daemon-reload` first. Public JSON edits need only a browser reload.
 
-To upgrade, back up PostgreSQL and `/etc/dashboard` (including the original encryption keys), verify the new archive's checksum, and extract it into a **new** root-owned release directory. Stop the app before switching the existing `latest` symlink:
-
-```bash
-sudo systemctl stop dashboard
-sudo ln -sfn /opt/dashboard/releases/0.0.2 /opt/dashboard/latest
-sudo systemctl start dashboard
-sudo journalctl -u dashboard -n 100 --no-pager
-```
-
-Configuration and media stay in place; do not copy samples over them. Keep the previous release until its process has stopped. Database migrations may require restoring a matching database backup to roll back. Renew expiring Microsoft client secrets in the properties file and restart; changing the bootstrap admin password does not reset an existing user's password.
+Renew expiring Microsoft client secrets in the properties file and restart; changing the bootstrap admin password does not reset an existing user's password.
 
 ## Troubleshooting
 
@@ -267,9 +237,9 @@ Start with `sudo journalctl -u dashboard -n 100 --no-pager`.
 | --- | --- |
 | Service fails to start | Java 25 path, `latest` symlink, file permissions, and unreplaced properties placeholders. |
 | Database errors | PostgreSQL availability, credentials, and `USAGE, CREATE` privileges on the database's `public` schema. |
-| HTTPS or proxy errors | Local DNS, trusted CA, Caddy logs, and backend readiness on `127.0.0.1:8080`. |
-| `/config` returns 503 | `/etc/dashboard/config.json` exists, contains valid JSON, and is readable by `dashboard`. |
-| Microsoft sign-in or requests fail | Redirect URI and allowed origin exactly match your HTTPS hostname; retain the original token key. |
+| HTTPS or proxy errors | Local DNS, trusted CA, reverse proxy logs, and backend readiness on `127.0.0.1:8080`. |
+| `/api/config` returns 503 | `/etc/dashboard/config.json` exists, contains valid JSON, and is readable by `dashboard`. |
+| Microsoft sign-in or requests fail | Redirect URI matches your public HTTPS URL; the proxy preserves the public host and scheme through trusted forwarding headers. Retain the original token key. |
 | Calendar or gallery is empty | Connect accounts, select and enable sources, then allow time for synchronization. |
 
 ## For Contributors

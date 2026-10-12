@@ -16,7 +16,7 @@ import jakarta.ws.rs.core.Context;
 import java.util.UUID;
 
 /** Serves public photo thumbnails and originals with private, version-aware HTTP caching. */
-@Path("/media/images/{id}")
+@Path("/api/media/images/{id}")
 @PermitAll
 public class MediaResource {
 

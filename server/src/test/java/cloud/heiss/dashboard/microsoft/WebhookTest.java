@@ -22,7 +22,7 @@ class WebhookTest {
 
     @Test
     void webhookEchoesValidationAndOnlyQueuesAuthenticatedNotifications() {
-        given().queryParam("validationToken", "validation-example").when().post("/graph/webhook").then().statusCode(200)
+        given().queryParam("validationToken", "validation-example").when().post("/api/graph/webhook").then().statusCode(200)
                 .contentType("text/plain").body(org.hamcrest.Matchers.equalTo("validation-example"));
         UUID account = UUID.randomUUID();
         String subscription = UUID.randomUUID().toString();
@@ -53,10 +53,9 @@ class WebhookTest {
 
     @Test
     void privateApiRequiresAuthentication() {
-        given().redirects().follow(false).when().get("/accounts").then().statusCode(401);
-        given().header("X-Dashboard-Request", "true").contentType("application/json")
-                .body(Map.of("query", "{ images { totalCount } }")).redirects().follow(false).when().post("/graphql").then()
-                .statusCode(200);
+        given().redirects().follow(false).when().get("/api/accounts").then().statusCode(401);
+        given().contentType("application/json").body(Map.of("query", "{ images { totalCount } }")).redirects().follow(false)
+                .when().post("/api/graphql").then().statusCode(200);
     }
 
     private boolean requested(UUID account) {
@@ -66,6 +65,6 @@ class WebhookTest {
     private void notification(String id, String state) {
         given().contentType("application/json")
                 .body(Map.of("value", java.util.List.of(Map.of("subscriptionId", id, "clientState", state)))).when()
-                .post("/graph/webhook").then().statusCode(202);
+                .post("/api/graph/webhook").then().statusCode(202);
     }
 }
