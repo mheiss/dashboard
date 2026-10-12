@@ -61,8 +61,8 @@ public abstract class WebSocketProxy {
                 fail(context);
             });
         }).onFailure(error -> {
-            LOG.warnf(error, "Upstream WebSocket connection failed for %s to %s:%d", context.request().path(),
-                    options.getHost(), options.getPort());
+            LOG.warnf(error, "Upstream WebSocket connection failed for %s to %s:%d", context.request().path(), options.getHost(),
+                    options.getPort());
             fail(context);
         });
     }

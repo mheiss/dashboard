@@ -78,7 +78,23 @@ class IntegrationProxyTest {
             assertEquals("org.openhab.ws.protocol.default,org.openhab.ws.accessToken.base64." + encoded,
                     handshake.getString("protocols").replace(" ", ""));
             assertEquals(null, handshake.getString("cookie"));
+            assertEquals("org.openhab.ws.protocol.default", socket.getSubprotocol());
             assertFalse(socket.getSubprotocol().contains("accessToken"));
+            socket.sendText("command", true).get(10, TimeUnit.SECONDS);
+            assertEquals("echo:command", listener.texts.poll(10, TimeUnit.SECONDS));
+        } finally {
+            socket.sendClose(WebSocket.NORMAL_CLOSURE, "Done").get(10, TimeUnit.SECONDS);
+        }
+    }
+
+    @Test
+    void bridgesOpenhabWebsocketWithoutBrowserSubprotocol() throws Exception {
+        var listener = new SocketListener();
+        WebSocket socket = connect("/api/ws/openhab", base.toString().replaceFirst("/$", ""), listener, false);
+        try {
+            assertEquals("", socket.getSubprotocol());
+            JsonObject handshake = new JsonObject(listener.texts.poll(10, TimeUnit.SECONDS));
+            assertEquals("/ws", handshake.getString("uri"));
             socket.sendText("command", true).get(10, TimeUnit.SECONDS);
             assertEquals("echo:command", listener.texts.poll(10, TimeUnit.SECONDS));
         } finally {
@@ -91,6 +107,7 @@ class IntegrationProxyTest {
         var listener = new SocketListener();
         WebSocket socket = connect("/api/ws/webrtc?src=unifi_front", base.toString().replaceFirst("/$", ""), listener, false);
         try {
+            assertEquals("", socket.getSubprotocol());
             JsonObject handshake = new JsonObject(listener.texts.poll(10, TimeUnit.SECONDS));
             assertEquals("/api/ws?src=unifi_front", handshake.getString("uri"));
             assertEquals(null, handshake.getString("origin"));
