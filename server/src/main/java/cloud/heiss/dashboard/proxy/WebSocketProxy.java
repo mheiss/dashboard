@@ -13,8 +13,11 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
+import org.jboss.logging.Logger;
 
 public abstract class WebSocketProxy {
+
+    private static final Logger LOG = Logger.getLogger(WebSocketProxy.class);
 
     @Inject
     IntegrationProxyConfig config;
@@ -46,20 +49,27 @@ public abstract class WebSocketProxy {
         sockets.connect(options).onSuccess(upstreamSocket -> {
             upstreamSocket.pause();
             context.request().toWebSocket().onSuccess(browserSocket -> {
-                bridge(browserSocket, upstreamSocket);
-                bridge(upstreamSocket, browserSocket);
+                String path = context.request().path();
+                LOG.debugf("WebSocket proxy connected for %s to %s:%d", path, options.getHost(), options.getPort());
+                bridge(browserSocket, upstreamSocket, path, "browser to upstream");
+                bridge(upstreamSocket, browserSocket, path, "upstream to browser");
                 browserSocket.resume();
                 upstreamSocket.resume();
             }).onFailure(error -> {
+                LOG.warnf(error, "Browser WebSocket upgrade failed for %s", context.request().path());
                 upstreamSocket.close();
                 fail(context);
             });
-        }).onFailure(error -> fail(context));
+        }).onFailure(error -> {
+            LOG.warnf(error, "Upstream WebSocket connection failed for %s to %s:%d", context.request().path(),
+                    options.getHost(), options.getPort());
+            fail(context);
+        });
     }
 
     protected abstract void configure(WebSocketConnectOptions options);
 
-    private void bridge(WebSocketBase source, WebSocketBase destination) {
+    private void bridge(WebSocketBase source, WebSocketBase destination, String path, String direction) {
         destination.setWriteQueueMaxSize(65536);
         destination.drainHandler(ignored -> source.resume());
         source.frameHandler(frame -> {
@@ -67,6 +77,7 @@ public abstract class WebSocketProxy {
                 return;
             }
             destination.writeFrame(frame).onFailure(error -> {
+                LOG.warnf(error, "WebSocket frame forwarding failed for %s (%s)", path, direction);
                 source.close((short) 1011, "Proxy connection failed");
                 destination.close((short) 1011, "Proxy connection failed");
             });
@@ -75,6 +86,7 @@ public abstract class WebSocketProxy {
             }
         });
         source.exceptionHandler(error -> {
+            LOG.warnf(error, "WebSocket connection failed for %s (%s)", path, direction);
             source.close((short) 1011, "Proxy connection failed");
             destination.close((short) 1011, "Proxy connection failed");
         });

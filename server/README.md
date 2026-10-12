@@ -209,7 +209,7 @@ Verify initial openHAB states, live item updates, commands, camera snapshots, an
 | Upstream HTTP 401/403 | Verify token permissions and upstream access policies; upstream HTTP statuses are preserved. |
 | Snapshots work but live video does not | Matching stream names, WebSocket support at the outer proxy, and go2rtc media/ICE connectivity. |
 
-`IntegrationProxy` owns routing, validation, header filtering, and HTTP streaming. `OpenhabWebSocketProxy` and `Go2rtcWebSocketProxy` supply integration-specific handshake settings; their shared `WebSocketProxy` base owns client lifecycle, frame forwarding, backpressure, and cleanup.
+`OpenhabProxy` and `Go2rtcProxy` own their integration routes and header behavior; their shared `HttpProxy` base handles client lifecycle, request checks, header filtering, and HTTP streaming. `OpenhabWebSocketProxy` and `Go2rtcWebSocketProxy` supply integration-specific handshake settings; their shared `WebSocketProxy` base owns client lifecycle, frame forwarding, backpressure, and cleanup.
 
 Run the focused fixture tests from the backend directory:
 
