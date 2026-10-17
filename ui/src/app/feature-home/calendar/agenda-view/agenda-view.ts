@@ -1,7 +1,6 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, computed, input, ChangeDetectionStrategy } from '@angular/core';
-import { EventView } from '../../../ms-graph/calendar.model';
-import { graphToDate } from '../../../ms-graph/graph.model';
+import { EventView } from '../calendar.model';
 import { isSameDay } from '../../../utils/date';
 import { AgendaEvent } from './agenda-view.model';
 
@@ -29,8 +28,8 @@ export class AgendaView {
         const id = event.id;
         const subject = event.subject;
 
-        const start = graphToDate(event.start);
-        const end = graphToDate(event.end);
+        const start = new Date(event.start!.dateTime!);
+        const end = new Date(event.end!.dateTime!);
         let tailwindClasses = event.myConfig.tailwindClasses;
         if (now > end) {
           tailwindClasses = tailwindClasses + ' opacity-75';

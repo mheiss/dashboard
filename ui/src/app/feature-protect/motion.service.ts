@@ -1,64 +1,55 @@
-import { HttpClient } from '@angular/common/http';
-import { computed, inject, Injectable, signal } from '@angular/core';
-import { timeout } from 'rxjs';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { BackendService } from '../backend/backend.service';
 import { DebugService } from '../utils/debug.service';
-import { Camera } from './protect.model';
-import { loadMotionSnapshots, saveMotionSnapshot } from '../ms-graph/database';
-import { groupMotionSnapshots, MAX_MOTION_GROUPS, MotionEventType, MotionSnapshot, StoredMotionSnapshot } from './motion.model';
+import { MotionGroup, MotionSnapshot } from './motion.model';
 export type { MotionSnapshot } from './motion.model';
+
+type BackendSnapshot = Omit<MotionSnapshot, 'timestamp'> & { timestamp: number | string };
+type BackendGroup = Omit<MotionGroup, 'snapshots' | 'preview'> & { snapshots: BackendSnapshot[]; preview: BackendSnapshot };
+const SNAPSHOT_FIELDS = 'id camera timestamp type url';
 
 @Injectable({ providedIn: 'root' })
 export class MotionService {
-  private readonly http = inject(HttpClient);
+  private readonly backend = inject(BackendService);
   private readonly debug = inject(DebugService);
-  private readonly images = signal<MotionSnapshot[]>([]);
-
-  readonly groups = computed(() => groupMotionSnapshots(this.images()));
+  private readonly groupState = signal<MotionGroup[]>([]);
+  readonly groups = this.groupState.asReadonly();
   readonly snapshots = computed(() => this.groups().map((group) => group.preview));
-  private pending = this.restore();
+  private version = 0;
 
-  capture(camera: Camera, type: MotionEventType = 'smart'): void {
-    const id = crypto.randomUUID();
-    const timestamp = Date.now();
-    this.http
-      .get('/api/webrtc/frame.jpeg', { params: { src: 'unifi_' + camera }, responseType: 'blob' })
-      .pipe(timeout(10_000))
-      .subscribe({
-        next: (blob) => {
-          const snapshot: StoredMotionSnapshot = { id, camera, timestamp, type, image: blob };
-          this.pending = this.pending
-            .then(() => this.addSnapshot(snapshot))
-            .catch((error) => this.debug.log(`Motion snapshot could not be stored for '${camera}'.`, error));
-        },
-        error: (error) => this.debug.log(`Motion snapshot failed for '${camera}'.`, error),
-      });
+  constructor() {
+    const destroyRef = inject(DestroyRef);
+    this.backend.actions.pipe(takeUntilDestroyed(destroyRef)).subscribe((action) => {
+      if (action.type === 'SNAPSHOTS_CHANGED' || action.type === 'SYNC') void this.refresh();
+    });
+    this.backend.changed.pipe(takeUntilDestroyed(destroyRef)).subscribe((change) => {
+      if (change.dataset === 'ALL') void this.refresh();
+    });
+    void this.refresh();
   }
 
-  private async restore(): Promise<void> {
+  private async refresh(): Promise<void> {
+    const version = ++this.version;
     try {
-      const snapshots = await loadMotionSnapshots();
-      this.publish(snapshots.map((snapshot) => this.toSnapshot(snapshot)));
+      const result = await this.backend.query<{ motionGroups: BackendGroup[] }>(
+        `{ motionGroups { id snapshots { ${SNAPSHOT_FIELDS} } preview { ${SNAPSHOT_FIELDS} } } }`,
+      );
+      if (version === this.version) {
+        this.groupState.set(
+          result.motionGroups.map((group) => ({
+            ...group,
+            snapshots: group.snapshots.map((snapshot) => this.toSnapshot(snapshot)),
+            preview: this.toSnapshot(group.preview),
+          })),
+        );
+      }
     } catch (error) {
-      this.debug.log('Motion snapshots could not be restored.', error);
+      this.debug.log('Motion snapshots could not be loaded.', error);
     }
   }
 
-  private async addSnapshot(snapshot: StoredMotionSnapshot): Promise<void> {
-    this.publish([...this.images(), this.toSnapshot(snapshot)]);
-    const oldestTimestamp = Math.min(...this.images().map((image) => image.timestamp.getTime()));
-    await saveMotionSnapshot(snapshot, oldestTimestamp);
-  }
-
-  private toSnapshot(snapshot: StoredMotionSnapshot): MotionSnapshot {
-    return { ...snapshot, timestamp: new Date(snapshot.timestamp), url: URL.createObjectURL(snapshot.image) };
-  }
-
-  private publish(snapshots: MotionSnapshot[]): void {
-    const retained = groupMotionSnapshots(snapshots)
-      .slice(0, MAX_MOTION_GROUPS)
-      .flatMap((group) => group.snapshots);
-    const ids = new Set(retained.map((snapshot) => snapshot.id));
-    snapshots.filter((snapshot) => !ids.has(snapshot.id)).forEach((snapshot) => URL.revokeObjectURL(snapshot.url));
-    this.images.set(retained);
+  private toSnapshot(snapshot: BackendSnapshot): MotionSnapshot {
+    return { ...snapshot, timestamp: new Date(Number(snapshot.timestamp)) };
   }
 }

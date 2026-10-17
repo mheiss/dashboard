@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, OnDestroy, signal, ChangeDetectionStrategy } from '@angular/core';
 import { DialogRef } from '@angular/cdk/dialog';
 import { DatePipe } from '@angular/common';
+import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AppConfigService } from '../feature-config/config.service';
@@ -8,7 +9,7 @@ import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
 import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 import { MotionService, MotionSnapshot } from './motion.service';
-import { of } from 'rxjs';
+import { shareReplay } from 'rxjs';
 import { PopupService } from '../popup/popup.service';
 import { ImageViewerComponent } from '../image-viewer/image-viewer';
 import { ImageViewerData, ViewerImage } from '../image-viewer/image-viewer.model';
@@ -26,9 +27,10 @@ export class Protect implements OnDestroy {
   readonly activatedRoute = inject(ActivatedRoute);
   readonly motion = inject(MotionService);
   private readonly popup = inject(PopupService);
+  private readonly http = inject(HttpClient);
   private snapshotDialog?: DialogRef<string>;
 
-  private readonly cameraOrder: Camera[] = Object.keys(this.config.config().protect.cameras);
+  private readonly cameraOrder: Camera[] = Object.keys(this.config.config().cameras);
   readonly cameras = signal<PlayableCamera[]>(this.cameraOrder.map((camera) => ({ camera, play: false })));
   readonly pinned = signal<Camera>(this.cameraOrder[0] ?? '');
   readonly mobileCameras = computed(() => {
@@ -63,7 +65,7 @@ export class Protect implements OnDestroy {
   }
 
   cameraLabel(camera: Camera): string {
-    return this.config.config().protect.cameras[camera] ?? camera;
+    return this.config.config().cameras[camera] ?? camera;
   }
 
   openSnapshot(snapshot: MotionSnapshot): void {
@@ -72,7 +74,7 @@ export class Protect implements OnDestroy {
       return;
     }
     const images: ViewerImage[] = group.snapshots.map((image) => {
-      const blob = of(image.image);
+      const blob = this.http.get(image.url, { responseType: 'blob' }).pipe(shareReplay({ bufferSize: 1, refCount: true }));
       return {
         id: image.id,
         name: this.cameraLabel(image.camera) + ' - ' + (image.type === 'smart' ? 'Smarte Bewegung' : 'Bewegung'),

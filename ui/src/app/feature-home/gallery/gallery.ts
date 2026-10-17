@@ -1,19 +1,18 @@
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { AsyncPipe, DatePipe } from '@angular/common';
-import { Component, computed, inject, OnInit, signal, Signal, viewChild, ChangeDetectionStrategy } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { filter, interval, map, tap } from 'rxjs';
-import { DriveImageExt } from '../../ms-graph/image.model';
-import { ImageService } from '../../ms-graph/image.service';
-import { PopupService } from '../../popup/popup.service';
-import { LayoutService } from '../../utils/layout.service';
-import { VisibilityService } from '../../utils/visibility.service';
-import { DebugService } from '../../utils/debug.service';
+import { LucideImages } from '@lucide/angular';
+import { filter, interval, map } from 'rxjs';
 import { BlobSrcDirective } from '../../image-viewer/blob.directive';
 import { ImageViewerComponent } from '../../image-viewer/image-viewer';
 import { ImageViewerData, ViewerImage } from '../../image-viewer/image-viewer.model';
-import { Moment, toMoment } from './gallery.model';
-import { LucideImages } from '@lucide/angular';
+import { ImageService } from './image.service';
+import { PopupService } from '../../popup/popup.service';
+import { DebugService } from '../../utils/debug.service';
+import { LayoutService } from '../../utils/layout.service';
+import { VisibilityService } from '../../utils/visibility.service';
+import { Moment } from './gallery.model';
 
 @Component({
   selector: 'app-gallery',
@@ -39,8 +38,6 @@ export class GalleryComponent implements OnInit {
    * The total number of images
    */
   readonly imageCount = this.service.imageCount.asReadonly();
-  private readonly viewerImageCache = new WeakMap<DriveImageExt, ViewerImage>();
-  private readonly viewerImages = computed(() => this.images().map((image) => this.toViewerImage(image)));
 
   /**
    * Computes the number of columns depending on the viewport size
@@ -55,7 +52,7 @@ export class GalleryComponent implements OnInit {
   readonly rows = computed(() => {
     const cols = this.columns();
     const items = this.images();
-    const result: DriveImageExt[][] = [];
+    const result: ViewerImage[][] = [];
     for (let i = 0; i < items.length; i += cols) {
       result.push(items.slice(i, i + cols));
     }
@@ -87,8 +84,8 @@ export class GalleryComponent implements OnInit {
       .subscribe(() => this.service.loadMore());
   }
 
-  trackByImageIds(_: number, row: DriveImageExt[]) {
-    return row.map((imageExt) => imageExt.image.id).join('|');
+  trackByImageIds(_: number, row: ViewerImage[]) {
+    return row.map((image) => image.id).join('|');
   }
 
   updateMomentPoster(): void {
@@ -99,12 +96,12 @@ export class GalleryComponent implements OnInit {
     }
   }
 
-  openDetailView(image: DriveImageExt) {
+  openDetailView(image: ViewerImage) {
     this.dialog.open(ImageViewerComponent, {
       data: {
-        image: this.toViewerImage(image),
+        image,
         imageCount: this.imageCount(),
-        images: this.viewerImages,
+        images: this.images,
         loadMore: () => this.service.loadMore(),
       } satisfies ImageViewerData,
       disableClose: false,
@@ -115,28 +112,13 @@ export class GalleryComponent implements OnInit {
   openMomentView(moment: Moment) {
     this.dialog.open(ImageViewerComponent, {
       data: {
-        image: this.toViewerImage(moment.poster()),
+        image: moment.poster(),
         imageCount: moment.images.length,
-        images: signal(moment.images.map((image) => this.toViewerImage(image))),
+        images: signal(moment.images),
         loadMore: () => {},
       } satisfies ImageViewerData,
       disableClose: false,
       fullScreen: true,
     });
-  }
-
-  private toViewerImage(source: DriveImageExt): ViewerImage {
-    let image = this.viewerImageCache.get(source);
-    if (!image) {
-      image = {
-        id: source.image.id,
-        name: source.image.name,
-        takenAt: new Date(source.image.takenAt.date),
-        thumbnail$: source.thumbnail$,
-        original$: source.original$,
-      };
-      this.viewerImageCache.set(source, image);
-    }
-    return image;
   }
 }

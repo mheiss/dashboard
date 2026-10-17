@@ -2,12 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 import { createClient } from 'graphql-ws';
 import { firstValueFrom, Subject } from 'rxjs';
-import { DashboardChange } from './backend.model';
+import { DashboardAction, DashboardChange } from './backend.model';
 
 @Injectable({ providedIn: 'root' })
 export class BackendService {
   private readonly http = inject(HttpClient);
   readonly changed = new Subject<DashboardChange>();
+  readonly actions = new Subject<DashboardAction>();
   readonly connected = signal(false);
 
   constructor() {
@@ -35,6 +36,16 @@ export class BackendService {
         complete: () => this.connected.set(false),
       },
     );
+    const unsubscribeActions = client.subscribe<{ dashboardAction: DashboardAction }>(
+      { query: 'subscription { dashboardAction { type camera armed } }' },
+      {
+        next: (message) => {
+          if (message.data?.dashboardAction) this.actions.next(message.data.dashboardAction);
+        },
+        error: () => this.connected.set(false),
+        complete: () => this.connected.set(false),
+      },
+    );
     const visible = () => {
       if (document.visibilityState === 'visible') {
         this.changed.next({ dataset: 'ALL', revision: -1, timestamp: new Date().toISOString() });
@@ -44,12 +55,16 @@ export class BackendService {
     let currentDay = new Date().toDateString();
     const midnight = window.setInterval(() => {
       const day = new Date().toDateString();
-      if (day !== currentDay) { currentDay = day; visible(); }
+      if (day !== currentDay) {
+        currentDay = day;
+        visible();
+      }
     }, 60_000);
     inject(DestroyRef).onDestroy(() => {
       document.removeEventListener('visibilitychange', visible);
       window.clearInterval(midnight);
       unsubscribe();
+      unsubscribeActions();
       this.connected.set(false);
       void client.dispose();
     });
@@ -57,13 +72,15 @@ export class BackendService {
 
   async query<Result>(query: string, variables: Record<string, unknown> = {}): Promise<Result> {
     const response = await firstValueFrom(
-      this.http.post<{ data?: Result; errors?: { message: string; extensions?: { code?: string } }[] }>(
-        '/api/graphql',
-        { query, variables },
-      ),
+      this.http.post<{ data?: Result; errors?: { message: string; extensions?: { code?: string } }[] }>('/api/graphql', {
+        query,
+        variables,
+      }),
     );
     if (response.errors?.length || !response.data) {
-      throw new Error(response.errors?.map((error) => `${error.extensions?.code ?? ''} ${error.message}`).join('; ') || 'Backend returned no data');
+      throw new Error(
+        response.errors?.map((error) => `${error.extensions?.code ?? ''} ${error.message}`).join('; ') || 'Backend returned no data',
+      );
     }
     return response.data;
   }

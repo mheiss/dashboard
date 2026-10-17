@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { DebugService } from '../utils/debug.service';
+import type {} from './fully.model';
 
 @Injectable({ providedIn: 'root' })
 export class FullyService {

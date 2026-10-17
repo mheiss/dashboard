@@ -32,7 +32,12 @@ public class UiConfigResource {
             if (settings == null || !settings.isObject()) {
                 throw new ServiceUnavailableException("UI configuration must be a JSON object");
             }
-            return Response.ok(settings).header("Cache-Control", "no-store").build();
+            var publicSettings = mapper.createObjectNode();
+            publicSettings.put("sitemapUrl", settings.path("openhab").path("sitemap").asText());
+            publicSettings.put("evccUrl", settings.path("evcc").path("url").asText());
+            JsonNode cameras = settings.path("protect").path("cameras");
+            publicSettings.set("cameras", cameras.isObject() ? cameras : mapper.createObjectNode());
+            return Response.ok(publicSettings).header("Cache-Control", "no-store").build();
         } catch (IOException failure) {
             throw new ServiceUnavailableException("UI configuration is unavailable");
         }

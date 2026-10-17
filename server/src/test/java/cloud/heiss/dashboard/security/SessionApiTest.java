@@ -45,8 +45,9 @@ class SessionApiTest {
     @Test
     void uiConfigurationIsAvailableBeforeLogin() {
         given().when().get("/api/config").then().statusCode(200).contentType("application/json")
-                .header("Cache-Control", "no-store").body("openhab.items.security", equalTo("Security"))
-                .body("evcc.url", equalTo("https://evcc.example.lan")).body("protect.cameras.entry", equalTo("Eingang"));
+                .header("Cache-Control", "no-store").body("sitemapUrl", equalTo("https://openhab.example.lan/basicui/app"))
+                .body("evccUrl", equalTo("https://evcc.example.lan")).body("cameras.entry", equalTo("Eingang"))
+                .body("size()", equalTo(3));
         given().header("Origin", "https://attacker.example").when().get("/api/config").then().statusCode(403);
     }
 

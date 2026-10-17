@@ -1,5 +1,5 @@
-import { signal, WritableSignal } from '@angular/core';
-import { DriveImageExt } from '../../ms-graph/image.model';
+import { WritableSignal } from '@angular/core';
+import { ViewerImage } from '../../image-viewer/image-viewer.model';
 
 /**
  * A moment containing all images of a given day.
@@ -7,10 +7,6 @@ import { DriveImageExt } from '../../ms-graph/image.model';
 export interface Moment {
   date: string;
   day: number;
-  images: DriveImageExt[];
-  poster: WritableSignal<DriveImageExt>;
+  images: ViewerImage[];
+  poster: WritableSignal<ViewerImage>;
 }
-/**
- * Converts the given day and images into the moment structure
- */
-export const toMoment = ([day, images]: [number, DriveImageExt[]]) => ({ date: String(day), day, poster: signal(images[0]), images });

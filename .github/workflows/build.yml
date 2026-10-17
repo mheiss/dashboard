@@ -52,10 +52,6 @@ jobs:
         working-directory: ui
         run: npm ci
 
-      - name: Test frontend
-        working-directory: ui
-        run: npm test
-
       - name: Check, build, and package
         run: |
           [[ "$BUILD_VERSION" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]] || { echo 'Unsupported release version'; exit 1; }

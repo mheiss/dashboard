@@ -8,17 +8,11 @@
     </header>
     <div class="moment-strip">
       @for (moment of momentsByDay(); track moment.date) {
-        <button
-          type="button"
-          class="moment-tile"
-          (click)="openMomentView(moment)"
-          [title]="moment.poster().image.name"
-          aria-haspopup="dialog"
-        >
-          <img [alt]="moment.poster().image.name" [blobSrc]="moment.poster().thumbnail$ | async" />
+        <button type="button" class="moment-tile" (click)="openMomentView(moment)" [title]="moment.poster().name" aria-haspopup="dialog">
+          <img [alt]="moment.poster().name" [blobSrc]="moment.poster().thumbnail$ | async" />
           <div class="moment-caption">
             <span class="moment-day">{{ moment.day }}</span>
-            <span class="moment-month">{{ moment.poster().image.takenAt.date | date: 'MMMM' }}</span>
+            <span class="moment-month">{{ moment.poster().takenAt | date: 'MMMM' }}</span>
           </div>
           <span class="photo-count">{{ moment.images.length }}</span>
         </button>
@@ -61,10 +55,10 @@
         class="photo-row"
         [style.gridTemplateColumns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
       >
-        @for (imageExt of row; track imageExt.image.id) {
-          <button type="button" class="photo-tile" (click)="openDetailView(imageExt)" [title]="imageExt.image.name" aria-haspopup="dialog">
-            <img [alt]="imageExt.image.name" [blobSrc]="imageExt.thumbnail$ | async" />
-            <span class="photo-caption">{{ imageExt.image.takenAt.date | date: 'dd. MMM yyyy' }}</span>
+        @for (image of row; track image.id) {
+          <button type="button" class="photo-tile" (click)="openDetailView(image)" [title]="image.name" aria-haspopup="dialog">
+            <img [alt]="image.name" [blobSrc]="image.thumbnail$ | async" />
+            <span class="photo-caption">{{ image.takenAt | date: 'dd. MMM yyyy' }}</span>
           </button>
         }
       </div>

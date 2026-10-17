@@ -1,6 +1,6 @@
 # Dashboard Backend
 
-Quarkus owns Microsoft authentication, scheduled synchronization, calendar grouping, OneDrive metadata, photo paging, and disk caching. Angular reads the cached household view through public GraphQL and receives `dashboardChanged` invalidations over `graphql-transport-ws` without login. Metadata queries never call Microsoft. Binary media uses public HTTP; originals are downloaded only when requested. Account/source setup requires the local admin login.
+Quarkus owns Microsoft authentication, scheduled synchronization, calendar grouping, OneDrive metadata, photo paging, disk caching, openHAB item handling, and motion snapshot storage. Angular reads the cached household view through public GraphQL and receives dataset invalidations and client actions over `graphql-transport-ws` without login. Metadata queries never call Microsoft. Binary media uses public HTTP; originals are downloaded only when requested. Account/source setup requires the local admin login.
 
 ## Requirements
 
@@ -34,10 +34,12 @@ Backend sources live under `cloud.heiss.dashboard`, grouped by responsibility:
 - `config`: application configuration mapping.
 - `microsoft`: account/source management, OAuth, Graph requests, subscriptions, and webhooks.
 - `microsoft.model`: top-level account/source request and response records.
+- `openhab`: upstream item connection, security commands, doorbell/motion decisions, and GraphQL contracts.
 - `persistence`: Hibernate store and transaction helpers.
 - `persistence.entity`: one entity or composite ID class per file, including local dashboard users.
 - `persistence.model`: account, source, and photo snapshot records, separate from managed entities.
 - `photos`: OneDrive synchronization and binary media caching/serving.
+- `protect`: persistent motion snapshots, grouping, retention, and media serving.
 - `proxy`: streaming HTTP forwarding and dedicated openHAB/go2rtc WebSocket bridges.
 - `security`: local sessions, browser request checks, and token encryption.
 - `sync`: background coordination and dashboard change notifications.
@@ -58,7 +60,7 @@ Configure runtime settings either in a protected `config/application.properties`
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Confidential application's client ID and secret. |
 | `MICROSOFT_REDIRECT_URI` | Exact registered Web callback, e.g. `https://dashboard.example.lan/api/accounts/callback`. |
 | `MICROSOFT_WEBHOOK_URL` | Public `https://.../api/graph/webhook`; omit to use scheduled reconciliation only. |
-| `DASHBOARD_MEDIA_DIRECTORY` | Persistent cache directory; defaults to `./data/media`, or `./dev/data/onedrive` with the local dev configuration. |
+| `DASHBOARD_MEDIA_DIRECTORY` | Persistent photo cache and motion snapshot directory; defaults to `./data/media`, or `./dev/data/onedrive` with the local dev configuration. Snapshots use its `protect/` subdirectory. |
 | `DASHBOARD_ORIGINAL_CACHE_BYTES` | Original-cache quota; defaults to 10 GiB. Individual originals are limited to the smaller of this quota and 512 MiB. |
 | `DASHBOARD_THUMBNAIL_CACHE_BYTES` | Thumbnail-cache quota; defaults to 1 GiB. Individual thumbnails are limited to 20 MiB. |
 | `DASHBOARD_UI_BASE_PATH` | UI return path; defaults to `/` for both embedded and separately served Angular builds. |
@@ -119,13 +121,15 @@ java -jar build/quarkus-app/quarkus-run.jar
 
 Quinoa builds the sibling UI with `/` as its base href, hosts it at the HTTP root, and serves SPA deep links. All dashboard backend endpoints live under `/api`; unknown API routes return HTTP 404 instead of the SPA page. No deployment-specific UI configuration is needed at build time. Angular requests `GET /api/config` from the backend before startup. To serve Angular separately, build it normally and proxy `/api/**` to the backend, including WebSocket upgrades.
 
+`GET /api/config` returns only the frontend model: `sitemapUrl` from `openhab.sitemap`, `evccUrl` from `evcc.url`, and `cameras` from `protect.cameras`. Camera IDs, labels, and property order are preserved. Backend item mappings and other configuration fields are not returned; the on-disk JSON format remains unchanged.
+
 Automated tests use H2 in PostgreSQL compatibility mode, mocked Graph responses, and an actual Quarkus HTTP/WebSocket test server. Test-only fixture passwords/keys are not production defaults. Real PostgreSQL schema initialization, live Microsoft refresh/subscriptions/shared-folder capabilities, and multi-device deployment still require an environment integration test.
 
 ## Deployment Packages And Releases
 
 Release packages currently cover fresh installations only. Updating existing installations between releases is not yet supported or documented.
 
-GitHub Actions runs frontend tests, backend tests, Spotless, and the combined production build on every push and pull request. Download the `dashboard` artifact from the successful **Build** run. It contains `dashboard-1.0.0-SNAPSHOT.zip` and `SHA256SUMS` and is retained for 14 days.
+GitHub Actions runs backend tests, Spotless, and the combined production build on every push and pull request. Download the `dashboard` artifact from the successful **Build** run. It contains `dashboard-1.0.0-SNAPSHOT.zip` and `SHA256SUMS` and is retained for 14 days.
 
 Publish a GitHub Release for a tag such as `v1.0.0` to run the **Release** pipeline. It checks out that exact tag, runs the same checks, and attaches `dashboard-v1.0.0.zip` and `SHA256SUMS` to the release. Tag names must start with a letter or digit and contain only letters, digits, dots, underscores, and hyphens. The workflow files must be present in the tagged commit. Release assets remain available independently of the temporary Actions artifacts.
 
@@ -192,6 +196,18 @@ Ensure the reverse proxy preserves the public host and conveys the public scheme
 
 The camera bridge proxies WebRTC signaling, not the WebRTC media connection. Configure go2rtc streams as `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching public `protect.cameras` IDs. Clients still need connectivity to the media candidates advertised by go2rtc; configure ICE/TURN and network access as appropriate. Embedded openHAB sitemap and EVCC pages remain separate URLs and must be reachable directly from the browser over HTTPS with iframe embedding allowed.
 
+### Backend Item Handling
+
+The backend maintains one openHAB item connection, independent of browser sessions. It reads initial states through authenticated REST, processes `ItemStateUpdatedEvent` messages, sends five-second heartbeats, and reconnects after connection failures. Item and camera mappings come from `dashboard.ui-config-file`: `openhab.items.security`, `openhab.items.pin`, `openhab.items.doorbell`, `openhab.doorbellCamera`, and `protect.cameras`. Restart the backend after changing these mappings.
+
+Each configured camera registers `<CapitalizedCameraId>_Camera_Motion` and `<CapitalizedCameraId>_Camera_SmartMotion`. Motion transitions to ON from a known non-ON state select the matching camera and queue a snapshot. Initial ON states and repeated ON motion updates do not create detections. Positive doorbell updates select the configured doorbell camera without taking a motion snapshot. PIN commands are sent to the configured PIN item through backend REST; clients never interpret upstream item topics or submit arbitrary item names.
+
+The public `dashboardAction` GraphQL subscription delivers `SHOW_CAMERA`, `SECURITY_STATE`, `SNAPSHOTS_CHANGED`, and an initial `SYNC`. Camera actions are not replayed to new clients. Angular only wakes the tablet, navigates to the requested camera, renders security state, and refreshes the snapshot gallery. `securityArmed` returns the current state, or null before a successful state read; `submitSecurityPin` submits a numeric PIN without logging its value.
+
+The backend downloads snapshots directly from go2rtc, including when no browser is open. Two capture workers and a queue of 32 requests bound concurrency; each JPEG is limited to 20 MiB with a ten-second download timeout. A capture failure is logged without preventing camera navigation. Multiple browsers do not multiply captures.
+
+JPEGs and JSON metadata are stored atomically in `<dashboard.media-directory>/protect/`, separate from the OneDrive cache. The newest 20 groups are retained; groups span 30 seconds from their first capture and prefer the latest smart snapshot, otherwise the latest regular snapshot. `motionGroups` supplies the grouped gallery, and `/api/media/protect/{id}` serves stored JPEGs. Snapshots survive backend restarts; cleanup removes older groups and interrupted writes. Anyone able to reach the dashboard can read this shared camera history, so keep the media directory persistent and the dashboard restricted to the trusted household network.
+
 ### Deployment
 
 Keep the outer HTTPS reverse proxy, with WebSocket support and suitable idle timeouts. Forward all dashboard requests to the backend without stripping integration prefixes. Quinoa already serves the production UI and SPA fallback. For a same-machine deployment, terminate HTTPS for `dashboard.home.arpa` at the proxy and forward requests unchanged to `http://127.0.0.1:8080`.
@@ -215,6 +231,7 @@ Run the focused fixture tests from the backend directory:
 
 ```powershell
 .\gradlew.bat test --tests cloud.heiss.dashboard.proxy.IntegrationProxyTest
+.\gradlew.bat test --tests "cloud.heiss.dashboard.openhab.*" --tests cloud.heiss.dashboard.protect.MotionSnapshotsTest
 ```
 
 The tests use local upstream fixtures and an artificial token to verify HTTP forwarding, credential isolation, origin rejection, and WebSocket messages and closure. They do not validate live openHAB/go2rtc services or WebRTC media connectivity.
@@ -226,9 +243,10 @@ All dashboard HTTP APIs and WebSockets share the `/api` namespace; SPA navigatio
 Register the Microsoft Web redirect URI and set `MICROSOFT_REDIRECT_URI` to the public `/api/accounts/callback` URL. If using Microsoft webhooks, configure `MICROSOFT_WEBHOOK_URL` and its public proxy rule for `/api/graph/webhook`.
 
 - `GET /api/config`: public UI configuration from the backend-owned runtime file, with `Cache-Control: no-store`; unavailable or invalid files return HTTP 503.
-- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries.
-- `WS /api/graphql`: public `dashboardChanged`; an initial revision is emitted after subscriber registration.
+- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries; cached `securityArmed` and `motionGroups`; the `submitSecurityPin` mutation.
+- `WS /api/graphql`: public `dashboardChanged` and `dashboardAction`; subscribers receive an initial revision or `SYNC`, not historical camera actions.
 - `GET /api/media/images/{opaque-id}/thumbnail` and `/original`: public access, private ETag caching, streamed bytes.
+- `GET /api/media/protect/{opaque-id}`: public stored motion JPEGs with private caching.
 - `/api/accounts` and its source/connect/sync endpoints: admin-only setup operations. OAuth remains HTTP rather than GraphQL.
 - `/api/session`, `/api/session/logout`, and `/api/j_security_check`: local admin session management. No application-specific request header is required; standard browser metadata rejects cross-origin requests, including WebSocket upgrades.
 - `POST /api/graph/webhook`: public validation challenge or validated subscription/client-state notification; only durable queueing happens in the callback.

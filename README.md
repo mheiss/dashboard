@@ -83,7 +83,7 @@ Stop if checksum verification fails. These are first-install commands; do not ex
 | `/opt/dashboard/releases/<version>/` | Extracted application, including `quarkus-app/` and `examples/`. |
 | `/opt/dashboard/latest` | Symlink to the active release directory. |
 | `/etc/dashboard/` | Private `application.properties` and public `config.json`. |
-| `/var/lib/dashboard/media/` | Persistent writable photo cache. PostgreSQL stores database data separately. |
+| `/var/lib/dashboard/media/` | Persistent writable photo cache and motion snapshots. PostgreSQL stores database data separately. |
 
 ### 2. Create The Database
 
@@ -142,7 +142,7 @@ Keep `quarkus.http.host=127.0.0.1` and the loopback proxy trust settings for thi
 
 All dashboard APIs use `/api`; UI navigation stays at the HTTP root. Register the Microsoft Web redirect URI at `/api/accounts/callback`. If using public webhooks, configure the webhook URL and its public proxy rule for `/api/graph/webhook`.
 
-`config.json` holds the openHAB, EVCC, and camera settings, not Microsoft source selections. It is served publicly by `/api/config`; **never put credentials in it**. The properties file contains private secrets and must stay out of Git. Advanced runtime settings and environment overrides are covered in the backend reference: [server/README.md](server/README.md) on GitHub, or `BACKEND.md` in the release ZIP.
+`config.json` holds the openHAB, EVCC, and camera settings, not Microsoft source selections. The backend exposes only `sitemapUrl`, `evccUrl`, and `cameras` through public `/api/config`; **never put credentials in the JSON file**. The properties file contains private secrets and must stay out of Git. Advanced runtime settings and environment overrides are covered in the backend reference: [server/README.md](server/README.md) on GitHub, or `BACKEND.md` in the release ZIP.
 
 ### 5. Start With Systemd
 
@@ -209,7 +209,9 @@ dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
 
 Use HTTP(S) origins without API paths or embedded credentials, reachable from the backend. Restart the dashboard after changing properties. Environment alternatives are `DASHBOARD_OPENHAB_URL`, `DASHBOARD_OPENHAB_TOKEN`, and `DASHBOARD_GO2RTC_URL`. Unconfigured integrations return HTTP 503; the rest of the dashboard remains available.
 
-The browser uses `/api/openhab/*` for REST and `/api/ws/openhab` for events and commands. Camera snapshots use `/api/webrtc/*`; signaling uses `/api/ws/webrtc`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. These integration routes do not require admin login, so anyone able to reach the dashboard can access cameras and issue openHAB commands. Keep the deployment on the trusted household network and protect the private token.
+The backend owns openHAB item states, PIN commands, and doorbell/motion decisions through one upstream connection. Clients receive camera-selection and security-state actions through `/api/graphql`, without parsing openHAB items. Motion snapshots are captured even without connected browsers and stored with metadata under `/var/lib/dashboard/media/protect/`; the newest 20 detection groups are shared through GraphQL and `/api/media/protect/{id}`. Restart the backend after changing item or camera mappings in `config.json`.
+
+Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. These integration routes and stored camera history do not require admin login, so anyone able to reach the dashboard can access cameras and issue openHAB commands. Keep the deployment on the trusted household network and protect the private token.
 
 Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `protect.cameras`. WebRTC media still connects using go2rtc's advertised network candidates; the backend proxies signaling, not media. Embedded openHAB and EVCC pages still require direct browser access.
 

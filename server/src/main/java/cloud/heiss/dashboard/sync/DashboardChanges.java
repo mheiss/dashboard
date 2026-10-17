@@ -17,6 +17,19 @@ public class DashboardChanges {
     @Inject
     DashboardStore store;
     private final Set<MultiEmitter<? super Change>> subscribers = ConcurrentHashMap.newKeySet();
+    private final Set<MultiEmitter<? super DashboardAction>> actionSubscribers = ConcurrentHashMap.newKeySet();
+
+    public void action(DashboardAction action) {
+        actionSubscribers.forEach(subscriber -> subscriber.emit(action));
+    }
+
+    public Multi<DashboardAction> actions() {
+        return Multi.createFrom().<DashboardAction> emitter(subscriber -> {
+            actionSubscribers.add(subscriber);
+            subscriber.onTermination(() -> actionSubscribers.remove(subscriber));
+            subscriber.emit(new DashboardAction("SYNC", null, null));
+        }, 64).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    }
 
     public void publish(String dataset, long revision) {
         var change = new Change(dataset, revision);

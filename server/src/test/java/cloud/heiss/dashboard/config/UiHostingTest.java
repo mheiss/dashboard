@@ -23,8 +23,8 @@ class UiHostingTest {
 
     @Test
     void publicConfigurationRemainsAnApiResponse() {
-        given().when().get("/api/config").then().statusCode(200).contentType("application/json").body("openhab.items.security",
-                equalTo("Security"));
+        given().when().get("/api/config").then().statusCode(200).contentType("application/json")
+                .body("cameras.entry", equalTo("Eingang")).body("size()", equalTo(3));
     }
 
     @Test

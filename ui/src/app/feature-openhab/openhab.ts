@@ -12,5 +12,5 @@ export class Openhab {
   private readonly config = inject(AppConfigService);
   private readonly sanitizer = inject(DomSanitizer);
 
-  readonly sitemapUrl = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.config.config().openhab.sitemap));
+  readonly sitemapUrl = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.config.config().sitemapUrl));
 }

@@ -47,6 +47,12 @@ export interface DashboardChange {
   timestamp: string;
 }
 
+export interface DashboardAction {
+  type: 'SHOW_CAMERA' | 'SECURITY_STATE' | 'SNAPSHOTS_CHANGED' | 'SYNC';
+  camera: string | null;
+  armed: boolean | null;
+}
+
 export interface SourceView {
   id: string;
   kind: string;

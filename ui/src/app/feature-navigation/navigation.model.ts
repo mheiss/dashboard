@@ -1,4 +1,4 @@
-import { effect, signal, Signal } from '@angular/core';
+import { effect, signal } from '@angular/core';
 
 export interface NavigationIcons {
   normal: string;

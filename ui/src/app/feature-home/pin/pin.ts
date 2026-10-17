@@ -44,8 +44,8 @@ export class Pin implements OnInit {
     this.pinActor.start();
 
     // Close the popup when the security is turned off
-    this.openHab.security.value$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
-      if (!value && this.isVerifying()) {
+    this.openHab.armed$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((value) => {
+      if (value === false && this.isVerifying()) {
         this.pinActor.send(verifyResponse(true));
         this.dialogRef.close();
         confettiSequence();
@@ -61,7 +61,7 @@ export class Pin implements OnInit {
 
   private doVerifyPin(digits: string[]) {
     const pinCode = digits.join('');
-    this.openHab.pin.sendPinCode(pinCode);
+    void this.openHab.submitPin(pinCode).catch(() => this.pinActor.send(verifyResponse(false)));
   }
 }
 

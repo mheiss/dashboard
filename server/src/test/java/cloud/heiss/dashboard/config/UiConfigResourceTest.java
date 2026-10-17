@@ -36,12 +36,38 @@ class UiConfigResourceTest {
     void reloadsTheFileOnEachRequest() throws Exception {
         Files.writeString(file, "{\"evcc\":{\"url\":\"https://first.example.lan\"}}");
         try (var response = resource.configuration()) {
-            assertEquals("https://first.example.lan", ((JsonNode) response.getEntity()).path("evcc").path("url").asText());
+            assertEquals("https://first.example.lan", ((JsonNode) response.getEntity()).path("evccUrl").asText());
             assertEquals("no-store", response.getHeaderString("Cache-Control"));
         }
         Files.writeString(file, "{\"evcc\":{\"url\":\"https://second.example.lan\"}}");
         try (var response = resource.configuration()) {
-            assertEquals("https://second.example.lan", ((JsonNode) response.getEntity()).path("evcc").path("url").asText());
+            assertEquals("https://second.example.lan", ((JsonNode) response.getEntity()).path("evccUrl").asText());
+        }
+    }
+
+    @Test
+    void exposesOnlyFrontendSettingsWithCameraOrderPreserved() throws Exception {
+        Files.writeString(file, """
+                {"openhab":{"sitemap":"https://openhab.example.lan/basicui/app","items":{"pin":"Private_Pin"}},
+                 "evcc":{"url":"https://evcc.example.lan"},
+                 "protect":{"cameras":{"garden":"Garden","entry":"Entrance"}},"secret":"private"}
+                """);
+        try (var response = resource.configuration()) {
+            assertEquals(resource.mapper.readTree("""
+                    {"sitemapUrl":"https://openhab.example.lan/basicui/app","evccUrl":"https://evcc.example.lan",
+                     "cameras":{"garden":"Garden","entry":"Entrance"}}
+                    """), response.getEntity());
+            var cameras = ((JsonNode) response.getEntity()).path("cameras").fieldNames();
+            assertEquals("garden", cameras.next());
+            assertEquals("entry", cameras.next());
+        }
+    }
+
+    @Test
+    void missingSettingsHaveFrontendCompatibleDefaults() throws Exception {
+        Files.writeString(file, "{}");
+        try (var response = resource.configuration()) {
+            assertEquals(resource.mapper.readTree("{\"sitemapUrl\":\"\",\"evccUrl\":\"\",\"cameras\":{}}"), response.getEntity());
         }
     }
 

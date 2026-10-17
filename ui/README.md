@@ -24,7 +24,7 @@ On mobile, `/home` and `/calendar` show the calendar at full height, while `/gal
 - Calendar selection and colors are managed in the protected backend setup view.
 - The gallery column displays photos from configured OneDrive folders.
 - Memory tiles show same-day photos from previous years. The photo grid uses two columns on mobile and smaller tablets, and three on larger screens.
-- Metadata and thumbnails are synchronized on the server. Originals are downloaded and cached there on demand; the existing camera-motion IndexedDB storage remains unchanged.
+- Metadata and thumbnails are synchronized on the server. Originals are downloaded and cached there on demand; camera-motion snapshots are also stored in the backend media directory.
 - Backend GraphQL notifications refresh the gallery and agenda. The gallery requests server-paged images as you scroll.
 - Detail view opens a larger image viewer for an individual photo or a same-day memory group.
 
@@ -50,9 +50,9 @@ The camera screen shows UniFi Protect streams through a local WebRTC integration
 - Streams are started with a short delay between cameras to reduce load on the streaming backend.
 - Streams stop when the tablet screen turns off and restart when it turns on again.
 
-Regular and smart motion items are derived from every configured camera ID by uppercasing its first character and appending `_Camera_Motion` or `_Camera_SmartMotion`. For example, `entry` registers `Entry_Camera_Motion` and `Entry_Camera_SmartMotion`. They capture a fresh camera snapshot on an OFF-to-ON transition, wake the tablet, and select that camera. Initial ON states and repeated ON updates do not trigger captures.
+The backend derives regular and smart motion items from every configured camera ID by uppercasing its first character and appending `_Camera_Motion` or `_Camera_SmartMotion`. For example, `entry` registers `Entry_Camera_Motion` and `Entry_Camera_SmartMotion`. It processes live transitions, captures and stores snapshots, and sends a camera-selection action to connected clients. Initial ON states and repeated ON motion updates do not trigger captures. The frontend only wakes the tablet and navigates to the requested camera; it does not connect to openHAB item events.
 
-The recent-detections filmstrip groups all cameras into 30-second windows starting with each window's first capture. Each window shows its latest smart snapshot when available, otherwise its latest regular snapshot. Opening a window shows all its images chronologically in the full-screen gallery, starting with the preferred image.
+The backend groups recent detections from all cameras into 30-second windows starting with each window's first capture and retains the newest 20 groups. Each window shows its latest smart snapshot when available, otherwise its latest regular snapshot. Opening a window shows all its images chronologically in the full-screen gallery, starting with the preferred image. Images and metadata persist under `<dashboard.media-directory>/protect/` and are shared by all clients; capture continues when no browser is open. The browser only renders GraphQL groups and backend media URLs, without IndexedDB snapshot storage.
 
 
 ## Tablet/Kiosk Behavior
@@ -117,7 +117,7 @@ Configure the sibling Quarkus backend with PostgreSQL, Microsoft app credentials
 
 Set `openhab.sitemap` in the selected environment config to the openHAB Basic UI sitemap URL that should be embedded on the OpenHAB screen. The URL must be reachable from the tablet browser.
 
-Set `openhab.items.security`, `openhab.items.pin`, and `openhab.items.doorbell` to the corresponding openHAB item names. These names control initial state requests, WebSocket updates, and PIN commands. Set `openhab.doorbellCamera` to a camera ID present in `protect.cameras`; this camera is selected when the doorbell rings, regardless of camera ordering.
+Set `openhab.items.security`, `openhab.items.pin`, and `openhab.items.doorbell` to the corresponding openHAB item names. The backend uses these names for initial state requests, upstream event handling, and PIN commands. Set `openhab.doorbellCamera` to a camera ID present in `protect.cameras`; this camera is selected when the doorbell rings, regardless of camera ordering. Restart the backend after changing item or camera mappings.
 
 ### EVCC Setup
 
@@ -154,10 +154,11 @@ Restart `npm start` after changing the proxy file. Angular still serves SPA navi
 Expected paths:
 
 - `/api/config`: public backend-owned runtime UI settings.
-- `/api/graphql`: backend queries and WebSocket subscriptions, preserving `graphql-transport-ws`.
+- `/api/graphql`: backend queries, PIN commands, and `dashboardChanged`/`dashboardAction` subscriptions, preserving `graphql-transport-ws`.
 - `/api/accounts*`, `/api/session*`, `/api/j_security_check`, `/api/media/*`: same-origin backend setup, sessions, and binary images.
-- `/api/openhab/*`: backend proxy for openHAB REST requests, including initial item states.
-- `/api/ws/openhab`: backend WebSocket bridge for openHAB events and commands.
+- `/api/openhab/*`: available backend proxy for openHAB REST requests; dashboard item handling uses the backend service instead.
+- `/api/ws/openhab`: available backend WebSocket bridge; dashboard item events and commands no longer use it from the browser.
+- `/api/media/protect/{id}`: stored motion snapshots from the backend media directory.
 - `/api/webrtc/*`: backend HTTP proxy for go2rtc, including `frame.jpeg?src=unifi_<cameraId>` snapshots.
 - `/api/ws/webrtc?src=unifi_<cameraId>`: backend WebSocket bridge for camera signaling.
 
@@ -200,7 +201,7 @@ npm run build
 
 The production build is written to `dist/Dashboard/browser`.
 
-Run `npm test` for the Angular/Vitest adapter tests. Standalone and Quinoa-embedded production builds both use `/` as the base href and serve the UI from root. The frontend deployment script does not deploy the backend.
+There is currently no frontend test runner configured. Standalone and Quinoa-embedded production builds both use `/` as the base href and serve the UI from root. The frontend deployment script does not deploy the backend.
 
 ### Format
 
@@ -245,7 +246,8 @@ src/app/feature-config     Runtime configuration model and service
 src/app/image-viewer       Shared fullscreen image viewer, image model, and blob directive
 src/app/backend           GraphQL DTOs, subscriptions, and local session guards
 src/app/feature-setup      Admin login and protected Microsoft account/source setup
-src/app/ms-graph           Thin calendar/gallery display adapters and retained motion storage
+src/app/feature-home/calendar  Calendar display model and backend service
+src/app/feature-home/gallery   Gallery display model and backend image service
 src/app/utils              Shared visibility, layout, date, debug, and WebSocket helpers
 ../server/config           Backend-owned runtime configuration and public sample
 src/proxy                  Angular development proxy configuration and sample
@@ -255,18 +257,21 @@ scripts                   Deployment configuration and PowerShell deploy script
 ### Architecture Notes
 
 - `src/main.ts` requests `/api/config` from the backend before application startup; there are no MSAL providers or Microsoft HTTP interceptors.
+- The backend projects the runtime JSON into `AppConfig`: `sitemapUrl`, `evccUrl`, and ordered `cameras`. Backend-only item mappings are not sent to the frontend.
 - Home, Calendar, and Gallery require a local session; Setup requires the admin role.
-- `Openhab` embeds the `openhab.sitemap` URL from runtime configuration as the OpenHAB screen.
-- `Evcc` embeds the `evcc.url` URL from runtime configuration as the Wallbox screen.
+- `Openhab` embeds the `sitemapUrl` URL from runtime configuration as the OpenHAB screen.
+- `OpenHABService` executes backend camera actions and displays security state; item parsing, state transitions, and PIN forwarding run in Quarkus.
+- `MotionService` renders server-grouped motion snapshots and refreshes on backend notifications; capture and persistence run in Quarkus.
+- `Evcc` embeds the `evccUrl` URL from runtime configuration as the Wallbox screen.
 - `ImageService` reads server-paged GraphQL metadata and grouped moments, then fetches authenticated backend media as blobs.
-- Home and Protect adapt their images to the provider-independent `ViewerImage` model for the shared fullscreen viewer.
+- `ImageService` converts backend image metadata into the provider-independent `ViewerImage` model shared by the gallery and fullscreen viewer. Protect uses the same model for motion snapshots.
 - `CalendarService` displays the server-grouped agenda. Filtering, grouping, sorting, sync, and source persistence happen in Quarkus.
-- `Protect` reads the camera list from `protect.cameras` and passes configured camera names to `WebRTCService`.
+- `Protect` reads the camera list from `cameras` and passes configured camera IDs to `WebRTCService`.
 - `WebRTCService` owns camera stream lifecycle and reacts to screen visibility events to stop or restart streams.
 
 ### Adding or Changing Cameras
 
-Camera IDs and labels are configured in the selected environment config under `protect.cameras`. To add, remove, rename, or reorder cameras, update that object and make sure go2rtc has matching stream names. OpenHAB motion items are registered automatically for each camera using the naming convention described above. Update `openhab.doorbellCamera` if the doorbell's assigned camera changes.
+Camera IDs and labels are configured in the selected environment config under `protect.cameras`. To add, remove, rename, or reorder cameras, update that object and make sure go2rtc has matching stream names. The backend registers openHAB motion items automatically for each camera using the naming convention described above. Update `openhab.doorbellCamera` if the doorbell's assigned camera changes, then restart the backend.
 
 The WebRTC stream names are generated as:
 
