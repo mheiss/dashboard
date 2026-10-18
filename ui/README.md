@@ -15,9 +15,9 @@ On tablets and larger screens, the dashboard has four primary sections in the na
 
 ## Home Screen
 
-The Home screen is the default landing page and requires no login; the Quarkus backend owns Microsoft accounts and synchronization. Account/source setup requires the local admin login.
+The Home screen is the default view; the Quarkus backend owns Microsoft accounts and synchronization. Anonymous startup shows a Keycloak sign-in popup, which can be dismissed for read-only viewing. Account/source setup and PIN commands require the `dashboard` client's `admin` role.
 
-On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. All three routes use the local session guard.
+On mobile, `/home` and `/calendar` show the calendar at full height, while `/gallery` shows the photo gallery at full height. The bottom navigation switches between these dedicated pages. At 640px and above, all three routes show the unified calendar and gallery layout with a single Home navigation button. Read-only views remain public; Setup uses the administrator guard.
 
 - The calendar column shows events from the configured calendars for the next few days.
 - Compact day headers highlight today; all-day and timed events stay together without nested day cards.
@@ -88,7 +88,7 @@ Example structure:
 ```json
 {
 	"openhab": {
-		"sitemap": "https://openhab.example.lan/basicui/app",
+		"sitemap": "https://openhab.home.arpa/basicui/app",
 		"items": {
 			"security": "Security",
 			"pin": "Security_Pin",
@@ -97,7 +97,7 @@ Example structure:
 		"doorbellCamera": "entry"
 	},
 	"evcc": {
-		"url": "https://evcc.example.lan"
+		"url": "https://evcc.home.arpa"
 	},
 	"protect": {
 		"cameras": {
@@ -111,7 +111,7 @@ Example structure:
 
 ### Microsoft Graph Setup
 
-Configure the sibling Quarkus backend with PostgreSQL, Microsoft app credentials, independent encryption keys, a local admin password, and callback URLs. See the backend README for registration and deployment details. Click the settings icon and enter the admin password in the popup, connect each owner's personal Microsoft account, and select calendars/folders in `/setup`. Viewing devices open `/home` without login; they do not receive Microsoft tokens or run OneDrive delta synchronization.
+Configure the sibling Quarkus backend with PostgreSQL, Microsoft app credentials, a token-cache encryption key, and callback URLs. Dashboard authentication uses your Keycloak realm, for example `https://login.home.arpa/realms/dashboard`, public client `dashboard`, and client role `admin`; see [Keycloak setup](../server/README.md#keycloak-authentication). The sign-in popup redirects to Keycloak using Authorization Code Flow with PKCE `S256`. Access and refresh tokens stay in memory, never in localStorage or sessionStorage. Silent SSO restores authentication after reload where browser privacy settings permit; otherwise sign in interactively again. Logout redirects to Keycloak. Connect each owner's Microsoft account and select calendars/folders in `/setup`; the browser never receives Microsoft tokens or runs OneDrive synchronization.
 
 ### openHAB Setup
 
@@ -155,14 +155,14 @@ Expected paths:
 
 - `/api/config`: public backend-owned runtime UI settings.
 - `/api/graphql`: backend queries, PIN commands, and `dashboardChanged`/`dashboardAction` subscriptions, preserving `graphql-transport-ws`.
-- `/api/accounts*`, `/api/session*`, `/api/media/*`: same-origin backend setup, JSON login/sessions, and binary images.
+- `/api/accounts*`, `/api/media/*`: same-origin bearer-protected setup and public binary images. Microsoft callback GET relays to the UI, which completes linking with an authenticated POST.
 - `/api/openhab/*`: available backend proxy for openHAB REST requests; dashboard item handling uses the backend service instead.
 - `/api/ws/openhab`: available backend WebSocket bridge; dashboard item events and commands no longer use it from the browser.
 - `/api/media/protect/{id}`: stored motion snapshots from the backend media directory.
 - `/api/webrtc/*`: backend HTTP proxy for go2rtc, including `frame.jpeg?src=unifi_<cameraId>` snapshots.
 - `/api/ws/webrtc?src=unifi_<cameraId>`: backend WebSocket bridge for camera signaling.
 
-The integration proxy accepts WebSocket upgrades only on the exact `/api/ws/openhab` and `/api/ws/webrtc` paths; its `/api/openhab/*` and `/api/webrtc/*` routes are HTTP-only. GraphQL also supports subscriptions at `/api/graphql`. The backend automatically rejects cross-origin browser API requests using standard browser metadata. The integration routes do not require an admin session; network access to the dashboard also grants access to camera data and proxied openHAB commands.
+The integration proxy accepts WebSocket upgrades only on the exact `/api/ws/openhab` and `/api/ws/webrtc` paths; its `/api/openhab/*` and `/api/webrtc/*` routes are HTTP-only. GraphQL also supports subscriptions at `/api/graphql`. The backend automatically rejects cross-origin browser API requests using standard browser metadata. Read-only camera data remains public. Upstream HTTP writes and the openHAB WebSocket bridge require an admin bearer token; the UI uses the protected GraphQL PIN mutation rather than that bridge. The interceptor attaches tokens only to same-origin account-management and GraphQL requests, never to upstream integrations or third-party URLs.
 
 Configure `dashboard.proxy.openhab-url`, `dashboard.proxy.openhab-token`, and `dashboard.proxy.go2rtc-url` in the backend's protected runtime properties, or use `DASHBOARD_OPENHAB_URL`, `DASHBOARD_OPENHAB_TOKEN`, and `DASHBOARD_GO2RTC_URL`. Do not put upstream credentials in public `/api/config` JSON or the frontend proxy file. The backend authenticates openHAB REST and WebSockets with the same private token and strips go2rtc's upstream `Origin` header. Missing upstream settings return HTTP 503. See [the backend proxy reference](../server/README.md#smart-home-proxy) for configuration, deployment, and troubleshooting.
 
@@ -176,7 +176,8 @@ For the embedded production UI, configure the HTTPS reverse proxy for `dashboard
 
 - Node.js/npm compatible with the package manager recorded in `package.json`.
 - Angular CLI, usually through `npm run ng` or `npx ng`.
-- A configured Quarkus backend for local sessions and synchronized Microsoft data.
+- A configured Quarkus backend for OIDC token validation and synchronized Microsoft data.
+- Keycloak client redirect URIs for `/auth/callback` and `/silent-check-sso.html`, post-logout `/home`, and the exact frontend web origin, including `http://localhost:4200` for development. Access tokens must include audience `dashboard` and the `admin` client role for administrators.
 - A trusted HTTPS reverse proxy for production. Integration forwarding is provided by Quarkus.
 - go2rtc for WebRTC camera streaming.
 - An openHAB Basic UI sitemap URL that the tablet can reach.
@@ -195,7 +196,7 @@ The development server uses `src/proxy/proxy.dev.json` by default. All `target` 
 
 ### Build
 
-All frontend REST calls use generated OpenAPI service classes and models: configuration, sessions, account setup/synchronization, photo blobs, motion snapshots, and camera poster frames. Do not add handwritten REST calls or invoke generated functions directly from consumers. The authoritative, editable contract is the repository-root `../openapi.yaml`; both backend interfaces/models and frontend services/models are generated from it. GraphQL transport and WebSocket signaling remain separate and unchanged.
+All dashboard REST calls use generated OpenAPI service classes and models: configuration, account setup/synchronization, photo blobs, motion snapshots, and camera poster frames. Do not add handwritten REST calls or invoke generated functions directly from consumers. The authoritative, editable contract is the repository-root `../openapi.yaml`; both backend interfaces/models and frontend services/models are generated from it. Keycloak's adapter owns OIDC requests; GraphQL transport and WebSocket signaling remain separate.
 
 After editing the contract, regenerate the frontend from this directory:
 
@@ -203,7 +204,7 @@ After editing the contract, regenerate the frontend from this directory:
 npm run gen:api
 ```
 
-This also runs automatically before `npm start` and `npm run build`. No backend build or running server is required. The backend generates its own sources automatically during Java compilation, or explicitly with `../server/gradlew.bat -p ../server openApiGenerate`. Do not edit generated sources.
+This also runs automatically before `npm start` and `npm run build`. No backend build or running server is required. The backend generates its own sources automatically during Java compilation, or explicitly with `../server/gradlew.bat -p ../server genApi`. Do not edit generated sources.
 
 ```powershell
 npm run build
@@ -254,7 +255,7 @@ src/app/feature-evcc       EVCC wallbox screen
 src/app/feature-protect    UniFi Protect camera screen and WebRTC streaming
 src/app/feature-config     Runtime configuration model and service
 src/app/image-viewer       Shared fullscreen image viewer, image model, and blob directive
-src/app/backend           GraphQL DTOs, subscriptions, and local session guards
+src/app/backend           GraphQL DTOs, subscriptions, and Keycloak authentication
 src/app/feature-setup      Admin login and protected Microsoft account/source setup
 src/app/feature-home/calendar  Calendar display model and backend service
 src/app/feature-home/gallery   Gallery display model and backend image service
@@ -268,7 +269,7 @@ scripts                   Deployment configuration and PowerShell deploy script
 
 - `src/main.ts` requests `/api/config` from the backend before application startup; there are no MSAL providers or Microsoft HTTP interceptors.
 - The backend projects the runtime JSON into `AppConfig`: `sitemapUrl`, `evccUrl`, and ordered `cameras`. Backend-only item mappings are not sent to the frontend.
-- Home, Calendar, and Gallery require a local session; Setup requires the admin role.
+- Home, Calendar, and Gallery support read-only access after dismissing the sign-in popup; Setup and PIN commands require the `dashboard` client role `admin`.
 - `Openhab` embeds the `sitemapUrl` URL from runtime configuration as the OpenHAB screen.
 - `OpenHABService` executes backend camera actions and displays security state; item parsing, state transitions, and PIN forwarding run in Quarkus.
 - `MotionService` renders server-grouped motion snapshots and refreshes on backend notifications; capture and persistence run in Quarkus.
@@ -300,7 +301,7 @@ The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.htm
 
 ### Common Troubleshooting
 
-- **Sign-in fails**: verify the backend is running, local users were bootstrapped, the session paths are proxied, and the browser origin is allowed.
+- **Sign-in fails**: verify Keycloak reachability, public client `dashboard`, PKCE, redirect/web-origin allowlists, audience `dashboard`, and the `admin` client role. Local users and session endpoints are no longer used.
 - **Calendars missing**: open Setup as admin, discover and enable the intended sources, then inspect account synchronization status.
 - **Gallery folders missing**: verify the selected server-side folder path is relative to the owner's drive root and accessible to that connected account.
 - **OpenHAB screen is blank**: verify `openhab.sitemap` in the selected environment config is reachable from the tablet and that the configured sitemap is available in openHAB Basic UI.

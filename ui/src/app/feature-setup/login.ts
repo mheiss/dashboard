@@ -1,6 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { DialogRef } from '@angular/cdk/dialog';
+import { Component, inject, Injectable, signal } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { LucideLogIn } from '@lucide/angular';
 import { firstValueFrom } from 'rxjs';
@@ -10,36 +8,32 @@ import { PopupService } from '../popup/popup.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, LucideLogIn, Popup],
+  imports: [LucideLogIn, Popup],
   template: `
     <app-popup title="Einstellungen">
-        <form (ngSubmit)="login()" class="grid gap-3 p-6 max-sm:p-4">
-          <label for="password">Passwort</label>
-          <input id="password" name="password" [(ngModel)]="password" type="password" autocomplete="current-password" required cdkFocusInitial
-            class="w-full min-w-0 rounded-md border border-(--line) bg-(--surface) px-3 py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--accent)" />
+        <div class="grid gap-3 p-6 max-sm:p-4">
+          @if (session.session() && !session.session()?.admin) {
+            <p role="alert">Keine Administratorberechtigung.</p>
+          }
           @if (error()) { <p role="alert" class="text-sm text-[#a52b3d] wrap-anywhere">{{ error() }}</p> }
-          <button type="submit" [disabled]="busy() || !password"
+          <button type="button" (click)="login()" [disabled]="busy()"
             class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white disabled:cursor-default disabled:opacity-50">
-            <svg lucideLogIn aria-hidden="true" class="size-5 shrink-0"></svg> Anmelden
+            <svg lucideLogIn aria-hidden="true" class="size-5 shrink-0"></svg> Mit Keycloak anmelden
           </button>
-        </form>
+        </div>
     </app-popup>
   `,
 })
 export class Login {
-  private readonly session = inject(SessionService);
-  private readonly dialog = inject<DialogRef<string>>(DialogRef);
-  password = '';
+  readonly session = inject(SessionService);
   readonly busy = signal(false);
-  readonly error = signal<string | null>(null);
+  readonly error = signal<string | null>(this.session.error());
 
   async login() {
     this.busy.set(true);
     this.error.set(null);
     try {
-      await this.session.login(this.password);
-      this.password = '';
-      this.dialog.close('authenticated');
+      await this.session.login();
     } catch {
       this.error.set('Anmeldung fehlgeschlagen.');
     } finally {
@@ -48,14 +42,26 @@ export class Login {
   }
 }
 
+@Injectable({ providedIn: 'root' })
+export class LoginPromptService {
+  private readonly session = inject(SessionService);
+  private readonly popup = inject(PopupService);
+  private pending?: Promise<boolean>;
+
+  async requireAdmin(): Promise<boolean> {
+    if (await this.session.load() && this.session.session()?.admin) return true;
+    this.pending ??= firstValueFrom(this.popup.open(Login, {
+      disableClose: false,
+      width: 'min(420px, calc(100vw - 32px))',
+    }).closed).then(() => this.session.session()?.admin ?? false).finally(() => {
+      this.pending = undefined;
+    });
+    return this.pending;
+  }
+}
+
 export const adminGuard: CanActivateFn = async () => {
-  const session = inject(SessionService);
+  const login = inject(LoginPromptService);
   const router = inject(Router);
-  const popup = inject(PopupService);
-  if (await session.load()) return session.session()?.admin || router.createUrlTree(['/home']);
-  const result = await firstValueFrom(popup.open(Login, {
-    disableClose: false,
-    width: 'min(420px, calc(100vw - 32px))',
-  }).closed);
-  return (result === 'authenticated' && session.session()?.admin) || router.createUrlTree(['/home']);
+  return await login.requireAdmin() || router.createUrlTree(['/home']);
 };

@@ -6,7 +6,6 @@ quarkus.datasource.username=dashboard
 quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
 
 dashboard.token-key=REPLACE_SAVED_TOKEN_KEY
-dashboard.admin-password=REPLACE_ADMIN_PASSWORD
 dashboard.ui-base-path=/
 dashboard.ui-config-file=config/config.json
 dashboard.media-directory=C:/dashboard-data/media
@@ -27,4 +26,7 @@ quarkus.http.proxy.proxy-address-forwarding=true
 quarkus.http.proxy.allow-forwarded=false
 quarkus.http.proxy.allow-x-forwarded=true
 quarkus.http.proxy.trusted-proxies=127.0.0.1,::1
-quarkus.http.auth.session.encryption-key=REPLACE_SAVED_SESSION_KEY
+
+# Keycloak bearer tokens; the dashboard client role admin authorizes changes.
+quarkus.oidc.auth-server-url=https://login.home.arpa/realms/dashboard
+quarkus.oidc.token.audience=dashboard

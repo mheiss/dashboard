@@ -1,8 +1,7 @@
 # Dev
-%dev.dashboard.admin-password=${DASHBOARD_ADMIN_PASSWORD:}
 %dev.dashboard.media-directory=${DASHBOARD_MEDIA_DIRECTORY:./dev/data/onedrive}
 %dev.dashboard.ui-base-path=${DASHBOARD_UI_BASE_PATH:/}
-%dev.dashboard.ui-config-file=${DASHBOARD_UI_CONFIG_FILE:dev/config/config.json}
+%dev.dashboard.ui-config-file=${DASHBOARD_UI_CONFIG_FILE:./dev/config/config.json}
 
 # Optional integrations use the backend in development as well.
 # %dev.dashboard.proxy.openhab-url=http://openhab.example.lan:8080

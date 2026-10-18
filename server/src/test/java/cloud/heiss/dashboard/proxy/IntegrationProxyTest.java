@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import cloud.heiss.dashboard.security.OidcTestResource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -46,8 +47,8 @@ class IntegrationProxyTest {
 
     @Test
     void streamsRequestsAndGo2rtcResponsesWithoutBrowserCredentialsOrOrigin() {
-        given().header("Origin", base.toString().replaceFirst("/$", "")).header("Cookie", "dashboard=private")
-                .header("Authorization", "browser-token").contentType("text/plain").body("ON").when()
+        given().header("Origin", base.toString().replaceFirst("/$", "")).header("Cookie", "dashboard=private").auth()
+                .oauth2(OidcTestResource.adminToken()).contentType("text/plain").body("ON").when()
                 .post("/api/webrtc/streams?src=front").then().statusCode(200).body("uri", equalTo("/api/streams?src=front"))
                 .body("method", equalTo("POST")).body("body", equalTo("ON")).body("cookie", nullValue())
                 .body("authorization", nullValue()).body("origin", nullValue());
@@ -55,6 +56,14 @@ class IntegrationProxyTest {
                 .statusCode(200).contentType("image/jpeg").extract().asByteArray());
         assertEquals("a".repeat(131072) + "b".repeat(131072),
                 given().when().get("/api/webrtc/chunked").then().statusCode(200).extract().asString());
+    }
+
+    @Test
+    void proxyWritesRequireDashboardAdminRole() {
+        for (String path : new String[] { "/api/openhab/items/Test", "/api/webrtc/streams" }) {
+            given().body("ON").post(path).then().statusCode(401);
+            given().auth().oauth2(OidcTestResource.token(java.util.Map.of())).body("ON").post(path).then().statusCode(403);
+        }
     }
 
     @Test
@@ -153,7 +162,8 @@ class IntegrationProxyTest {
 
     private WebSocket connect(String path, String origin, SocketListener listener, boolean openhab) throws Exception {
         var builder = HttpClient.newHttpClient().newWebSocketBuilder().header("Origin", origin)
-                .header("Cookie", "dashboard=private").header("Authorization", "browser-token");
+                .header("Cookie", "dashboard=private").header("Authorization",
+                        path.startsWith("/api/ws/openhab") ? "Bearer " + OidcTestResource.adminToken() : "browser-token");
         if (openhab) {
             builder.subprotocols("org.openhab.ws.protocol.default");
         }

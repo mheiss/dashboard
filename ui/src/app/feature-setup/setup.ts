@@ -30,7 +30,19 @@ export class Setup {
 
   constructor() {
     this.backend.changed.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(() => void this.reload());
-    void this.reload();
+    void this.completeConnection();
+  }
+
+  private async completeConnection() {
+    const pending = sessionStorage.getItem('dashboard.microsoft-connection');
+    if (pending) {
+      sessionStorage.removeItem('dashboard.microsoft-connection');
+      await this.run(async () => {
+        const connection: { code: string; state: string } = JSON.parse(pending);
+        await this.accountsApi.completeAccountConnection(connection);
+      });
+    }
+    await this.reload();
   }
 
   async reload() {

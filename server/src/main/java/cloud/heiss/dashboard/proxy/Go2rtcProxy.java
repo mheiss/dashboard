@@ -73,7 +73,7 @@ public class Go2rtcProxy extends HttpProxy implements CameraApi {
         }
     }
 
-    @RouteFilter(900)
+    @RouteFilter(0)
     void forward(RoutingContext context) {
         String path = context.request().path();
         if (path.equals("/api/webrtc/frame.jpeg") && context.request().method() == HttpMethod.GET) {

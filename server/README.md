@@ -1,6 +1,6 @@
 # Dashboard Backend
 
-Quarkus owns Microsoft authentication, scheduled synchronization, calendar grouping, OneDrive metadata, photo paging, disk caching, openHAB item handling, and motion snapshot storage. Angular reads the cached household view through public GraphQL and receives dataset invalidations and client actions over `graphql-transport-ws` without login. Metadata queries never call Microsoft. Binary media uses public HTTP; originals are downloaded only when requested. Account/source setup requires the local admin login.
+Quarkus owns Microsoft authentication, scheduled synchronization, calendar grouping, OneDrive metadata, photo paging, disk caching, openHAB item handling, and motion snapshot storage. Angular reads the cached household view through public GraphQL and receives dataset invalidations and client actions over `graphql-transport-ws` without login. Metadata queries never call Microsoft. Binary media uses public HTTP; originals are downloaded only when requested. Account/source setup, PIN commands, and upstream HTTP writes require a Keycloak access token with the `dashboard` client's `admin` role.
 
 ## Requirements
 
@@ -35,12 +35,12 @@ Backend sources live under `cloud.heiss.dashboard`, grouped by responsibility:
 - `microsoft`: account/source management, OAuth, Graph requests, subscriptions, and webhooks.
 - `openhab`: upstream item connection, security commands, doorbell/motion decisions, and GraphQL contracts.
 - `persistence`: Hibernate store and transaction helpers.
-- `persistence.entity`: one entity or composite ID class per file, including local dashboard users.
+- `persistence.entity`: one entity or composite ID class per file.
 - `persistence.model`: account, source, and photo snapshot records, separate from managed entities.
 - `photos`: OneDrive synchronization and binary media caching/serving.
 - `protect`: persistent motion snapshots, grouping, retention, and media serving.
 - `proxy`: streaming HTTP forwarding and dedicated openHAB/go2rtc WebSocket bridges.
-- `security`: local sessions, browser request checks, and token encryption.
+- `security`: browser request checks and Microsoft token-cache encryption; Quarkus OIDC validates bearer tokens.
 - `sync`: background coordination and dashboard change notifications.
 
 Each handwritten class, record, and configuration interface has its own top-level file; handwritten response values and sync notifications use records. OpenAPI Generator creates REST interfaces and DTO classes under `build/generated/openapi`, not in the handwritten source tree. Tests mirror the responsibility packages. Entity names and table mappings remain independent of the Java package layout; package moves require no Liquibase schema changes.
@@ -54,23 +54,37 @@ Configure runtime settings either in a protected `config/application.properties`
 | `DASHBOARD_DB_URL` | PostgreSQL JDBC URL, such as `jdbc:postgresql://localhost:5432/dashboard`. Required in production. In development, set `QUARKUS_DATASOURCE_JDBC_URL` explicitly when Docker Dev Services is unavailable. |
 | `DASHBOARD_DB_USER`, `DASHBOARD_DB_PASSWORD` | Database credentials. Replace the development defaults. |
 | `DASHBOARD_TOKEN_KEY` | Base64-encoded, cryptographically random 32-byte AES key for persisted Microsoft token caches. |
-| `DASHBOARD_SESSION_KEY` | Independent random session-encryption secret, at least 32 characters. Required in production. |
-| `DASHBOARD_ADMIN_PASSWORD` | Bootstrap password for `admin`, at least 12 characters. |
+| `DASHBOARD_OIDC_ISSUER` | OIDC realm URL, e.g. `https://login.home.arpa/realms/dashboard`. Set this to your deployment's realm; the frontend uses the same realm. |
+| `DASHBOARD_OIDC_AUDIENCE` | Required access-token audience; defaults to `dashboard`. |
 | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET` | Confidential application's client ID and secret. |
-| `MICROSOFT_REDIRECT_URI` | Exact registered Web callback, e.g. `https://dashboard.example.lan/api/accounts/callback`. |
+| `MICROSOFT_REDIRECT_URI` | Exact registered Web callback, e.g. `https://dashboard.home.arpa/api/accounts/callback`. |
 | `MICROSOFT_WEBHOOK_URL` | Public `https://.../api/graph/webhook`; omit to use scheduled reconciliation only. |
 | `DASHBOARD_MEDIA_DIRECTORY` | Persistent photo cache and motion snapshot directory; defaults to `./data/media`, or `./dev/data/onedrive` with the local dev configuration. Snapshots use its `protect/` subdirectory. |
 | `DASHBOARD_ORIGINAL_CACHE_BYTES` | Original-cache quota; defaults to 10 GiB. Individual originals are limited to the smaller of this quota and 512 MiB. |
 | `DASHBOARD_THUMBNAIL_CACHE_BYTES` | Thumbnail-cache quota; defaults to 1 GiB. Individual thumbnails are limited to 20 MiB. |
 | `DASHBOARD_UI_BASE_PATH` | UI return path; defaults to `/` for both embedded and separately served Angular builds. |
 | `DASHBOARD_UI_CONFIG_FILE` | Backend-owned public UI JSON file. Defaults to `config/config.json`, or `dev/config/config.json` with the local dev configuration. Relative paths resolve from the backend's working directory. |
-| `DASHBOARD_OPENHAB_URL` | Optional openHAB HTTP(S) origin reachable from the backend, e.g. `http://openhab.example.lan:8080`. Requires `DASHBOARD_OPENHAB_TOKEN`. |
+| `DASHBOARD_OPENHAB_URL` | Optional openHAB HTTP(S) origin reachable from the backend, e.g. `http://openhab.home.arpa:8080`. Requires `DASHBOARD_OPENHAB_TOKEN`. |
 | `DASHBOARD_OPENHAB_TOKEN` | Private openHAB API token used for both REST and WebSocket authentication; never put it in public UI JSON. |
 | `DASHBOARD_GO2RTC_URL` | Optional go2rtc HTTP(S) origin reachable from the backend, e.g. `http://127.0.0.1:1984`. |
 
 `dashboard.zone` defaults to `Europe/Vienna`; override with `DASHBOARD_ZONE`. Reconciliation defaults to five minutes; override with `DASHBOARD_SYNC_EVERY`, such as `5m` or `PT5M`. Workers check the durable queue every ten seconds. Retry-After and bounded backoff delay failing accounts without stopping other accounts.
 
-Liquibase applies the database changelog at startup using `src/main/resources/db/changelog.xml`. Hibernate maps the dashboard tables and validates the resulting schema; application persistence uses managed entities, HQL, and JTA transactions rather than direct JDBC SQL. Bootstrap passwords create missing users only; changing the environment does not overwrite existing password hashes. For an administrative password reset, remove only that user's row through a trusted database connection, set the replacement bootstrap password, and restart. Rotate the session key and restart to invalidate existing cookies/connections. Never rotate the token key without re-encrypting the stored caches or reconnecting Microsoft accounts.
+Liquibase applies the database changelog at startup using `src/main/resources/db/changelog.xml`. Hibernate maps the dashboard tables and validates the resulting schema; application persistence uses managed entities, HQL, and JTA transactions rather than direct JDBC SQL. Local administrator passwords and session cookies are no longer accepted. Existing database contents are retained. Never rotate the token key without re-encrypting the stored Microsoft caches or reconnecting Microsoft accounts.
+
+## Keycloak Authentication
+
+Use your realm, for example `https://login.home.arpa/realms/dashboard`, and a public OpenID Connect client named `dashboard`, with client authentication disabled, Standard Flow enabled, implicit/direct-access grants disabled, and PKCE `S256` required. No client secret is shipped to the browser. Register these URLs for every deployment origin, including `http://localhost:4200` during development:
+
+- Valid redirect URIs: `<origin>/auth/callback` and `<origin>/silent-check-sso.html`.
+- Valid post-logout redirect URI: `<origin>/home`.
+- Web origins: the exact frontend origin, without a path or wildcard.
+
+Create the client role `admin` under `dashboard` and assign it to administrators. Ensure the access-token mapper includes `resource_access.dashboard.roles`; a realm role or another client's `admin` role does not grant access. Add an audience mapper that includes `dashboard` in access tokens. The backend validates signature, issuer, expiry, and audience using OIDC discovery/JWKS; it never trusts a frontend role assertion. Invalid authentication returns 401, and authenticated users without the client role receive 403 for protected HTTP operations. GraphQL authorization errors appear in the GraphQL error response.
+
+The frontend uses `keycloak-js` with Authorization Code Flow and PKCE, in-memory tokens, refresh before protected requests, silent SSO on reload where supported, and Keycloak logout. Anonymous startup shows a dismissible sign-in popup; public reads remain accessible. Browsers blocking third-party cookies may need an interactive sign-in after reload. Account setup and PIN entry prompt for sign-in before privileged actions. Microsoft account callback navigation only relays the code/state to the UI; completing the connection is an authenticated POST bound to the initiating administrator.
+
+Tests use a local discovery/JWKS server and freshly signed fixture tokens, without contacting the live realm. Live user login, role assignment, redirect allowlists, and logout still require a configured Keycloak client and a real user.
 
 ## Schema Initialization
 
@@ -82,9 +96,9 @@ Application tables use short, lowercase singular names: `appuser`, `account`, `s
 
 1. Register an application supporting personal Microsoft accounts and add a **Web**, not SPA, redirect URI matching `MICROSOFT_REDIRECT_URI`.
 2. Configure delegated `User.Read`, `Calendars.Read`, and `Files.Read`. The server requests `offline_access` during authorization. It uses the consumers authority, authorization code flow, PKCE, and an admin-bound, ten-minute state token.
-3. Open `/home`, click the settings icon, and enter the local admin password in the popup. Open `/setup` and connect each owner's Microsoft account.
+3. Open `/home`, click the settings icon, and sign in through Keycloak from the popup. Open `/setup` and connect each owner's Microsoft account.
 4. Select discovered calendars. Add OneDrive folder paths relative to the drive root, then enable them. New sources are disabled until selected. All selected accounts feed the same household view.
-5. Open `/home` on viewing devices without signing in. Microsoft credentials are never needed on those devices; account/source management still requires the local admin login.
+5. Open `/home` on viewing devices. Microsoft credentials are never needed on those devices; public reads remain available without authentication, while changes require the Keycloak client role.
 
 Reconnect accounts marked `RECONNECT_REQUIRED` from setup. Failed syncs retain last-good data. Disconnect removes source membership and unreferenced metadata; stale/unreferenced disk files are removed during subsequent synchronization or hourly cleanup. Files already being streamed remain pinned until the response closes. Quotas are temporarily soft while files are pinned.
 
@@ -106,7 +120,7 @@ The standard dev task uses the `dev,h2` profiles and disables Quinoa by default:
 .\gradlew.bat quarkusDev
 ```
 
-H2 data persists across restarts in `dev/data/h2/dashboard.mv.db`; OneDrive originals and thumbnails use `dev/data/onedrive`. Paths are relative to the backend working directory. The backend listens at `http://localhost:8080`. Supply `DASHBOARD_ADMIN_PASSWORD` (at least 12 characters) to create the local administrator. Tests continue to use their isolated in-memory H2 database.
+H2 data persists across restarts in `dev/data/h2/dashboard.mv.db`; OneDrive originals and thumbnails use `dev/data/onedrive`. Paths are relative to the backend working directory. The backend listens at `http://localhost:8080`. Configure the frontend's development URLs in Keycloak to sign in. Tests continue to use their isolated in-memory H2 database.
 
 Run `npm start` in the sibling UI directory for the Angular dev server. Its single `/api/**` proxy rule forwards all dashboard APIs, including WebSockets, to the backend on port 8080. It must not target openHAB or go2rtc directly. Configure those upstreams in `dev/config/application.properties` or through the environment as described below. The browser uses the Angular server's origin for both the UI and APIs; no separate origin configuration is needed. Local UI proxy files use `/api/**`, targeting `http://localhost:8080` with `ws: true`. Preserve the browser-facing host rather than enabling `changeOrigin`. Angular continues to serve SPA routes, assets, and development hot reload. For PostgreSQL development, configure its JDBC URL and credentials and change the dev JVM profiles in `build.gradle` to `dev`.
 
@@ -114,13 +128,13 @@ Run `npm start` in the sibling UI directory for the Angular dev server. Its sing
 
 ### OpenAPI Contracts
 
-The repository-root `../openapi.yaml` is the authoritative, editable REST contract shared by backend and frontend. It covers configuration, administrator sessions, account/source setup, synchronization, photo blobs, motion snapshots, and camera poster frames. Do not generate or overwrite this file from Java code.
+The repository-root `../openapi.yaml` is the authoritative, editable REST contract shared by backend and frontend. It covers configuration, account/source setup, synchronization, photo blobs, motion snapshots, and camera poster frames. Do not generate or overwrite this file from Java code.
 
-OpenAPI Generator's `jaxrs-spec` generator creates Jakarta REST interfaces and Jackson models in `build/generated/openapi`. Resource classes implement the generated interfaces, which own operation paths, parameters, and media types. Handwritten implementations contain business logic, runtime authorization, and validation, but no OpenAPI annotations. `compileJava` automatically depends on `openApiGenerate`; run `.\gradlew.bat openApiGenerate` to generate the backend sources independently, without building Angular or starting the server. Generated files are build outputs and must not be edited or committed.
+OpenAPI Generator's `jaxrs-spec` generator creates Jakarta REST interfaces and Jackson models in `build/generated/openapi`. Resource classes implement the generated interfaces, which own operation paths, parameters, and media types. Handwritten implementations contain business logic, runtime authorization, and validation, but no OpenAPI annotations. `compileJava` automatically depends on `genApi`; run `.\gradlew.bat genApi` to generate the backend sources independently, without building Angular or starting the server. Generated files are build outputs and must not be edited or committed.
 
 Angular's `npm run gen:api` reads the same root YAML and generates its service classes and TypeScript models. Frontend start/build commands regenerate these automatically. Neither generator requires the other project's build outputs, and there is no schema synchronization check or backend schema export/copy task.
 
-Gradle packages the root contract as `META-INF/openapi.yaml`. SmallRye annotation scanning is disabled, so `/q/openapi` serves this contract rather than inferring one from Java. API documentation endpoints require the administrator role. `POST /api/session/login` accepts JSON `{username, password}` and issues the existing encrypted HttpOnly cookie; cookie restoration, browser-origin safeguards, and JPA password verification are unchanged.
+Gradle packages the root contract as `META-INF/openapi.yaml`. SmallRye annotation scanning is disabled, so `/q/openapi` serves this contract rather than inferring one from Java. API documentation endpoints require a bearer token with the `dashboard` client's `admin` role. The contract uses HTTP bearer authentication; local login/session/logout endpoints have been removed. Browser-origin safeguards remain enabled.
 
 GraphQL, WebSocket signaling, Microsoft webhooks, arbitrary transparent upstream proxying, and operational health endpoints remain outside this REST contract. The concrete camera-frame operation implements the generated interface and streams upstream responses without forwarding browser credentials.
 
@@ -136,7 +150,7 @@ Quinoa builds the sibling UI with `/` as its base href, hosts it at the HTTP roo
 
 `GET /api/config` returns only the frontend model: `sitemapUrl` from `openhab.sitemap`, `evccUrl` from `evcc.url`, and `cameras` from `protect.cameras`. Camera IDs, labels, and property order are preserved. Backend item mappings and other configuration fields are not returned; the on-disk JSON format remains unchanged.
 
-Automated tests use H2 in PostgreSQL compatibility mode, mocked Graph responses, and an actual Quarkus HTTP/WebSocket test server. Test-only fixture passwords/keys are not production defaults. Real PostgreSQL schema initialization, live Microsoft refresh/subscriptions/shared-folder capabilities, and multi-device deployment still require an environment integration test.
+Automated tests use H2 in PostgreSQL compatibility mode, mocked Graph responses, local OIDC discovery/JWKS, and an actual Quarkus HTTP/WebSocket test server. Test-only signing keys are generated at runtime. Real PostgreSQL schema initialization, live Keycloak/Microsoft flows, and multi-device deployment still require an environment integration test.
 
 ## Deployment Packages And Releases
 
@@ -173,7 +187,7 @@ Quarkus forwards openHAB REST requests, camera snapshots, and WebSocket signalin
 Set these properties in the protected runtime properties file, or use the environment variables listed above:
 
 ```properties
-dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+dashboard.proxy.openhab-url=http://openhab.home.arpa:8080
 dashboard.proxy.openhab-token=REPLACE_OPENHAB_API_TOKEN
 dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
 dashboard.proxy.connect-timeout-ms=5000
@@ -201,7 +215,7 @@ The integration proxy accepts WebSocket upgrades only at `/api/ws/openhab` and `
 
 ### Security And Media Boundaries
 
-These routes do not require an admin session. Anyone able to reach the dashboard can access the proxied APIs, camera images, and openHAB commands using the server's token. Restrict the dashboard to the trusted household network and scope the openHAB token's permissions where supported. Origin checking is a browser safeguard, not authentication for non-browser clients.
+Read-only HTTP proxy requests, camera images, and camera-viewing signaling remain public. Other HTTP methods and openHAB WebSocket upgrades require a valid bearer token with the `dashboard` client role `admin`; browser code cannot set an Authorization header on native WebSockets, so the dashboard sends privileged PIN commands through authenticated GraphQL HTTP instead. Proxy filters run after OIDC authentication and strip browser credentials before forwarding upstream. Restrict the dashboard to the trusted household network and scope the private openHAB token's permissions where supported.
 
 The UI and APIs share one public scheme, host, and port. No configured origin list or application-specific request header is needed. The backend compares standard browser `Origin` headers with the request's public origin and rejects mismatches, including on WebSocket upgrades. For unsafe HTTP methods and WebSocket upgrades, Fetch Metadata and a supplied `Referer` also reject cross-origin requests when applicable. Non-browser clients can call APIs without browser metadata; origin checks are not authentication. The public webhook is exempt, and cross-site OAuth callback navigation remains supported.
 
@@ -256,17 +270,17 @@ All dashboard HTTP APIs and WebSockets share the `/api` namespace; SPA navigatio
 Register the Microsoft Web redirect URI and set `MICROSOFT_REDIRECT_URI` to the public `/api/accounts/callback` URL. If using Microsoft webhooks, configure `MICROSOFT_WEBHOOK_URL` and its public proxy rule for `/api/graph/webhook`.
 
 - `GET /api/config`: public UI configuration from the backend-owned runtime file, with `Cache-Control: no-store`; unavailable or invalid files return HTTP 503.
-- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries; cached `securityArmed` and `motionGroups`; the `submitSecurityPin` mutation.
+- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries; cached `securityArmed` and `motionGroups`; the admin-only `submitSecurityPin` mutation.
 - `WS /api/graphql`: public `dashboardChanged` and `dashboardAction`; subscribers receive an initial revision or `SYNC`, not historical camera actions.
 - `GET /api/media/images/{opaque-id}/thumbnail` and `/original`: public access, private ETag caching, streamed bytes.
 - `GET /api/media/protect/{opaque-id}`: public stored motion JPEGs with private caching.
 - `/api/accounts` and its source/connect/sync endpoints: admin-only setup operations. OAuth remains HTTP rather than GraphQL.
-- `/api/session`, `/api/session/logout`, and `/api/j_security_check`: local admin session management. No application-specific request header is required; standard browser metadata rejects cross-origin requests, including WebSocket upgrades.
+- `GET /api/accounts/callback`: public Microsoft callback relay; `POST /api/accounts/callback` completes the connection with an admin bearer token. Standard browser metadata rejects cross-origin API requests, including WebSocket upgrades.
 - `POST /api/graph/webhook`: public validation challenge or validated subscription/client-state notification; only durable queueing happens in the callback.
 
-For a separately served frontend, preserve the API paths at the LAN proxy and support WebSocket upgrades. Do not expose the LAN server wholesale to the Internet. If using public Microsoft webhooks, configure a separate HTTPS listener, such as `notifications.example.com`, to forward only the exact `/api/graph/webhook` path unchanged to `http://dashboard-backend:8080`. Return HTTP 404 for all other paths on that public listener.
+For a separately served frontend, preserve the API paths at the LAN proxy and support WebSocket upgrades. Do not expose the LAN server wholesale to the Internet. If using public Microsoft webhooks, configure a separate HTTPS listener with your publicly resolvable hostname to forward only the exact `/api/graph/webhook` path unchanged to `http://dashboard-backend:8080`. The `home.arpa` examples are LAN-only and cannot receive public Microsoft webhooks. Return HTTP 404 for all other paths on that public listener.
 
-Terminate LAN HTTPS at a trusted proxy, configure forwarding headers only for trusted proxy addresses, and ensure session cookies are Secure on the deployed HTTPS origin. Avoid logging OAuth callback query strings and upstream token/download URLs. Rate-limit the public callback at the edge.
+Terminate LAN HTTPS at a trusted proxy and configure forwarding headers only for trusted proxy addresses. Avoid logging bearer tokens, OAuth callback query strings, and upstream token/download URLs. Rate-limit the public callback at the edge.
 
 ## Operational Boundaries
 
@@ -274,4 +288,4 @@ Webhooks are hints, not a guaranteed delivery stream. Microsoft drive notificati
 
 The agenda is cached from yesterday through thirty days ahead. Requests outside that range fail rather than causing live Graph calls. Images use revision-bound, timestamp-plus-ID cursors; clients reload if a revision expires their cursor. Moments contain four populated dates in the preceding ten days, excluding the reference year's photos, with a current limit of 100 images per group.
 
-Back up PostgreSQL **and** the external token/session keys. Database contents alone cannot decrypt Microsoft token caches. Media is reconstructible and optional in backups. Use one backend instance initially; in-memory notification broadcasts are not shared between replicas. Admin sessions use encrypted cookies rather than a per-device revocation registry; restart with a rotated session key to revoke admin sessions. Calendar metadata and images are public to anyone who can reach the server; restrict network access accordingly.
+Back up PostgreSQL **and** the external Microsoft token-cache key. Database contents alone cannot decrypt Microsoft token caches. Media is reconstructible and optional in backups. Use one backend instance initially; in-memory notification broadcasts are not shared between replicas. Keycloak owns administrator sessions; issued access tokens remain valid until expiry, so use suitably short access-token lifetimes. Calendar metadata and images are public to anyone who can reach the server; restrict network access accordingly.

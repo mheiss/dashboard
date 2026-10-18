@@ -128,7 +128,9 @@ sudoedit /etc/dashboard/application.properties
 sudoedit /etc/dashboard/config.json
 ```
 
-In `application.properties`, replace every `REPLACE_...` placeholder with your database password, an admin password of at least 12 characters, Microsoft client ID/secret, and two independent encryption keys. Generate each key in a private terminal with `openssl rand -base64 32`: one for `dashboard.token-key`, another for `quarkus.http.auth.session.encryption-key`. Save them securely; the token key is required to decrypt saved Microsoft token caches.
+In `application.properties`, replace every `REPLACE_...` placeholder with your database password, Microsoft client ID/secret, and a token-cache encryption key. Generate the key in a private terminal with `openssl rand -base64 32` for `dashboard.token-key`. Save it securely; it is required to decrypt saved Microsoft token caches.
+
+Configure the public Keycloak client `dashboard` in your realm, for example `https://login.home.arpa/realms/dashboard`, using Standard Flow and PKCE `S256`. Register `https://dashboard.home.arpa/auth/callback` and `https://dashboard.home.arpa/silent-check-sso.html` as redirect URIs, `https://dashboard.home.arpa/home` as a post-logout redirect, and the exact frontend web origin. Assign the client role `admin` to administrators and add an access-token audience mapper for `dashboard`. See [Keycloak Authentication](server/README.md#keycloak-authentication) for details.
 
 Change the sample's paths and hostname as needed:
 
@@ -184,7 +186,7 @@ sudo systemctl enable --now dashboard
 sudo journalctl -u dashboard -f
 ```
 
-First startup initializes the database schema and creates the admin user. Check readiness with `curl --fail http://127.0.0.1:8080/q/health/ready`.
+First startup initializes the database schema; administrators are managed in Keycloak. Check readiness with `curl --fail http://127.0.0.1:8080/q/health/ready`.
 
 ### 6. Set Up HTTPS And Connect Accounts
 
@@ -192,7 +194,7 @@ Configure your HTTPS reverse proxy for `dashboard.home.arpa` with a certificate 
 
 If using a private certificate authority, install its public root CA certificate in every client device's trust store; never distribute the CA's private key. Allow HTTPS on the LAN, keep port 8080 on loopback, and do not forward the dashboard to the internet.
 
-Open `https://dashboard.home.arpa/home` without certificate warnings. Click settings, enter the local admin password, and connect each owner's Microsoft account. Select calendars and enable OneDrive folders such as `Pictures/Camera Roll` in `/setup`. Synchronization normally runs every five minutes. Use `/home` as the wall tablet's start URL.
+Open `https://dashboard.home.arpa/home` without certificate warnings. Click settings, sign in through Keycloak, and connect each owner's Microsoft account. Select calendars and enable OneDrive folders such as `Pictures/Camera Roll` in `/setup`. Synchronization normally runs every five minutes. Use `/home` as the wall tablet's start URL.
 
 <details>
 <summary>Optional Smart-Home Integrations</summary>
@@ -202,7 +204,7 @@ openHAB, EVCC, and go2rtc run separately. Configure their URLs and camera IDs in
 The backend hosts the openHAB HTTP/WebSocket and go2rtc snapshot/signaling proxy routes. Keep the HTTPS proxy forwarding requests unchanged; do not add path rewrites or openHAB credentials to it. Configure upstream access in the **private** `/etc/dashboard/application.properties`, not the publicly served JSON:
 
 ```properties
-dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+dashboard.proxy.openhab-url=http://openhab.home.arpa:8080
 dashboard.proxy.openhab-token=REPLACE_OPENHAB_API_TOKEN
 dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
 ```
@@ -211,7 +213,7 @@ Use HTTP(S) origins without API paths or embedded credentials, reachable from th
 
 The backend owns openHAB item states, PIN commands, and doorbell/motion decisions through one upstream connection. Clients receive camera-selection and security-state actions through `/api/graphql`, without parsing openHAB items. Motion snapshots are captured even without connected browsers and stored with metadata under `/var/lib/dashboard/media/protect/`; the newest 20 detection groups are shared through GraphQL and `/api/media/protect/{id}`. Restart the backend after changing item or camera mappings in `config.json`.
 
-Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. These integration routes and stored camera history do not require admin login, so anyone able to reach the dashboard can access cameras and issue openHAB commands. Keep the deployment on the trusted household network and protect the private token.
+Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. Camera viewing and stored history remain public; PIN commands, upstream HTTP writes, and the openHAB WebSocket bridge require the `dashboard` client's `admin` role. Keep the deployment on the trusted household network and protect the private token.
 
 Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `protect.cameras`. WebRTC media still connects using go2rtc's advertised network candidates; the backend proxies signaling, not media. Embedded openHAB and EVCC pages still require direct browser access.
 
@@ -229,7 +231,7 @@ sudo systemctl restart dashboard
 
 Restart after changing backend properties. After changing the unit, run `sudo systemctl daemon-reload` first. Public JSON edits need only a browser reload.
 
-Renew expiring Microsoft client secrets in the properties file and restart; changing the bootstrap admin password does not reset an existing user's password.
+Renew expiring Microsoft client secrets in the properties file and restart. Manage administrator credentials and the `dashboard` client role `admin` in Keycloak.
 
 ## Troubleshooting
 

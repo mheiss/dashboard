@@ -14,7 +14,7 @@ public class OpenhabProxy extends HttpProxy {
     @Inject
     OpenhabWebSocketProxy socket;
 
-    @RouteFilter(900)
+    @RouteFilter(0)
     void forward(RoutingContext context) {
         String path = context.request().path();
         if (matches(path, "/api/openhab")) {

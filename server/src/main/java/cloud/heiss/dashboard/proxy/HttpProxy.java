@@ -7,6 +7,7 @@ import java.util.Locale;
 import java.util.Set;
 
 import cloud.heiss.dashboard.config.IntegrationProxyConfig;
+import io.quarkus.vertx.http.runtime.security.QuarkusHttpUser;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
@@ -48,6 +49,14 @@ public abstract class HttpProxy {
         if (websocketRoute != upgrade) {
             fail(context, websocketRoute ? 426 : 400);
             return;
+        }
+        boolean write = !Set.of("GET", "HEAD", "OPTIONS").contains(context.request().method().name());
+        if (write || (upgrade && context.request().path().equals("/api/ws/openhab"))) {
+            var identity = context.user() instanceof QuarkusHttpUser user ? user.getSecurityIdentity() : null;
+            if (identity == null || !identity.hasRole("admin")) {
+                fail(context, identity == null || identity.isAnonymous() ? 401 : 403);
+                return;
+            }
         }
         if (upstream == null) {
             fail(context, 503);

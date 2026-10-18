@@ -80,7 +80,7 @@
             "werden",
             "Ziffer"
         ],
-        "java.configuration.updateBuildConfiguration": "always",
+        "java.configuration.updateBuildConfiguration": "automatic",
         "java.compile.nullAnalysis.mode": "disabled",
         "java.format.enabled": true,
         "java.format.settings.url": "server/etc/java_code_format.xml",

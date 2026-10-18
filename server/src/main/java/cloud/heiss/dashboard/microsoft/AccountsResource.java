@@ -19,12 +19,16 @@ import cloud.heiss.dashboard.persistence.entity.DashboardSource;
 import cloud.heiss.dashboard.sync.DashboardChanges;
 import cloud.heiss.dashboard.sync.SyncCoordinator;
 import io.quarkus.security.identity.SecurityIdentity;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
 
 /**
  * Admin endpoints for connecting Microsoft accounts and discovering, selecting, or removing their sources.
@@ -73,6 +77,21 @@ public class AccountsResource implements AccountsApi {
         return Response.ok(new ConnectionUrl(URI.create(auth.connectUrl(identity.getPrincipal().getName())))).build();
     }
 
+    @GET
+    @Path("/api/accounts/callback")
+    @PermitAll
+    public Response relayAccountConnection(@QueryParam("code") String code, @QueryParam("state") String state) {
+        if (code == null || code.isBlank() || state == null || state.isBlank() || code.length() > 16384
+                || state.length() > 1024) {
+            throw new BadRequestException("Invalid account connection callback");
+        }
+        String base = config.uiBasePath();
+        return Response
+                .seeOther(UriBuilder.fromPath(base + (base.endsWith("/") ? "" : "/") + "setup").queryParam("microsoft_code", code)
+                        .queryParam("microsoft_state", state).build())
+                .header("Cache-Control", "no-store").header("Referrer-Policy", "no-referrer").build();
+    }
+
     @Override
     public Response completeAccountConnection(String code, String state) {
         UUID accountId = auth.complete(identity.getPrincipal().getName(), state, code);
@@ -82,8 +101,7 @@ public class AccountsResource implements AccountsApi {
             store.update("update MicrosoftAccount set error=?1 where id=?2", "Source discovery failed; retry in setup",
                     accountId);
         }
-        String base = config.uiBasePath();
-        return Response.seeOther(URI.create(base + (base.endsWith("/") ? "" : "/") + "setup")).build();
+        return Response.noContent().build();
     }
 
     @Override
