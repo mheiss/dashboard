@@ -8,10 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.quarkus.test.common.QuarkusTestResource;
-import io.quarkus.test.common.http.TestHTTPResource;
-import io.quarkus.test.junit.QuarkusTest;
-import io.vertx.core.json.JsonObject;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
@@ -21,7 +17,13 @@ import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
+
+import io.quarkus.test.common.QuarkusTestResource;
+import io.quarkus.test.common.http.TestHTTPResource;
+import io.quarkus.test.junit.QuarkusTest;
+import io.vertx.core.json.JsonObject;
 
 @QuarkusTest
 @QuarkusTestResource(value = IntegrationProxyUpstream.class, restrictToAnnotatedClass = true)
@@ -53,6 +55,22 @@ class IntegrationProxyTest {
                 .statusCode(200).contentType("image/jpeg").extract().asByteArray());
         assertEquals("a".repeat(131072) + "b".repeat(131072),
                 given().when().get("/api/webrtc/chunked").then().statusCode(200).extract().asString());
+    }
+
+    @Test
+    void cameraApiValidatesParametersAndForwardsUpstreamErrorsWithoutCredentials() {
+        given().get("/api/webrtc/frame.jpeg").then().statusCode(400);
+        given().queryParam("src", " ").get("/api/webrtc/frame.jpeg").then().statusCode(400);
+        given().header("Connection", "Upgrade").header("Upgrade", "websocket").queryParam("src", "front")
+                .get("/api/webrtc/frame.jpeg").then().statusCode(400);
+        given().header("Origin", "https://attacker.example").queryParam("src", "front").get("/api/webrtc/frame.jpeg").then()
+                .statusCode(403);
+        given().header("Origin", base.toString().replaceFirst("/$", "")).header("Cookie", "dashboard=private")
+                .header("Authorization", "browser-token").queryParam("src", "upstream-error").queryParam("extra", "a b&c")
+                .get("/api/webrtc/frame.jpeg").then().statusCode(418).contentType("application/json")
+                .header("Set-Cookie", nullValue()).header("X-Upstream-Private", nullValue())
+                .body("uri", equalTo("/api/frame.jpeg?src=upstream-error&extra=a%20b%26c")).body("cookie", nullValue())
+                .body("authorization", nullValue()).body("origin", nullValue());
     }
 
     @Test

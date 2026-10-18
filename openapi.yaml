@@ -1,0 +1,580 @@
+---
+openapi: 3.1.0
+info:
+  title: Dashboard HTTP API
+  version: 1.0.0
+paths:
+  /api/webrtc/frame.jpeg:
+    get:
+      operationId: getCameraFrame
+      summary: Load a camera poster frame through go2rtc
+      tags:
+      - Camera
+      parameters:
+      - name: src
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: JPEG camera frame
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid upstream request
+        "403":
+          description: Browser origin rejected
+        "502":
+          description: "Upstream connection, streaming or timeout failure"
+        "503":
+          description: go2rtc is not configured
+        "504":
+          description: Upstream reported a gateway timeout
+        default:
+          description: Other upstream status codes are forwarded unchanged
+  /api/accounts:
+    get:
+      summary: List connected accounts and sources
+      operationId: getAccounts
+      tags:
+      - Accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountView"
+      security:
+      - sessionCookie: []
+  /api/accounts/callback:
+    get:
+      summary: Complete Microsoft authorization and redirect to setup
+      operationId: completeAccountConnection
+      tags:
+      - Accounts
+      parameters:
+      - name: code
+        in: query
+        schema:
+          type: string
+      - name: state
+        in: query
+        schema:
+          type: string
+      responses:
+        "303":
+          description: Account connected
+          headers:
+            Location:
+              schema:
+                type: string
+        "400":
+          description: Invalid or expired authorization state
+      security:
+      - sessionCookie: []
+  /api/accounts/connect:
+    post:
+      summary: Create an administrator-bound Microsoft authorization URL
+      operationId: connectAccount
+      tags:
+      - Accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionUrl"
+      security:
+      - sessionCookie: []
+  /api/accounts/sources/{sourceId}:
+    put:
+      summary: Update source selection and calendar theme
+      operationId: selectAccountSource
+      tags:
+      - Accounts
+      parameters:
+      - name: sourceId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SourceSelection"
+        required: true
+      responses:
+        "200":
+          description: Updated account list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountView"
+        "400":
+          description: Unsupported theme
+        "404":
+          description: Source not found
+      security:
+      - sessionCookie: []
+  /api/accounts/sync:
+    post:
+      summary: Queue synchronization for connected accounts
+      operationId: requestSync
+      tags:
+      - Accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QueuedSynchronization"
+      security:
+      - sessionCookie: []
+  /api/accounts/{accountId}:
+    delete:
+      summary: Disconnect an account and remove its sources
+      operationId: disconnectAccount
+      tags:
+      - Accounts
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: Account disconnected
+      security:
+      - sessionCookie: []
+  /api/accounts/{accountId}/discover:
+    post:
+      summary: Discover calendars for an account
+      operationId: discoverAccountSources
+      tags:
+      - Accounts
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: Updated account list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountView"
+        "404":
+          description: Account not found
+      security:
+      - sessionCookie: []
+  /api/accounts/{accountId}/folders:
+    post:
+      summary: Add an accessible OneDrive folder
+      operationId: addAccountFolder
+      tags:
+      - Accounts
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FolderRequest"
+        required: true
+      responses:
+        "200":
+          description: Updated account list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountView"
+        "400":
+          description: Invalid or inaccessible folder
+        "404":
+          description: Account or folder not found
+      security:
+      - sessionCookie: []
+  /api/config:
+    get:
+      summary: Read public UI configuration
+      operationId: getConfiguration
+      tags:
+      - Configuration
+      responses:
+        "200":
+          description: Public settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UiConfiguration"
+        "403":
+          description: Browser origin rejected
+        "503":
+          description: UI configuration unavailable
+  /api/media/images/{id}/original:
+    parameters:
+    - name: v
+      in: query
+      schema:
+        type: string
+    get:
+      summary: Load an original photo
+      operationId: getImageOriginal
+      tags:
+      - Media
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      - in: header
+        name: If-None-Match
+        schema:
+          type: string
+      responses:
+        "304":
+          description: Cached version is current
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        "404":
+          description: Image not found
+        "403":
+          description: Browser origin rejected
+        "200":
+          description: "Original image (JPEG, PNG, WebP, GIF, HEIC or HEIF)"
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            image/*:
+              schema:
+                format: binary
+                type: string
+  /api/media/images/{id}/thumbnail:
+    parameters:
+    - name: v
+      in: query
+      schema:
+        type: string
+    get:
+      summary: Load a photo thumbnail
+      operationId: getImageThumbnail
+      tags:
+      - Media
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      - in: header
+        name: If-None-Match
+        schema:
+          type: string
+      responses:
+        "304":
+          description: Cached version is current
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        "404":
+          description: Image not found
+        "403":
+          description: Browser origin rejected
+        "200":
+          description: JPEG thumbnail
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            image/jpeg:
+              schema:
+                format: binary
+                type: string
+  /api/media/protect/{id}:
+    get:
+      summary: Load a stored motion snapshot
+      operationId: getMotionSnapshot
+      tags:
+      - Media
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      responses:
+        "200":
+          description: JPEG snapshot
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            image/jpeg:
+              schema:
+                format: binary
+                type: string
+        "404":
+          description: Snapshot not found
+        "403":
+          description: Browser origin rejected
+  /api/session:
+    get:
+      summary: Read the administrator session
+      operationId: getSession
+      tags:
+      - Session
+      responses:
+        "200":
+          description: Administrator session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator role required or browser origin rejected
+      security:
+      - sessionCookie: []
+  /api/session/login:
+    post:
+      summary: Authenticate and issue an HttpOnly session cookie
+      operationId: login
+      tags:
+      - Session
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: Authenticated session; HttpOnly cookie issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          description: Missing or invalid credentials
+        "401":
+          description: Invalid username or password
+        "403":
+          description: Administrator role required or browser origin rejected
+        "415":
+          description: JSON request body required
+  /api/session/logout:
+    post:
+      summary: Clear the session cookie
+      operationId: logout
+      tags:
+      - Session
+      responses:
+        "204":
+          description: Session cookie cleared
+        "401":
+          description: Authentication required
+        "403":
+          description: Administrator role required or browser origin rejected
+      security:
+      - sessionCookie: []
+tags:
+- name: Accounts
+- name: Configuration
+- name: Media
+- name: Session
+components:
+  schemas:
+    AccountView:
+      type: object
+      required:
+      - id
+      - name
+      - status
+      - error
+      - lastSync
+      - sources
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        status:
+          type: string
+        error:
+          type:
+          - string
+          - "null"
+        lastSync:
+          type:
+          - string
+          - "null"
+          format: date-time
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/SourceView"
+    ConnectionUrl:
+      type: object
+      required:
+      - url
+      properties:
+        url:
+          type: string
+          format: uri
+    FolderRequest:
+      type: object
+      required:
+      - path
+      properties:
+        path:
+          type: string
+          maxLength: 1024
+          minLength: 1
+    LoginRequest:
+      type: object
+      required:
+      - username
+      - password
+      properties:
+        username:
+          type: string
+          maxLength: 256
+          minLength: 1
+        password:
+          type: string
+          maxLength: 1024
+          minLength: 1
+          writeOnly: true
+    QueuedSynchronization:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          enum:
+          - QUEUED
+    Session:
+      type: object
+      required:
+      - username
+      - admin
+      properties:
+        username:
+          type: string
+        admin:
+          type: boolean
+    SourceSelection:
+      type: object
+      required:
+      - selected
+      - theme
+      properties:
+        selected:
+          type: boolean
+        theme:
+          type: string
+          enum:
+          - emerald
+          - rose
+          - sky
+          - amber
+    SourceView:
+      type: object
+      required:
+      - id
+      - kind
+      - name
+      - theme
+      - selected
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        name:
+          type: string
+        theme:
+          type: string
+          enum:
+          - emerald
+          - rose
+          - sky
+          - amber
+        selected:
+          type: boolean
+    UUID:
+      type: string
+      format: uuid
+      pattern: "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
+    UiConfiguration:
+      type: object
+      required:
+      - sitemapUrl
+      - evccUrl
+      - cameras
+      properties:
+        sitemapUrl:
+          type: string
+        evccUrl:
+          type: string
+        cameras:
+          type: object
+          additionalProperties:
+            type: string
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      name: quarkus-credential
+      in: cookie
+servers:
+- url: /

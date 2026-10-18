@@ -1,13 +1,15 @@
 package cloud.heiss.dashboard.persistence.entity;
 
+import java.time.Instant;
+import java.util.UUID;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.time.Instant;
-import java.util.UUID;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /** Persisted Graph webhook subscription with its account, resource, validation secret, and expiry. */
 @Entity(name = "GraphSubscription")

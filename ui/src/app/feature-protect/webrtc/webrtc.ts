@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { CameraService } from '../../backend/generated/services/camera.service';
 import { WebSocket } from 'partysocket';
 import { BehaviorSubject, interval } from 'rxjs';
 import { DebugService } from '../../utils/debug.service';
@@ -34,7 +34,7 @@ export class WebRTCStream {
   private lastWebSocketError: string | null = null;
 
   constructor(
-    private httpClient: HttpClient,
+    private cameraApi: CameraService,
     private camera: string,
     private debug: DebugService,
   ) {
@@ -150,13 +150,16 @@ export class WebRTCStream {
 
   /** Fetches and updates the latest poster image for the camera. */
   private updatePoster() {
-    this.httpClient.get(`/api/webrtc/frame.jpeg?src=${this.camera}`, { responseType: 'blob' }).subscribe((blob) => {
-      const oldValue = this.poster.getValue();
-      this.poster.next(URL.createObjectURL(blob));
-      if (oldValue) {
-        URL.revokeObjectURL(oldValue);
-      }
-    });
+    void this.cameraApi
+      .getCameraFrame({ src: this.camera })
+      .then((blob) => {
+        const oldValue = this.poster.getValue();
+        this.poster.next(URL.createObjectURL(blob));
+        if (oldValue) {
+          URL.revokeObjectURL(oldValue);
+        }
+      })
+      .catch((error) => this.debug.log('%s: Camera poster request failed.', this.camera, error));
   }
 
   /** Creates a fresh peer connection when the signaling socket opens. */

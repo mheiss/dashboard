@@ -1,7 +1,8 @@
 package cloud.heiss.dashboard.config;
 
-import io.quarkus.test.junit.QuarkusTestProfile;
 import java.util.Map;
+
+import io.quarkus.test.junit.QuarkusTestProfile;
 
 /** Enables embedded UI serving for HTTP routing checks while retaining test database and credential fixtures. */
 public class UiHostingProfile implements QuarkusTestProfile {

@@ -1,31 +1,38 @@
 package cloud.heiss.dashboard.security;
 
+import cloud.heiss.dashboard.api.SessionApi;
+import cloud.heiss.dashboard.api.model.LoginRequest;
+import cloud.heiss.dashboard.api.model.Session;
 import cloud.heiss.dashboard.config.DashboardConfig;
 import cloud.heiss.dashboard.persistence.entity.DashboardUser;
-
 import io.quarkus.elytron.security.common.BcryptUtil;
 import io.quarkus.runtime.StartupEvent;
+import io.quarkus.security.AuthenticationFailedException;
+import io.quarkus.security.credential.PasswordCredential;
+import io.quarkus.security.identity.IdentityProviderManager;
 import io.quarkus.security.identity.SecurityIdentity;
+import io.quarkus.security.identity.request.UsernamePasswordAuthenticationRequest;
+import io.vertx.ext.web.RoutingContext;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.NotAuthorizedException;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.NewCookie;
 import jakarta.ws.rs.core.Response;
-import java.util.Map;
 
-/** Bootstraps the local administrator and exposes admin session information and cookie-based logout. */
-@Path("/api/session")
+/**
+ * Bootstraps the local administrator and exposes admin session information and
+ * cookie-based logout.
+ */
+@Path("/")
 @ApplicationScoped
-@Produces(MediaType.APPLICATION_JSON)
-public class SessionResource {
+public class SessionResource implements SessionApi {
 
     @Inject
     DashboardConfig config;
@@ -33,6 +40,12 @@ public class SessionResource {
     EntityManager entities;
     @Inject
     SecurityIdentity identity;
+    @Inject
+    IdentityProviderManager providers;
+    @Inject
+    CookieAuthentication cookies;
+    @Inject
+    RoutingContext context;
 
     @Transactional
     void initialize(@Observes StartupEvent event) {
@@ -57,17 +70,40 @@ public class SessionResource {
         }
     }
 
-    @GET
+    @Override
     @RolesAllowed("admin")
-    public Map<String, Object> current() {
-        return Map.of("username", identity.getPrincipal().getName(), "admin", identity.hasRole("admin"));
+    public Response getSession() {
+        context.response().putHeader("Cache-Control", "no-store");
+        return Response.ok(new Session(identity.getPrincipal().getName(), identity.hasRole("admin"))).build();
     }
 
-    @POST
-    @Path("/logout")
+    @Override
+    @PermitAll
+    public Response login(LoginRequest request) {
+        context.response().putHeader("Cache-Control", "no-store");
+        if (request == null || request.getUsername() == null || request.getUsername().isBlank()
+                || request.getUsername().length() > 256 || request.getPassword() == null || request.getPassword().isEmpty()
+                || request.getPassword().length() > 1024) {
+            throw new BadRequestException("Username and password are required");
+        }
+        SecurityIdentity authenticated;
+        try {
+            authenticated = providers.authenticateBlocking(new UsernamePasswordAuthenticationRequest(request.getUsername(),
+                    new PasswordCredential(request.getPassword().toCharArray())));
+        } catch (AuthenticationFailedException failure) {
+            throw new NotAuthorizedException("Invalid credentials");
+        }
+        if (!authenticated.hasRole("admin")) {
+            throw new ForbiddenException();
+        }
+        cookies.login(authenticated, context);
+        return Response.ok(new Session(authenticated.getPrincipal().getName(), true)).build();
+    }
+
+    @Override
     @RolesAllowed("admin")
     public Response logout() {
-        return Response.noContent().cookie(new NewCookie.Builder("quarkus-credential").path("/").maxAge(0).httpOnly(true).build())
-                .build();
+        cookies.logout(context);
+        return Response.noContent().build();
     }
 }

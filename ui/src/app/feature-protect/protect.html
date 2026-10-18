@@ -64,7 +64,7 @@
           >
             <img
               class="aspect-video w-full object-cover"
-              [src]="snapshot.url"
+              [blobSrc]="snapshotBlob(snapshot) | async"
               [alt]="'Bewegung bei Kamera ' + cameraLabel(snapshot.camera)"
             />
             <span class="photo-count" [title]="group.snapshots.length + (group.snapshots.length === 1 ? ' Foto' : ' Fotos')">{{

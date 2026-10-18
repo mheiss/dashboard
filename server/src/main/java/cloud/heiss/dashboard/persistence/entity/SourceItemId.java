@@ -7,6 +7,8 @@ import java.util.UUID;
 /** Composite persistence key identifying an upstream OneDrive item within a dashboard source. */
 public class SourceItemId implements Serializable {
 
+    private static final long serialVersionUID = 226483367443860893L;
+
     public UUID sourceId;
     public String upstreamId;
 

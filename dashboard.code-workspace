@@ -12,8 +12,10 @@
             "path": "."
         }
     ],
-    "java.configuration.updateBuildConfiguration": "interactive",
     "settings": {
+        "files.associations": {
+            "*.gradle": "groovy"
+        },
         "cSpell.language": "en,de-at",
         "cSpell.words": [
             "Bewegung",
@@ -78,7 +80,10 @@
             "werden",
             "Ziffer"
         ],
-        "java.configuration.updateBuildConfiguration": "interactive",
+        "java.configuration.updateBuildConfiguration": "always",
         "java.compile.nullAnalysis.mode": "disabled",
+        "java.format.enabled": true,
+        "java.format.settings.url": "server/etc/java_code_format.xml",
+        "java.format.settings.profile": "Dashboard",
     },
 }

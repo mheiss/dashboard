@@ -1,5 +1,7 @@
 package cloud.heiss.dashboard.proxy;
 
+import org.jboss.logging.Logger;
+
 import cloud.heiss.dashboard.config.IntegrationProxyConfig;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
@@ -13,7 +15,6 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
-import org.jboss.logging.Logger;
 
 public abstract class WebSocketProxy {
 
@@ -71,7 +72,7 @@ public abstract class WebSocketProxy {
 
     private void bridge(WebSocketBase source, WebSocketBase destination, String path, String direction) {
         destination.setWriteQueueMaxSize(65536);
-        destination.drainHandler(ignored -> source.resume());
+        destination.drainHandler(_ -> source.resume());
         source.frameHandler(frame -> {
             if (frame.isClose() || frame.isPing() || frame.type() == WebSocketFrameType.PONG) {
                 return;
@@ -90,7 +91,7 @@ public abstract class WebSocketProxy {
             source.close((short) 1011, "Proxy connection failed");
             destination.close((short) 1011, "Proxy connection failed");
         });
-        source.closeHandler(ignored -> {
+        source.closeHandler(_ -> {
             Short status = source.closeStatusCode();
             if (!destination.isClosed()) {
                 if (status == null || status == 1005 || status == 1006 || status == 1015) {
@@ -107,7 +108,7 @@ public abstract class WebSocketProxy {
             return;
         }
         if (context.response().headWritten()) {
-            context.response().close();
+            context.response().reset();
         } else {
             context.response().setStatusCode(502).end();
         }

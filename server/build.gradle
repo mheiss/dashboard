@@ -1,7 +1,9 @@
 plugins {
     id 'java'
+    id 'eclipse'
     id 'io.quarkus'
     id 'com.diffplug.spotless' version '8.10.3'
+    id 'org.openapi.generator' version '7.17.0'
 }
 
 repositories {
@@ -15,6 +17,7 @@ dependencies {
     implementation 'io.quarkus:quarkus-rest-jackson'
     implementation 'io.quarkiverse.quinoa:quarkus-quinoa:2.9.2'
     implementation 'io.quarkus:quarkus-smallrye-graphql'
+    implementation 'io.quarkus:quarkus-smallrye-openapi'
     implementation 'io.quarkus:quarkus-arc'
     implementation 'io.quarkus:quarkus-jdbc-postgresql'
     implementation 'io.quarkus:quarkus-jdbc-h2'
@@ -53,6 +56,100 @@ compileJava {
 
 compileTestJava {
     options.encoding = 'UTF-8'
+}
+
+tasks.register('genApi', org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
+    generatorName = 'jaxrs-spec'
+    inputSpec = file('../openapi.yaml').toURI().toString()
+    outputDir = layout.buildDirectory.dir('generated/openapi').get().asFile.absolutePath
+    apiPackage = 'cloud.heiss.dashboard.api'
+    modelPackage = 'cloud.heiss.dashboard.api.model'
+    generateApiTests = false
+    generateModelTests = false
+    generateApiDocumentation = false
+    generateModelDocumentation = false
+    cleanupOutput = true
+    globalProperties = [apis: '', models: '']
+    configOptions = [
+        interfaceOnly: 'true',
+        useJakartaEe: 'true',
+        useSwaggerAnnotations: 'false',
+        useBeanValidation: 'false',
+        useTags: 'true',
+        returnResponse: 'true',
+        dateLibrary: 'java8',
+        hideGenerationTimestamp: 'true'
+    ]
+}
+
+sourceSets.main.java.srcDir(layout.buildDirectory.dir('generated/openapi/src/gen/java'))
+
+eclipse {
+    jdt {
+        file {
+            withProperties { properties ->
+                def profiles = new groovy.xml.XmlSlurper().parse(rootProject.file('etc/java_code_format.xml'))
+                def profile = profiles.profile.find { it.@name.text() == 'Dashboard' }
+                if (profile.isEmpty()) {
+                    throw new GradleException('Dashboard formatter profile not found')
+                }
+                profile.setting.each { setting ->
+                    properties.setProperty(setting.@id.text(), setting.@value.text())
+                }
+            }
+        }
+    }
+    classpath {
+        file {
+            whenMerged { classpath ->
+                classpath.entries.findAll { entry ->
+                    entry.kind == 'src' && entry.path.startsWith('build/generated/')
+                }.each { entry ->
+                    entry.entryAttributes['ignore_optional_problems'] = 'true'
+                }
+            }
+        }
+    }
+}
+
+tasks.register('eclipseResourcePreferences', WriteProperties) {
+    group = 'ide'
+    description = 'Sets the Eclipse project text encoding to UTF-8.'
+    destinationFile = layout.projectDirectory.file('.settings/org.eclipse.core.resources.prefs')
+    property('eclipse.preferences.version', '1')
+    property('encoding/<project>', 'UTF-8')
+}
+
+tasks.named('eclipseProject') {
+    dependsOn tasks.named('eclipseResourcePreferences')
+}
+
+tasks.register('eclipseFormatterPreferences', WriteProperties) {
+    group = 'ide'
+    description = 'Writes the Eclipse formatter profile name and version.'
+    inputs.file('etc/java_code_format.xml')
+    destinationFile = layout.projectDirectory.file('.settings/org.eclipse.jdt.ui.prefs')
+    property('eclipse.preferences.version', '1')
+    property('formatter_profile', '_Dashboard')
+    property('formatter_settings_version', providers.provider {
+        def profiles = new groovy.xml.XmlSlurper().parse(rootProject.file('etc/java_code_format.xml'))
+        profiles.profile.find { it.@name.text() == 'Dashboard' }.@version.text()
+    })
+}
+
+tasks.named('eclipseJdt') {
+    dependsOn tasks.named('eclipseFormatterPreferences')
+    inputs.file('etc/java_code_format.xml')
+}
+
+tasks.named('compileJava') {
+    dependsOn tasks.named('genApi')
+}
+
+tasks.named('processResources') {
+    from('../openapi.yaml') {
+        into 'META-INF'
+    }
 }
 
 tasks.register('prepareDevConfig') {

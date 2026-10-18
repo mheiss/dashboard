@@ -1,1 +1,2 @@
 *.java text eol=lf
+/openapi.yaml text eol=lf

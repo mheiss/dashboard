@@ -1,16 +1,16 @@
-import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, debounceTime, filter, of, shareReplay } from 'rxjs';
+import { catchError, debounceTime, defer, filter, of, shareReplay } from 'rxjs';
 import { BackendImage, BackendMoment, IMAGE_FIELDS, ImagePage } from '../../backend/backend.model';
 import { BackendService } from '../../backend/backend.service';
+import { MediaService } from '../../backend/generated/services/media.service';
 import { Moment } from './gallery.model';
 import { ViewerImage } from '../../image-viewer/image-viewer.model';
 
 @Injectable({ providedIn: 'root' })
 export class ImageService {
   private readonly backend = inject(BackendService);
-  private readonly http = inject(HttpClient);
+  private readonly media = inject(MediaService);
   readonly loading = signal(false);
   readonly images = signal<ViewerImage[]>([]);
   readonly moments = signal<Moment[]>([]);
@@ -121,8 +121,12 @@ export class ImageService {
       previous.originalUrl === source.originalUrl
     )
       return existing;
-    const blob = (url: string) =>
-      this.http.get(url, { responseType: 'blob' }).pipe(
+    const blob = (url: string, original: boolean) =>
+      defer(() => {
+        const version = new URL(url, window.location.href).searchParams.get('v') ?? undefined;
+        const params = { id: source.id, v: version };
+        return original ? this.media.getImageOriginal(params) : this.media.getImageThumbnail(params);
+      }).pipe(
         shareReplay({ bufferSize: 1, refCount: true }),
         catchError(() => of(null)),
       );
@@ -130,8 +134,8 @@ export class ImageService {
       id: source.id,
       name: source.name,
       takenAt: new Date(source.takenAt ?? source.modifiedAt),
-      thumbnail$: blob(source.thumbnailUrl),
-      original$: blob(source.originalUrl),
+      thumbnail$: blob(source.thumbnailUrl, false),
+      original$: blob(source.originalUrl, true),
     };
     this.imageSources.set(image, source);
     return image;

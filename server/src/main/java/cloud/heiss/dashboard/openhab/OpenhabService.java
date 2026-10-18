@@ -1,20 +1,5 @@
 package cloud.heiss.dashboard.openhab;
 
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.config.IntegrationProxyConfig;
-import cloud.heiss.dashboard.protect.MotionSnapshots;
-import cloud.heiss.dashboard.sync.DashboardAction;
-import cloud.heiss.dashboard.sync.DashboardChanges;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.quarkus.runtime.Startup;
-import io.quarkus.scheduler.Scheduled;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.ServiceUnavailableException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -39,7 +24,25 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+
 import org.jboss.logging.Logger;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.config.IntegrationProxyConfig;
+import cloud.heiss.dashboard.protect.MotionSnapshots;
+import cloud.heiss.dashboard.sync.DashboardAction;
+import cloud.heiss.dashboard.sync.DashboardChanges;
+import io.quarkus.runtime.Startup;
+import io.quarkus.scheduler.Scheduled;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
+import jakarta.ws.rs.ServiceUnavailableException;
 
 /**
  * Owns one authenticated openHAB event connection for the entire dashboard.

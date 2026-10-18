@@ -1,9 +1,10 @@
 package cloud.heiss.dashboard.openhab;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+
+import com.fasterxml.jackson.databind.JsonNode;
 
 /**
  * Maps configured openHAB items to security state and camera actions.

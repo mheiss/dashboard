@@ -5,6 +5,8 @@ import java.time.Instant;
 /** Microsoft Graph HTTP failure carrying its status and earliest retry time. */
 public class GraphFailure extends RuntimeException {
 
+    private static final long serialVersionUID = 154004692044769670L;
+
     public final int status;
     public final Instant retryAt;
 

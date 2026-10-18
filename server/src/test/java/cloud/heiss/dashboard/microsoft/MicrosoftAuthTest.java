@@ -1,20 +1,21 @@
 package cloud.heiss.dashboard.microsoft;
 
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.security.TokenCipher;
-
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import jakarta.ws.rs.BadRequestException;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+
 import org.junit.jupiter.api.Test;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.security.TokenCipher;
+import jakarta.ws.rs.BadRequestException;
 
 /** Verifies Microsoft authorization uses the GET callback while retaining state and PKCE protection. */
 class MicrosoftAuthTest {

@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { CameraService } from '../../backend/generated/services/camera.service';
 import { inject, Injectable } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DebugService } from '../../utils/debug.service';
@@ -12,7 +12,7 @@ import { StreamOffer } from './webrtc.model';
  */
 @Injectable({ providedIn: 'root' })
 export class WebRTCService {
-  private readonly httpClient = inject(HttpClient);
+  private readonly cameraApi = inject(CameraService);
   private readonly debug = inject(DebugService);
   private readonly visibility = inject(VisibilityService);
   private readonly streams = new Map<string, WebRTCStream>();
@@ -31,7 +31,7 @@ export class WebRTCService {
     const streamName = this.buildStreamName(camera, quality);
     let stream = this.streams.get(streamName);
     if (!stream) {
-      stream = new WebRTCStream(this.httpClient, streamName, this.debug);
+      stream = new WebRTCStream(this.cameraApi, streamName, this.debug);
       this.streams.set(streamName, stream);
     }
 

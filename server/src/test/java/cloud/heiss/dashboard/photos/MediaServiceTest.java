@@ -1,20 +1,13 @@
 package cloud.heiss.dashboard.photos;
 
-import cloud.heiss.dashboard.persistence.model.AccountSnapshot;
-import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.microsoft.GraphClient;
-import cloud.heiss.dashboard.persistence.entity.Photo;
-
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.clearInvocations;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,10 +21,18 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.microsoft.GraphClient;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.Photo;
+import cloud.heiss.dashboard.persistence.model.AccountSnapshot;
+import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
 
 /**
  * Verifies versioned media reuse, active-reader eviction protection, and orphan
@@ -56,7 +57,7 @@ class MediaServiceTest {
         when(media.config.thumbnailCacheBytes()).thenReturn(8L);
         var account = new AccountSnapshot(UUID.randomUUID(), "fixture", "Fixture", "cache", "CONNECTED", null, null);
         when(store.photoAccount(any())).thenReturn(account);
-        when(graph.media(any(), anyString())).thenAnswer(invocation -> new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6 }));
+        when(graph.media(any(), anyString())).thenAnswer(_ -> new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6 }));
     }
 
     @AfterEach
@@ -82,7 +83,7 @@ class MediaServiceTest {
         }).toList();
         var finished = new CountDownLatch(1);
         var firstPage = new java.util.concurrent.atomic.AtomicBoolean(true);
-        when(store.page(anyString(), eq(Photo.class), eq(100), any(Object[].class))).thenAnswer(invocation -> {
+        when(store.page(anyString(), eq(Photo.class), eq(100), any(Object[].class))).thenAnswer(_ -> {
             if (firstPage.getAndSet(false)) {
                 return photos;
             }
@@ -91,7 +92,7 @@ class MediaServiceTest {
         });
         var started = new CountDownLatch(4);
         var release = new CountDownLatch(1);
-        when(graph.media(any(), anyString())).thenAnswer(invocation -> {
+        when(graph.media(any(), anyString())).thenAnswer(_ -> {
             started.countDown();
             assertTrue(release.await(5, TimeUnit.SECONDS));
             return new ByteArrayInputStream(new byte[] { 1 });

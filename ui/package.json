@@ -5,7 +5,10 @@
   "packageManager": "npm@10.9.3",
   "scripts": {
     "ng": "ng",
+    "gen:api": "ng-openapi-gen",
+    "prestart": "npm run gen:api",
     "start": "ng serve",
+    "prebuild": "npm run gen:api",
     "build": "ng build",
     "prettier": "prettier --write '**/*.{ts,js,css,html}'"
   },
@@ -33,6 +36,7 @@
     "@microsoft/microsoft-graph-types": "2.43.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/canvas-confetti": "1.9.0",
+    "ng-openapi-gen": "1.1.0",
     "postcss": "8.5.30",
     "prettier": "3.9.10",
     "prettier-plugin-tailwindcss": "0.8.1",

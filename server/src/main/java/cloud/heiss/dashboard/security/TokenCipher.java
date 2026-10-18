@@ -1,16 +1,17 @@
 package cloud.heiss.dashboard.security;
 
-import cloud.heiss.dashboard.config.DashboardConfig;
-
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /** Encrypts and authenticates persisted Microsoft token caches using the configured dashboard key. */
 @ApplicationScoped

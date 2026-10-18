@@ -1,21 +1,24 @@
 package cloud.heiss.dashboard.photos;
 
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
-import jakarta.ws.rs.core.EntityTag;
-import jakarta.ws.rs.core.Request;
-import jakarta.ws.rs.core.Response;
+
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
 import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
+import jakarta.ws.rs.core.EntityTag;
+import jakarta.ws.rs.core.Request;
+import jakarta.ws.rs.core.Response;
 
 class MediaResourceTest {
 
@@ -35,8 +38,8 @@ class MediaResourceTest {
 
     @Test
     void matchingVersionCanBeCachedPrivatelyForFiveMinutes() {
-        resource.version = Integer.toUnsignedString(photo.version().hashCode());
-        try (var response = resource.thumbnail(photo.id())) {
+        String version = Integer.toUnsignedString(photo.version().hashCode());
+        try (var response = resource.getImageThumbnail(photo.id(), null, version)) {
             String cache = response.getHeaderString("Cache-Control");
             assertMaxAge(cache, 300);
             assertTrue(cache.contains("private"));
@@ -47,8 +50,7 @@ class MediaResourceTest {
     @Test
     void missingOrOutdatedVersionsRequireRevalidation() {
         for (String version : new String[] { null, "outdated" }) {
-            resource.version = version;
-            try (var response = resource.thumbnail(photo.id())) {
+            try (var response = resource.getImageThumbnail(photo.id(), null, version)) {
                 assertMaxAge(response.getHeaderString("Cache-Control"), 0);
             }
         }
@@ -56,9 +58,9 @@ class MediaResourceTest {
 
     @Test
     void conditionalRequestsDoNotOpenMedia() {
-        resource.version = Integer.toUnsignedString(photo.version().hashCode());
+        String version = Integer.toUnsignedString(photo.version().hashCode());
         when(resource.request.evaluatePreconditions(any(EntityTag.class))).thenReturn(Response.notModified());
-        try (var response = resource.thumbnail(photo.id())) {
+        try (var response = resource.getImageThumbnail(photo.id(), null, version)) {
             assertEquals(304, response.getStatus());
             assertMaxAge(response.getHeaderString("Cache-Control"), 300);
             verifyNoInteractions(resource.media);

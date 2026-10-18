@@ -1,5 +1,11 @@
 package cloud.heiss.dashboard.proxy;
 
+import java.net.URI;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
+
 import cloud.heiss.dashboard.config.IntegrationProxyConfig;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
@@ -10,11 +16,6 @@ import io.vertx.ext.web.RoutingContext;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.inject.Inject;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Locale;
-import java.util.Set;
 
 public abstract class HttpProxy {
 
@@ -85,7 +86,7 @@ public abstract class HttpProxy {
                 .setTimeout(config.requestTimeoutMs());
     }
 
-    private MultiMap headers(MultiMap source, boolean request) {
+    protected MultiMap headers(MultiMap source, boolean request) {
         Set<String> excluded = new HashSet<>(HOP_HEADERS);
         for (String connection : source.getAll("Connection")) {
             for (String header : connection.split(",")) {
@@ -111,7 +112,7 @@ public abstract class HttpProxy {
         MultiMap outgoingHeaders = headers(incoming.headers(), true);
         configureHttpHeaders(outgoingHeaders);
         http.request(options(upstream, target).setMethod(incoming.method()).setHeaders(outgoingHeaders)).onSuccess(outgoing -> {
-            context.response().closeHandler(ignored -> outgoing.reset());
+            context.response().closeHandler(_ -> outgoing.reset());
             if (!outgoingHeaders.contains("Content-Length")) {
                 outgoing.setChunked(true);
             }
@@ -121,9 +122,9 @@ public abstract class HttpProxy {
                 if (!response.headers().contains("Content-Length")) {
                     context.response().setChunked(true);
                 }
-                response.pipeTo(context.response()).onFailure(error -> fail(context, 502));
-            }).onFailure(error -> fail(context, 502));
-        }).onFailure(error -> fail(context, 502));
+                response.pipeTo(context.response()).onFailure(_ -> fail(context, 502));
+            }).onFailure(_ -> fail(context, 502));
+        }).onFailure(_ -> fail(context, 502));
     }
 
     private void fail(RoutingContext context, int status) {
@@ -131,7 +132,7 @@ public abstract class HttpProxy {
             return;
         }
         if (context.response().headWritten()) {
-            context.response().close();
+            context.response().reset();
         } else {
             context.response().setStatusCode(status).end();
         }

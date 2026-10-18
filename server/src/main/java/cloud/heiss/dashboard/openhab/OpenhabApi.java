@@ -1,18 +1,20 @@
 package cloud.heiss.dashboard.openhab;
 
-import cloud.heiss.dashboard.protect.MotionSnapshots;
+import java.util.List;
+
+import org.eclipse.microprofile.graphql.GraphQLApi;
+import org.eclipse.microprofile.graphql.Mutation;
+import org.eclipse.microprofile.graphql.Name;
+import org.eclipse.microprofile.graphql.Query;
+
 import cloud.heiss.dashboard.protect.MotionGroup;
+import cloud.heiss.dashboard.protect.MotionSnapshots;
 import cloud.heiss.dashboard.sync.DashboardAction;
 import cloud.heiss.dashboard.sync.DashboardChanges;
 import io.smallrye.graphql.api.Subscription;
 import io.smallrye.mutiny.Multi;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
-import java.util.List;
-import org.eclipse.microprofile.graphql.GraphQLApi;
-import org.eclipse.microprofile.graphql.Mutation;
-import org.eclipse.microprofile.graphql.Name;
-import org.eclipse.microprofile.graphql.Query;
 
 /**
  * Exposes backend-owned openHAB state, PIN commands, snapshot groups, and client actions through GraphQL.

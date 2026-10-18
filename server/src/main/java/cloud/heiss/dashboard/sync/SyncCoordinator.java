@@ -1,35 +1,28 @@
 package cloud.heiss.dashboard.sync;
 
-import cloud.heiss.dashboard.microsoft.GraphFailure;
-import cloud.heiss.dashboard.calendar.CalendarSync;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.microsoft.GraphSubscriptions;
-import cloud.heiss.dashboard.photos.MediaService;
-import cloud.heiss.dashboard.photos.PhotoSync;
-
-import io.quarkus.scheduler.Scheduled;
-import jakarta.annotation.PreDestroy;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.Path;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.MediaType;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import cloud.heiss.dashboard.calendar.CalendarSync;
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.microsoft.GraphFailure;
+import cloud.heiss.dashboard.microsoft.GraphSubscriptions;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.photos.MediaService;
+import cloud.heiss.dashboard.photos.PhotoSync;
+import io.quarkus.scheduler.Scheduled;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
 /**
  * Coordinates leased background account syncs, retries, webhook renewal, and
  * media prefetching.
  */
-@Path("/api/accounts/sync")
 @ApplicationScoped
 public class SyncCoordinator {
 
@@ -51,12 +44,8 @@ public class SyncCoordinator {
     private final ConcurrentHashMap<UUID, Integer> failures = new ConcurrentHashMap<>();
     private final java.util.Set<UUID> running = ConcurrentHashMap.newKeySet();
 
-    @POST
-    @RolesAllowed("admin")
-    @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, String> requestSync() {
+    public void requestSync() {
         store.update("update MicrosoftAccount set requested=true where status<>'RECONNECT_REQUIRED'");
-        return Map.of("status", "QUEUED");
     }
 
     @Scheduled(every = "10s", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)

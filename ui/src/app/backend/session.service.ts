@@ -1,15 +1,15 @@
-import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { SessionService as SessionApiService } from './generated/services/session.service';
+import { Session } from './generated/models/session';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
-  private readonly http = inject(HttpClient);
-  readonly session = signal<{ username: string; admin: boolean } | null>(null);
+  private readonly api = inject(SessionApiService);
+  readonly session = signal<Session | null>(null);
 
   async load() {
     try {
-      this.session.set(await firstValueFrom(this.http.get<{ username: string; admin: boolean }>('/api/session')));
+      this.session.set(await this.api.getSession());
       return true;
     } catch {
       this.session.set(null);
@@ -18,15 +18,11 @@ export class SessionService {
   }
 
   async login(password: string) {
-    const body = new URLSearchParams({ j_username: 'admin', j_password: password });
-    await firstValueFrom(this.http.post('/api/j_security_check', body.toString(), {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, responseType: 'text',
-    }));
-    if (!(await this.load())) throw new Error('Sign-in failed');
+    this.session.set(await this.api.login({ body: { username: 'admin', password } }));
   }
 
   async logout() {
-    await firstValueFrom(this.http.post('/api/session/logout', {}));
+    await this.api.logout();
     this.session.set(null);
   }
 }

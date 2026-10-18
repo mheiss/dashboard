@@ -1,10 +1,11 @@
 package cloud.heiss.dashboard.security;
 
-import jakarta.enterprise.context.ApplicationScoped;
+import java.net.URI;
+
 import io.quarkus.vertx.web.RouteFilter;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.ext.web.RoutingContext;
-import java.net.URI;
+import jakarta.enterprise.context.ApplicationScoped;
 
 /** Rejects cross-origin browser API requests while allowing the public webhook and OAuth callback navigation. */
 @ApplicationScoped

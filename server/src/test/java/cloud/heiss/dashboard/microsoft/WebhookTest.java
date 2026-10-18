@@ -1,17 +1,19 @@
 package cloud.heiss.dashboard.microsoft;
 
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.entity.GraphSubscription;
-import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
+
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
+
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.GraphSubscription;
+import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
 
 /** Verifies webhook challenges, authenticated notification queuing, and private API access checks. */
 @QuarkusTest

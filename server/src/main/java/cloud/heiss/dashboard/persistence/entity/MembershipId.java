@@ -7,6 +7,8 @@ import java.util.UUID;
 /** Composite persistence key linking a photo ID to a source ID. */
 public class MembershipId implements Serializable {
 
+    private static final long serialVersionUID = -8225977848913443141L;
+
     public UUID photoId;
     public UUID sourceId;
 

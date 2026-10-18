@@ -1,15 +1,16 @@
 package cloud.heiss.dashboard.persistence;
 
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.util.UUID;
+
+import org.junit.jupiter.api.Test;
+
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import java.util.UUID;
-import org.junit.jupiter.api.Test;
 
 /** Verifies Liquibase migration idempotency, transactional rollback, and account deletion cascades. */
 @QuarkusTest

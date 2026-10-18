@@ -8,14 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import cloud.heiss.dashboard.config.DashboardConfig;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.ws.rs.NotFoundException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import jakarta.ws.rs.NotFoundException;
 
 /**
  * Verifies snapshot persistence, grouping, retention, and crash-artifact cleanup in an isolated media directory.

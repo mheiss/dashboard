@@ -1,47 +1,56 @@
 package cloud.heiss.dashboard.photos;
 
-import cloud.heiss.dashboard.persistence.DashboardStore;
+import java.util.UUID;
 
+import cloud.heiss.dashboard.api.MediaApi;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.protect.MotionSnapshots;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.CacheControl;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.EntityTag;
 import jakarta.ws.rs.core.Request;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.Context;
-import java.util.UUID;
 
-/** Serves public photo thumbnails and originals with private, version-aware HTTP caching. */
-@Path("/api/media/images/{id}")
+/**
+ * Serves public photo thumbnails and originals with private, version-aware HTTP
+ * caching.
+ */
+@Path("/")
 @PermitAll
-public class MediaResource {
+public class MediaResource implements MediaApi {
 
     @Inject
     DashboardStore store;
     @Inject
     MediaService media;
+    @Inject
+    MotionSnapshots snapshots;
     @Context
     Request request;
-    @QueryParam("v")
-    String version;
 
-    @GET
-    @Path("/thumbnail")
-    public Response thumbnail(@PathParam("id") UUID id) {
-        return response(id, false);
+    @Override
+    public Response getImageThumbnail(UUID id, String ifNoneMatch, String version) {
+        return response(id, false, version);
     }
 
-    @GET
-    @Path("/original")
-    public Response original(@PathParam("id") UUID id) {
-        return response(id, true);
+    @Override
+    public Response getImageOriginal(UUID id, String ifNoneMatch, String version) {
+        return response(id, true, version);
     }
 
-    private Response response(UUID id, boolean original) {
+    @Override
+    public Response getMotionSnapshot(UUID id) {
+        var cache = new CacheControl();
+        cache.setPrivate(true);
+        cache.setMaxAge(300);
+        return Response.ok(snapshots.image(id), "image/jpeg").cacheControl(cache).tag(new EntityTag(id.toString()))
+                .header("X-Content-Type-Options", "nosniff").build();
+    }
+
+    private Response response(UUID id, boolean original, String version) {
         var photo = store.photo(id);
         var tag = new EntityTag(id + "-" + Integer.toUnsignedString(photo.version().hashCode()) + (original ? "-o" : "-t"));
         var cache = new CacheControl();

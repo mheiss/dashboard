@@ -1,12 +1,13 @@
-import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { LucidePlus, LucideRefreshCw, LucideTrash2, LucideLogOut } from '@lucide/angular';
-import { debounceTime, firstValueFrom } from 'rxjs';
-import { AccountView, SourceView } from '../backend/backend.model';
+import { debounceTime } from 'rxjs';
+import { AccountView } from '../backend/generated/models/account-view';
+import { SourceView } from '../backend/generated/models/source-view';
+import { AccountsService } from '../backend/generated/services/accounts.service';
 import { BackendService } from '../backend/backend.service';
 import { SessionService } from '../backend/session.service';
 
@@ -17,7 +18,7 @@ import { SessionService } from '../backend/session.service';
   host: { class: 'block h-full' },
 })
 export class Setup {
-  private readonly http = inject(HttpClient);
+  private readonly accountsApi = inject(AccountsService);
   private readonly backend = inject(BackendService);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
@@ -34,7 +35,7 @@ export class Setup {
 
   async reload() {
     try {
-      this.accounts.set(await firstValueFrom(this.http.get<AccountView[]>('/api/accounts')));
+      this.accounts.set(await this.accountsApi.getAccounts());
     } catch {
       this.error.set('Konten konnten nicht geladen werden.');
     }
@@ -42,20 +43,20 @@ export class Setup {
 
   async connect() {
     await this.run(async () => {
-      const response = await firstValueFrom(this.http.post<{ url: string }>('/api/accounts/connect', {}));
+      const response = await this.accountsApi.connectAccount();
       window.location.assign(response.url);
     });
   }
 
   async discover(account: AccountView) {
     await this.run(async () => {
-      this.accounts.set(await firstValueFrom(this.http.post<AccountView[]>(`/api/accounts/${account.id}/discover`, {})));
+      this.accounts.set(await this.accountsApi.discoverAccountSources({ accountId: account.id }));
     });
   }
 
   async select(source: SourceView, selected: boolean, theme = source.theme) {
     await this.run(async () => {
-      this.accounts.set(await firstValueFrom(this.http.put<AccountView[]>(`/api/accounts/sources/${source.id}`, { selected, theme })));
+      this.accounts.set(await this.accountsApi.selectAccountSource({ sourceId: source.id, body: { selected, theme } }));
     });
   }
 
@@ -63,14 +64,14 @@ export class Setup {
     const path = this.folderPaths[account.id]?.trim();
     if (!path) return;
     await this.run(async () => {
-      this.accounts.set(await firstValueFrom(this.http.post<AccountView[]>(`/api/accounts/${account.id}/folders`, { path })));
+      this.accounts.set(await this.accountsApi.addAccountFolder({ accountId: account.id, body: { path } }));
       this.folderPaths[account.id] = '';
     });
   }
 
   async disconnect(account: AccountView) {
     await this.run(async () => {
-      await firstValueFrom(this.http.delete(`/api/accounts/${account.id}`));
+      await this.accountsApi.disconnectAccount({ accountId: account.id });
       this.pendingDisconnect.set(null);
       await this.reload();
     });
@@ -78,7 +79,7 @@ export class Setup {
 
   async sync() {
     await this.run(async () => {
-      await firstValueFrom(this.http.post('/api/accounts/sync', {}));
+      await this.accountsApi.requestSync();
       await this.reload();
     });
   }
@@ -92,7 +93,12 @@ export class Setup {
     if (this.busy()) return;
     this.busy.set(true);
     this.error.set(null);
-    try { await operation(); } catch { this.error.set('Aktion fehlgeschlagen. Serverkonfiguration und Kontozugriff prüfen.'); }
-    finally { this.busy.set(false); }
+    try {
+      await operation();
+    } catch {
+      this.error.set('Aktion fehlgeschlagen. Serverkonfiguration und Kontozugriff prüfen.');
+    } finally {
+      this.busy.set(false);
+    }
   }
 }

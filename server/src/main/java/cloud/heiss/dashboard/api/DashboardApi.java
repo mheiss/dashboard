@@ -1,23 +1,24 @@
 package cloud.heiss.dashboard.api;
 
-import cloud.heiss.dashboard.api.model.CalendarInfo;
-import cloud.heiss.dashboard.api.model.AccountStatus;
-import cloud.heiss.dashboard.api.model.Agenda;
-import cloud.heiss.dashboard.api.model.Image;
-import cloud.heiss.dashboard.api.model.ImagePage;
-import cloud.heiss.dashboard.api.model.Moment;
-import cloud.heiss.dashboard.sync.DashboardChanges;
-import cloud.heiss.dashboard.sync.Change;
-
-import io.smallrye.graphql.api.Subscription;
-import io.smallrye.mutiny.Multi;
-import jakarta.annotation.security.PermitAll;
-import jakarta.inject.Inject;
 import java.util.List;
+
 import org.eclipse.microprofile.graphql.DefaultValue;
 import org.eclipse.microprofile.graphql.GraphQLApi;
 import org.eclipse.microprofile.graphql.Name;
 import org.eclipse.microprofile.graphql.Query;
+
+import cloud.heiss.dashboard.api.model.AccountStatus;
+import cloud.heiss.dashboard.api.model.Agenda;
+import cloud.heiss.dashboard.api.model.CalendarInfo;
+import cloud.heiss.dashboard.api.model.Image;
+import cloud.heiss.dashboard.api.model.ImagePage;
+import cloud.heiss.dashboard.api.model.Moment;
+import cloud.heiss.dashboard.sync.Change;
+import cloud.heiss.dashboard.sync.DashboardChanges;
+import io.smallrye.graphql.api.Subscription;
+import io.smallrye.mutiny.Multi;
+import jakarta.annotation.security.PermitAll;
+import jakarta.inject.Inject;
 
 /**
  * Exposes public GraphQL queries for cached data and subscriptions for dataset
@@ -29,6 +30,7 @@ public class DashboardApi {
 
     @Inject
     DashboardReadService reads;
+
     @Inject
     DashboardChanges changes;
 

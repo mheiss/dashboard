@@ -23,18 +23,20 @@ import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 
 /**
- * Reconciles selected Microsoft calendars into transactional cached snapshots
- * and publishes changes.
+ * Reconciles selected Microsoft calendars into transactional cached snapshots and publishes changes.
  */
 @ApplicationScoped
 public class CalendarSync {
 
     @Inject
     GraphClient graph;
+
     @Inject
     DashboardStore store;
+
     @Inject
     DashboardConfig config;
+
     @Inject
     DashboardChanges changes;
 

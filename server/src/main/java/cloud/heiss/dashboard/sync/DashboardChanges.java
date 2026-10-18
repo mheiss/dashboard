@@ -1,14 +1,14 @@
 package cloud.heiss.dashboard.sync;
 
-import cloud.heiss.dashboard.persistence.DashboardStore;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import cloud.heiss.dashboard.persistence.DashboardStore;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.smallrye.mutiny.subscription.MultiEmitter;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /** Broadcasts dataset invalidations and supplies the initial revision to new GraphQL subscribers. */
 @ApplicationScoped

@@ -1,16 +1,17 @@
 package cloud.heiss.dashboard.microsoft;
 
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.entity.GraphSubscription;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.GraphSubscription;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
 /** Creates, renews, and removes Graph webhook subscriptions for an account's selected sources. */
 @ApplicationScoped

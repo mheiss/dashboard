@@ -1,21 +1,5 @@
 package cloud.heiss.dashboard.microsoft;
 
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.model.AccountSnapshot;
-import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-import cloud.heiss.dashboard.security.TokenCipher;
-
-import com.microsoft.aad.msal4j.AuthorizationCodeParameters;
-import com.microsoft.aad.msal4j.AuthorizationRequestUrlParameters;
-import com.microsoft.aad.msal4j.ClientCredentialFactory;
-import com.microsoft.aad.msal4j.ConfidentialClientApplication;
-import com.microsoft.aad.msal4j.Prompt;
-import com.microsoft.aad.msal4j.ResponseMode;
-import com.microsoft.aad.msal4j.SilentParameters;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.BadRequestException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -27,6 +11,23 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import com.microsoft.aad.msal4j.AuthorizationCodeParameters;
+import com.microsoft.aad.msal4j.AuthorizationRequestUrlParameters;
+import com.microsoft.aad.msal4j.ClientCredentialFactory;
+import com.microsoft.aad.msal4j.ConfidentialClientApplication;
+import com.microsoft.aad.msal4j.Prompt;
+import com.microsoft.aad.msal4j.ResponseMode;
+import com.microsoft.aad.msal4j.SilentParameters;
+
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
+import cloud.heiss.dashboard.persistence.model.AccountSnapshot;
+import cloud.heiss.dashboard.security.TokenCipher;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
+
 /** Manages delegated Microsoft OAuth with PKCE and encrypted token caches for connected accounts. */
 @ApplicationScoped
 public class MicrosoftAuth {
@@ -35,10 +36,13 @@ public class MicrosoftAuth {
     private final ConcurrentHashMap<String, PendingConnection> pending = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Object> locks = new ConcurrentHashMap<>();
     private final SecureRandom random = new SecureRandom();
+
     @Inject
     DashboardConfig config;
+
     @Inject
     DashboardStore store;
+
     @Inject
     TokenCipher cipher;
 
@@ -83,7 +87,7 @@ public class MicrosoftAuth {
             String microsoftId = result.account().homeAccountId();
             var existing = store.accounts().stream().filter(account -> account.microsoftId().equals(microsoftId)).findFirst();
             UUID id = existing.map(AccountSnapshot::id).orElseGet(UUID::randomUUID);
-            synchronized (locks.computeIfAbsent(id, ignored -> new Object())) {
+            synchronized (locks.computeIfAbsent(id, _ -> new Object())) {
                 String cache = cipher.encrypt(application.tokenCache().serialize());
                 if (existing.isPresent()) {
                     store.update("update MicrosoftAccount set tokenCache=?1,name=?2,status='CONNECTED',error=null,"
@@ -104,7 +108,7 @@ public class MicrosoftAuth {
     }
 
     public String token(UUID id, boolean refresh) {
-        synchronized (locks.computeIfAbsent(id, ignored -> new Object())) {
+        synchronized (locks.computeIfAbsent(id, _ -> new Object())) {
             try {
                 var saved = store.account(id);
                 var application = application();

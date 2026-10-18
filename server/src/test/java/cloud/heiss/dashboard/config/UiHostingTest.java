@@ -4,10 +4,12 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.TestProfile;
-import java.util.List;
-import org.junit.jupiter.api.Test;
 
 /** Verifies root-hosted SPA deep links do not mask public configuration or protected backend endpoints. */
 @QuarkusTest

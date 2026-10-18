@@ -1,20 +1,20 @@
 package cloud.heiss.dashboard.persistence;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.function.Function;
+
 import cloud.heiss.dashboard.persistence.entity.DashboardRevision;
 import cloud.heiss.dashboard.persistence.entity.DashboardSource;
 import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
 import cloud.heiss.dashboard.persistence.model.AccountSnapshot;
-import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
 import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
-
+import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
+import io.quarkus.narayana.jta.QuarkusTransaction;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
-import io.quarkus.narayana.jta.QuarkusTransaction;
-import java.util.function.Function;
-import java.util.List;
-import java.util.UUID;
 
 /** Provides typed Hibernate queries, transaction boundaries, snapshots, and locked revision updates. */
 @ApplicationScoped

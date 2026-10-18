@@ -1,25 +1,5 @@
 package cloud.heiss.dashboard.api;
 
-import cloud.heiss.dashboard.api.model.CalendarInfo;
-import cloud.heiss.dashboard.api.model.AccountStatus;
-import cloud.heiss.dashboard.api.model.Agenda;
-import cloud.heiss.dashboard.api.model.AgendaDay;
-import cloud.heiss.dashboard.api.model.CalendarEntry;
-import cloud.heiss.dashboard.api.model.Image;
-import cloud.heiss.dashboard.api.model.ImagePage;
-import cloud.heiss.dashboard.api.model.Moment;
-import cloud.heiss.dashboard.calendar.AgendaDates;
-import cloud.heiss.dashboard.persistence.entity.CalendarEvent;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
-import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
-import cloud.heiss.dashboard.persistence.entity.Photo;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.ws.rs.BadRequestException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -28,6 +8,27 @@ import java.util.Base64;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.api.model.AccountStatus;
+import cloud.heiss.dashboard.api.model.Agenda;
+import cloud.heiss.dashboard.api.model.AgendaDay;
+import cloud.heiss.dashboard.api.model.CalendarEntry;
+import cloud.heiss.dashboard.api.model.CalendarInfo;
+import cloud.heiss.dashboard.api.model.Image;
+import cloud.heiss.dashboard.api.model.ImagePage;
+import cloud.heiss.dashboard.api.model.Moment;
+import cloud.heiss.dashboard.calendar.AgendaDates;
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.CalendarEvent;
+import cloud.heiss.dashboard.persistence.entity.Photo;
+import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
+import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.ws.rs.BadRequestException;
 
 /**
  * Builds agenda, image, moment, and sync-status responses from persisted data

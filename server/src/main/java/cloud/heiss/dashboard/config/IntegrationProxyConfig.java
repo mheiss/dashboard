@@ -1,9 +1,10 @@
 package cloud.heiss.dashboard.config;
 
-import io.smallrye.config.ConfigMapping;
-import io.smallrye.config.WithDefault;
 import java.net.URI;
 import java.util.Optional;
+
+import io.smallrye.config.ConfigMapping;
+import io.smallrye.config.WithDefault;
 
 @ConfigMapping(prefix = "dashboard.proxy")
 public interface IntegrationProxyConfig {

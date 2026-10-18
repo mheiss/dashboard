@@ -1,22 +1,23 @@
 package cloud.heiss.dashboard.api;
 
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-import cloud.heiss.dashboard.persistence.entity.Photo;
-import cloud.heiss.dashboard.persistence.entity.PhotoMembership;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Instant;
+import java.util.UUID;
+
+import org.junit.jupiter.api.Test;
+
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
+import cloud.heiss.dashboard.persistence.entity.Photo;
+import cloud.heiss.dashboard.persistence.entity.PhotoMembership;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.BadRequestException;
-import java.time.Instant;
-import java.util.UUID;
-import org.junit.jupiter.api.Test;
 
 /** Verifies cached photo paging, anniversary grouping, query bounds, and invalid cursor handling. */
 @QuarkusTest

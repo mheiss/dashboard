@@ -1,10 +1,11 @@
 package cloud.heiss.dashboard.security;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.http.WebSocket;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /** Test listener that completes the GraphQL WebSocket handshake and captures a subscription payload. */
 final class DashboardSubscriptionListener implements WebSocket.Listener {

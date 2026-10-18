@@ -1,10 +1,11 @@
 package cloud.heiss.dashboard.persistence.entity;
 
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.util.UUID;
 
 /** Persisted account-owned calendar or photo folder with display settings and a delta checkpoint. */
 @Entity(name = "DashboardSource")

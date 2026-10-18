@@ -155,7 +155,7 @@ Expected paths:
 
 - `/api/config`: public backend-owned runtime UI settings.
 - `/api/graphql`: backend queries, PIN commands, and `dashboardChanged`/`dashboardAction` subscriptions, preserving `graphql-transport-ws`.
-- `/api/accounts*`, `/api/session*`, `/api/j_security_check`, `/api/media/*`: same-origin backend setup, sessions, and binary images.
+- `/api/accounts*`, `/api/session*`, `/api/media/*`: same-origin backend setup, JSON login/sessions, and binary images.
 - `/api/openhab/*`: available backend proxy for openHAB REST requests; dashboard item handling uses the backend service instead.
 - `/api/ws/openhab`: available backend WebSocket bridge; dashboard item events and commands no longer use it from the browser.
 - `/api/media/protect/{id}`: stored motion snapshots from the backend media directory.
@@ -194,6 +194,16 @@ npm start
 The development server uses `src/proxy/proxy.dev.json` by default. All `target` values should point to the Quarkus backend. Configure actual openHAB/go2rtc addresses and the openHAB token in `../server/dev/config/application.properties` or through backend environment variables. No separate local reverse proxy is required. The local proxy config is ignored by Git; keep publishable defaults in `src/proxy/proxy.dev.sample.json`.
 
 ### Build
+
+All frontend REST calls use generated OpenAPI service classes and models: configuration, sessions, account setup/synchronization, photo blobs, motion snapshots, and camera poster frames. Do not add handwritten REST calls or invoke generated functions directly from consumers. The authoritative, editable contract is the repository-root `../openapi.yaml`; both backend interfaces/models and frontend services/models are generated from it. GraphQL transport and WebSocket signaling remain separate and unchanged.
+
+After editing the contract, regenerate the frontend from this directory:
+
+```powershell
+npm run gen:api
+```
+
+This also runs automatically before `npm start` and `npm run build`. No backend build or running server is required. The backend generates its own sources automatically during Java compilation, or explicitly with `../server/gradlew.bat -p ../server openApiGenerate`. Do not edit generated sources.
 
 ```powershell
 npm run build

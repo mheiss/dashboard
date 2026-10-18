@@ -1,18 +1,7 @@
 package cloud.heiss.dashboard.photos;
 
-import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
-import cloud.heiss.dashboard.microsoft.GraphFailure;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.microsoft.GraphClient;
-import cloud.heiss.dashboard.persistence.entity.Photo;
-
-import jakarta.annotation.PreDestroy;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import io.quarkus.scheduler.Scheduled;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,37 +13,56 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-/** Maintains versioned disk media caches with thumbnail prefetching, eviction, and active-reader protection. */
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.microsoft.GraphClient;
+import cloud.heiss.dashboard.microsoft.GraphFailure;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.Photo;
+import cloud.heiss.dashboard.persistence.model.PhotoSnapshot;
+import io.quarkus.scheduler.Scheduled;
+import jakarta.annotation.PreDestroy;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+
+/**
+ * Maintains versioned disk media caches with thumbnail prefetching, eviction, and active-reader protection.
+ */
 @ApplicationScoped
 public class MediaService {
 
-    @Inject
-    DashboardConfig config;
-    @Inject
-    DashboardStore store;
-    @Inject
-    GraphClient graph;
-    private final Object[] stripes = java.util.stream.IntStream.range(0, 64).mapToObj(index -> new Object()).toArray();
+    private final Object[] stripes = java.util.stream.IntStream.range(0, 64).mapToObj(_ -> new Object()).toArray();
     private final ExecutorService thumbnails = Executors.newSingleThreadExecutor();
     private final ExecutorService thumbnailDownloads = Executors.newFixedThreadPool(4);
     private final java.util.Set<UUID> prefetching = ConcurrentHashMap.newKeySet();
     private final Object cacheLock = new Object();
     private final java.util.Map<Path, Integer> readers = new java.util.HashMap<>();
 
+    @Inject
+    DashboardConfig config;
+
+    @Inject
+    DashboardStore store;
+
+    @Inject
+    GraphClient graph;
+
     /**
-     * Returns the versioned cache path, downloading missing content first. Selects the original when {@code original} is true,
-     * otherwise the large thumbnail. The returned file is not protected from hourly cleanup; use {@link #open} for reading.
+     * Returns the versioned cache path, downloading missing content first. Selects
+     * the original when {@code original} is true, otherwise the large thumbnail.
+     * The returned file is not protected from hourly cleanup; use {@link #open} for
+     * reading.
      */
     public Path file(PhotoSnapshot photo, boolean original) {
         return file(photo, original, false);
     }
 
     /**
-     * Opens cached content, downloading it first if necessary, and protects the file from cleanup until the stream is closed.
-     * Callers must close the returned stream to release that protection.
+     * Opens cached content, downloading it first if necessary, and protects the
+     * file from cleanup until the stream is closed. Callers must close the returned
+     * stream to release that protection.
      */
     public InputStream open(PhotoSnapshot photo, boolean original) {
         Path path = file(photo, original, true);
@@ -67,9 +75,11 @@ public class MediaService {
     }
 
     /**
-     * Reuses the current version or fully downloads it to a temporary file before publishing it in the cache. Striped locks
-     * prevent duplicate downloads for the same photo. Updates the last-used timestamp and optionally registers a reader under
-     * the cache lock. Enforces per-image download limits but leaves total cache-size enforcement to hourly cleanup.
+     * Reuses the current version or fully downloads it to a temporary file before
+     * publishing it in the cache. Striped locks prevent duplicate downloads for the
+     * same photo. Updates the last-used timestamp and optionally registers a reader
+     * under the cache lock. Enforces per-image download limits but leaves total
+     * cache-size enforcement to hourly cleanup.
      */
     private Path file(PhotoSnapshot photo, boolean original, boolean pin) {
         synchronized (stripes[Math.floorMod(photo.id().hashCode(), stripes.length)]) {
@@ -128,9 +138,11 @@ public class MediaService {
     }
 
     /**
-     * Queues thumbnail warming for an account's selected sources, ignoring duplicate queued or running requests for that account.
-     * Processes pages of 100 photos with up to four concurrent downloads. Individual failures are skipped; HTTP 429 stops queued
-     * downloads and further pages after already running tasks finish. This method returns without waiting for downloads.
+     * Queues thumbnail warming for an account's selected sources, ignoring
+     * duplicate queued or running requests for that account. Processes pages of 100
+     * photos with up to four concurrent downloads. Individual failures are skipped;
+     * HTTP 429 stops queued downloads and further pages after already running tasks
+     * finish. This method returns without waiting for downloads.
      */
     public void prefetch(UUID account) {
         if (!prefetching.add(account)) {
@@ -175,17 +187,21 @@ public class MediaService {
         });
     }
 
-    /** Removes one reader pin when a stream closes or fails to open, without running cache cleanup. */
+    /**
+     * Removes one reader pin when a stream closes or fails to open, without running
+     * cache cleanup.
+     */
     private void release(Path path) {
         synchronized (cacheLock) {
-            readers.computeIfPresent(path, (key, count) -> count == 1 ? null : count - 1);
+            readers.computeIfPresent(path, (_, count) -> count == 1 ? null : count - 1);
         }
     }
 
     /**
-     * Runs hourly to remove outdated or unselected photo versions and temporary downloads older than 24 hours, then enforce both
-     * cache-size limits. Files with active readers are retained. Cache sizes may exceed their limits between runs or while files
-     * remain protected.
+     * Runs hourly to remove outdated or unselected photo versions and temporary
+     * downloads older than 24 hours, then enforce both cache-size limits. Files
+     * with active readers are retained. Cache sizes may exceed their limits between
+     * runs or while files remain protected.
      */
     @Scheduled(every = "1h", concurrentExecution = Scheduled.ConcurrentExecution.SKIP)
     public void prune() {
@@ -224,9 +240,10 @@ public class MediaService {
     }
 
     /**
-     * Deletes least recently used, unpinned files until the separate original and thumbnail cache limits are met, if possible.
-     * Called only by cleanup while holding {@code cacheLock}; active readers and failed deletions can leave a cache over its
-     * limit.
+     * Deletes least recently used, unpinned files until the separate original and
+     * thumbnail cache limits are met, if possible. Called only by cleanup while
+     * holding {@code cacheLock}; active readers and failed deletions can leave a
+     * cache over its limit.
      */
     private void evict() throws IOException {
         Path directory = Path.of(config.mediaDirectory()).toAbsolutePath().normalize();
@@ -257,7 +274,10 @@ public class MediaService {
         }
     }
 
-    /** Hashes the upstream version as SHA-256 hexadecimal text for a stable, filesystem-safe cache filename. */
+    /**
+     * Hashes the upstream version as SHA-256 hexadecimal text for a stable,
+     * filesystem-safe cache filename.
+     */
     private static String versionHash(String version) {
         try {
             return HexFormat.of()
@@ -267,7 +287,10 @@ public class MediaService {
         }
     }
 
-    /** Returns the cache file's last-used timestamp, or zero on read failure so cleanup considers it oldest. */
+    /**
+     * Returns the cache file's last-used timestamp, or zero on read failure so
+     * cleanup considers it oldest.
+     */
     private static long lastUsed(Path path) {
         try {
             return Files.getLastModifiedTime(path).toMillis();
@@ -276,7 +299,10 @@ public class MediaService {
         }
     }
 
-    /** Requests cancellation of queued prefetch work and interrupts running coordinator and download tasks on shutdown. */
+    /**
+     * Requests cancellation of queued prefetch work and interrupts running
+     * coordinator and download tasks on shutdown.
+     */
     @PreDestroy
     void stop() {
         thumbnails.shutdownNow();

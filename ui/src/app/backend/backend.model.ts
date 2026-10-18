@@ -53,23 +53,6 @@ export interface DashboardAction {
   armed: boolean | null;
 }
 
-export interface SourceView {
-  id: string;
-  kind: string;
-  name: string;
-  theme: string;
-  selected: boolean;
-}
-
-export interface AccountView {
-  id: string;
-  name: string;
-  status: string;
-  error: string | null;
-  lastSync: string | null;
-  sources: SourceView[];
-}
-
 export const IMAGE_FIELDS = 'id name takenAt modifiedAt thumbnailUrl originalUrl';
 export const CALENDAR_FIELDS = 'id subject startsAt endsAt isAllDay calendar { id name theme }';
 

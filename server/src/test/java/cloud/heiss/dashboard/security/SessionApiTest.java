@@ -1,29 +1,34 @@
 package cloud.heiss.dashboard.security;
 
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import io.quarkus.test.junit.QuarkusTest;
-import io.quarkus.test.common.http.TestHTTPResource;
-import jakarta.inject.Inject;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 
-/** Verifies local sessions, role restrictions, browser request safeguards, and GraphQL HTTP/WebSocket access. */
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
+import io.quarkus.test.common.http.TestHTTPResource;
+import io.quarkus.test.junit.QuarkusTest;
+import jakarta.inject.Inject;
+
+/**
+ * Verifies local sessions, role restrictions, browser request safeguards, and
+ * GraphQL HTTP/WebSocket access.
+ */
 @QuarkusTest
 class SessionApiTest {
 
@@ -38,8 +43,8 @@ class SessionApiTest {
     ObjectMapper mapper;
 
     private String login(String username, String password) {
-        return given().formParam("j_username", username).formParam("j_password", password).when().post("/api/j_security_check")
-                .then().statusCode(200).extract().cookie("quarkus-credential");
+        return given().contentType("application/json").body(Map.of("username", username, "password", password)).when()
+                .post("/api/session/login").then().statusCode(200).extract().cookie("quarkus-credential");
     }
 
     @Test
@@ -71,6 +76,7 @@ class SessionApiTest {
         String id = java.util.UUID.randomUUID().toString();
         given().when().get("/api/media/images/" + id + "/thumbnail").then().statusCode(404);
         given().when().get("/api/media/images/" + id + "/original").then().statusCode(404);
+        given().when().get("/api/media/protect/" + id).then().statusCode(404);
         given().when().post("/api/accounts/connect").then().statusCode(401);
         given().when().delete("/api/accounts/" + id).then().statusCode(401);
     }
@@ -105,10 +111,16 @@ class SessionApiTest {
             long revision = store.revision();
             given().cookie("quarkus-credential", cookie).contentType("application/json")
                     .body(Map.of("selected", true, "theme", "rose")).when().put("/api/accounts/sources/" + source.id).then()
-                    .statusCode(200);
+                    .statusCode(200).body("find { it.id == '" + account.id + "' }.sources[0].selected", equalTo(true))
+                    .body("find { it.id == '" + account.id + "' }.sources[0].theme", equalTo("rose"));
             assertEquals(true, store.sources(account.id).getFirst().selected());
             assertEquals("rose", store.sources(account.id).getFirst().theme());
             assertEquals(revision + 1, store.revision());
+            given().cookie("quarkus-credential", cookie).contentType("application/json")
+                    .body(Map.of("selected", true, "theme", "invalid")).when().put("/api/accounts/sources/" + source.id).then()
+                    .statusCode(400);
+            given().cookie("quarkus-credential", cookie).contentType("application/json").body(Map.of("theme", "rose")).when()
+                    .put("/api/accounts/sources/" + source.id).then().statusCode(400);
             given().cookie("quarkus-credential", cookie).contentType("application/json")
                     .body(Map.of("selected", true, "theme", "rose")).when()
                     .put("/api/accounts/sources/" + java.util.UUID.randomUUID()).then().statusCode(404);
@@ -122,16 +134,78 @@ class SessionApiTest {
 
     @Test
     void signInNeedsNoCustomHeaderButRejectsCrossSiteRequests() {
-        given().header("Origin", base.toString().replaceFirst("/$", "")).formParam("j_username", "admin")
-                .formParam("j_password", "fixture-admin-password").when().post("/api/j_security_check").then().statusCode(200);
-        given().header("Origin", "https://attacker.example").formParam("j_username", "admin")
-                .formParam("j_password", "fixture-admin-password").when().post("/api/j_security_check").then().statusCode(403);
-        given().header("Sec-Fetch-Site", "cross-site").formParam("j_username", "admin")
-                .formParam("j_password", "fixture-admin-password").when().post("/api/j_security_check").then().statusCode(403);
-        given().header("Sec-Fetch-Site", "same-site").formParam("j_username", "admin")
-                .formParam("j_password", "fixture-admin-password").when().post("/api/j_security_check").then().statusCode(403);
-        given().header("Referer", "https://attacker.example/form").formParam("j_username", "admin")
-                .formParam("j_password", "fixture-admin-password").when().post("/api/j_security_check").then().statusCode(403);
+        var credentials = Map.of("username", "admin", "password", "fixture-admin-password");
+        given().header("Origin", base.toString().replaceFirst("/$", "")).contentType("application/json").body(credentials).when()
+                .post("/api/session/login").then().statusCode(200);
+        given().header("Origin", "https://attacker.example").contentType("application/json").body(credentials).when()
+                .post("/api/session/login").then().statusCode(403);
+        given().header("Sec-Fetch-Site", "cross-site").contentType("application/json").body(credentials).when()
+                .post("/api/session/login").then().statusCode(403);
+        given().header("Sec-Fetch-Site", "same-site").contentType("application/json").body(credentials).when()
+                .post("/api/session/login").then().statusCode(403);
+        given().header("Referer", "https://attacker.example/form").contentType("application/json").body(credentials).when()
+                .post("/api/session/login").then().statusCode(403);
+    }
+
+    @Test
+    void openApiIsAdminOnlyAndServesThePackagedContract() {
+        given().get("/q/openapi").then().statusCode(401);
+        String cookie = login("admin", "fixture-admin-password");
+        given().cookie("quarkus-credential", cookie).queryParam("format", "json").get("/q/openapi").then().statusCode(200)
+                .contentType("application/json").body("paths.size()", equalTo(16))
+                .body("paths.'/api/config'.get.operationId", equalTo("getConfiguration"))
+                .body("paths.'/api/session'.get.operationId", equalTo("getSession"))
+                .body("paths.'/api/session/login'.post.operationId", equalTo("login"))
+                .body("paths.'/api/session/logout'.post.responses.'204'.description", equalTo("Session cookie cleared"))
+                .body("components.schemas.Session.required", org.hamcrest.Matchers.containsInAnyOrder("username", "admin"))
+                .body("components.schemas.UiConfiguration.properties.cameras.additionalProperties.type", equalTo("string"))
+                .body("paths.'/api/accounts/{accountId}/discover'.post.responses.'200'.content.'application/json'.schema.type",
+                        equalTo("array"))
+                .body("paths.'/api/accounts/{accountId}/folders'.post.responses.'200'.content.'application/json'.schema.type",
+                        equalTo("array"))
+                .body("paths.'/api/accounts/sources/{sourceId}'.put.responses.'200'.content.'application/json'.schema.type",
+                        equalTo("array"))
+                .body("paths.'/api/accounts/{accountId}'.delete.responses.'204'.description", equalTo("Account disconnected"))
+                .body("paths.'/api/accounts/callback'.get.responses.'303'.headers.Location", notNullValue())
+                .body("paths.'/api/media/images/{id}/thumbnail'.get.responses.'200'.content.'image/jpeg'.schema.format",
+                        equalTo("binary"))
+                .body("paths.'/api/media/images/{id}/original'.get.responses.'200'.content.'image/*'.schema.format",
+                        equalTo("binary"))
+                .body("paths.'/api/media/images/{id}/original'.get.responses.'304'.headers.ETag", notNullValue())
+                .body("paths.'/api/media/protect/{id}'.get.responses.'200'.content.'image/jpeg'.schema.format", equalTo("binary"))
+                .body("paths.'/api/webrtc/frame.jpeg'.get.operationId", equalTo("getCameraFrame"))
+                .body("paths.'/api/webrtc/frame.jpeg'.get.parameters[0].required", equalTo(true))
+                .body("components.securitySchemes.sessionCookie.in", equalTo("cookie"));
+    }
+
+    @Test
+    void administratorCanQueueSynchronization() {
+        given().post("/api/accounts/sync").then().statusCode(401);
+        String cookie = login("admin", "fixture-admin-password");
+        given().cookie("quarkus-credential", cookie).post("/api/accounts/sync").then().statusCode(200)
+                .contentType("application/json").body("status", equalTo("QUEUED"));
+    }
+
+    @Test
+    void jsonLoginValidatesCredentialsAndLogoutClearsCookie() {
+        given().contentType("application/json").body(Map.of("username", "admin", "password", "wrong")).post("/api/session/login")
+                .then().statusCode(401);
+        given().contentType("application/json").body(Map.of("username", "admin")).post("/api/session/login").then()
+                .statusCode(400);
+        given().contentType("application/json").body("null").post("/api/session/login").then().statusCode(400);
+        given().formParam("j_username", "admin").formParam("j_password", "fixture-admin-password").post("/api/session/login")
+                .then().statusCode(415);
+        given().formParam("j_username", "admin").formParam("j_password", "fixture-admin-password").post("/api/j_security_check")
+                .then().statusCode(404);
+        var response = given().contentType("application/json")
+                .body(Map.of("username", "admin", "password", "fixture-admin-password")).post("/api/session/login").then()
+                .statusCode(200).header("Cache-Control", "no-store").body("username", equalTo("admin"))
+                .body("admin", equalTo(true)).extract().response();
+        org.junit.jupiter.api.Assertions.assertTrue(response.getDetailedCookie("quarkus-credential").isHttpOnly());
+        assertEquals("Lax", response.getDetailedCookie("quarkus-credential").getSameSite());
+        given().cookie("quarkus-credential", response.cookie("quarkus-credential")).post("/api/session/logout").then()
+                .statusCode(204).cookie("quarkus-credential", equalTo(""));
+        given().cookie("quarkus-credential", "tampered").get("/api/session").then().statusCode(401);
     }
 
     @Test

@@ -1,11 +1,12 @@
 package cloud.heiss.dashboard.proxy;
 
+import java.net.URI;
+
 import io.quarkus.vertx.web.RouteFilter;
 import io.vertx.core.MultiMap;
 import io.vertx.ext.web.RoutingContext;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import java.net.URI;
 
 @ApplicationScoped
 public class OpenhabProxy extends HttpProxy {

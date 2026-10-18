@@ -1,13 +1,14 @@
 package cloud.heiss.dashboard.proxy;
 
-import io.quarkus.vertx.http.HttpServerOptionsCustomizer;
-import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.http.WebSocketConnectOptions;
-import jakarta.enterprise.context.ApplicationScoped;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+
+import io.quarkus.vertx.http.HttpServerOptionsCustomizer;
+import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.WebSocketConnectOptions;
+import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class OpenhabWebSocketProxy extends WebSocketProxy implements HttpServerOptionsCustomizer {

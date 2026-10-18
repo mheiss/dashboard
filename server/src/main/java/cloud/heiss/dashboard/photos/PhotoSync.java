@@ -1,30 +1,31 @@
 package cloud.heiss.dashboard.photos;
 
-import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
-import cloud.heiss.dashboard.microsoft.GraphFailure;
-import cloud.heiss.dashboard.calendar.CalendarSync;
-import cloud.heiss.dashboard.sync.DashboardChanges;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.microsoft.GraphClient;
-import cloud.heiss.dashboard.persistence.entity.Photo;
-import cloud.heiss.dashboard.persistence.entity.PhotoMembership;
-import cloud.heiss.dashboard.persistence.entity.SourceItem;
-import cloud.heiss.dashboard.persistence.entity.SourceItemId;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.UUID;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.calendar.CalendarSync;
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.microsoft.GraphClient;
+import cloud.heiss.dashboard.microsoft.GraphFailure;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.persistence.entity.Photo;
+import cloud.heiss.dashboard.persistence.entity.PhotoMembership;
+import cloud.heiss.dashboard.persistence.entity.SourceItem;
+import cloud.heiss.dashboard.persistence.entity.SourceItemId;
+import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
+import cloud.heiss.dashboard.sync.DashboardChanges;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 /** Stages OneDrive folder deltas and transactionally reconciles shared photos, memberships, and checkpoints. */
 @ApplicationScoped

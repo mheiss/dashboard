@@ -1,75 +1,83 @@
 package cloud.heiss.dashboard.microsoft;
 
-import cloud.heiss.dashboard.microsoft.model.AccountView;
-import cloud.heiss.dashboard.microsoft.model.FolderRequest;
-import cloud.heiss.dashboard.microsoft.model.SourceSelection;
-import cloud.heiss.dashboard.microsoft.model.SourceView;
-import cloud.heiss.dashboard.sync.DashboardChanges;
-import cloud.heiss.dashboard.config.DashboardConfig;
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.DashboardStore;
+import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.UUID;
 
+import cloud.heiss.dashboard.api.AccountsApi;
+import cloud.heiss.dashboard.api.model.AccountView;
+import cloud.heiss.dashboard.api.model.ConnectionUrl;
+import cloud.heiss.dashboard.api.model.FolderRequest;
+import cloud.heiss.dashboard.api.model.QueuedSynchronization;
+import cloud.heiss.dashboard.api.model.SourceSelection;
+import cloud.heiss.dashboard.api.model.SourceView;
+import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.sync.DashboardChanges;
+import cloud.heiss.dashboard.sync.SyncCoordinator;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 import jakarta.ws.rs.BadRequestException;
-import jakarta.ws.rs.DELETE;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.net.URI;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
-/** Admin endpoints for connecting Microsoft accounts and discovering, selecting, or removing their sources. */
-@Path("/api/accounts")
-@Produces(MediaType.APPLICATION_JSON)
+/**
+ * Admin endpoints for connecting Microsoft accounts and discovering, selecting, or removing their sources.
+ */
+@Path("/")
 @RolesAllowed("admin")
-public class AccountsResource {
+public class AccountsResource implements AccountsApi {
 
     @Inject
     DashboardStore store;
+
     @Inject
     MicrosoftAuth auth;
+
     @Inject
     GraphClient graph;
+
     @Inject
     SecurityIdentity identity;
+
     @Inject
     DashboardChanges changes;
+
     @Inject
     DashboardConfig config;
 
-    @GET
-    public List<AccountView> accounts() {
+    @Inject
+    SyncCoordinator synchronization;
+
+    private List<AccountView> accounts() {
         return store.accounts().stream()
-                .map(account -> new AccountView(account.id().toString(), account.name(), account.status(), account.error(),
-                        account.lastSync() == null ? null : account.lastSync().toString(),
-                        store.sources(account.id()).stream().map(source -> new SourceView(source.id().toString(), source.kind(),
-                                source.name(), source.theme(), source.selected())).toList()))
+                .map(account -> new AccountView(account.id(), account.name(), account.status(), account.error(),
+                        account.lastSync() == null ? null : OffsetDateTime.ofInstant(account.lastSync(), ZoneOffset.UTC),
+                        store.sources(account.id()).stream().map(source -> new SourceView(source.id(), source.kind(),
+                                source.name(), SourceView.ThemeEnum.fromValue(source.theme()), source.selected())).toList()))
                 .toList();
     }
 
-    @POST
-    @Path("/connect")
-    public Map<String, String> connect() {
-        return Map.of("url", auth.connectUrl(identity.getPrincipal().getName()));
+    @Override
+    public Response getAccounts() {
+        return Response.ok(accounts()).build();
     }
 
-    @GET
-    @Path("/callback")
-    public Response callback(@QueryParam("state") String state, @QueryParam("code") String code) {
+    @Override
+    public Response connectAccount() {
+        return Response.ok(new ConnectionUrl(URI.create(auth.connectUrl(identity.getPrincipal().getName())))).build();
+    }
+
+    @Override
+    public Response completeAccountConnection(String code, String state) {
         UUID accountId = auth.complete(identity.getPrincipal().getName(), state, code);
         try {
-            discover(accountId);
+            discoverSources(accountId);
         } catch (RuntimeException exception) {
             store.update("update MicrosoftAccount set error=?1 where id=?2", "Source discovery failed; retry in setup",
                     accountId);
@@ -78,23 +86,25 @@ public class AccountsResource {
         return Response.seeOther(URI.create(base + (base.endsWith("/") ? "" : "/") + "setup")).build();
     }
 
-    @POST
-    @Path("/{accountId}/discover")
-    public List<AccountView> discover(@PathParam("accountId") UUID accountId) {
+    @Override
+    public Response discoverAccountSources(UUID accountId) {
+        discoverSources(accountId);
+        return Response.ok(accounts()).build();
+    }
+
+    private void discoverSources(UUID accountId) {
         store.account(accountId);
         for (var calendar : graph.list(accountId, "me/calendars")) {
             saveSource(accountId, "CALENDAR", calendar.path("id").asText(), null, calendar.path("name").asText("Calendar"));
         }
-        return accounts();
     }
 
-    @POST
-    @Path("/{accountId}/folders")
-    public List<AccountView> addFolder(@PathParam("accountId") UUID accountId, FolderRequest request) {
-        if (request == null || request.path() == null || request.path().isBlank() || request.path().length() > 1024) {
+    @Override
+    public Response addAccountFolder(UUID accountId, FolderRequest request) {
+        if (request == null || request.getPath() == null || request.getPath().isBlank() || request.getPath().length() > 1024) {
             throw new BadRequestException("A OneDrive folder path is required");
         }
-        String path = java.util.Arrays.stream(request.path().split("/")).map(GraphClient::segment)
+        String path = java.util.Arrays.stream(request.getPath().split("/")).map(GraphClient::segment)
                 .collect(java.util.stream.Collectors.joining("/"));
         var item = graph.get(accountId, "me/drive/root:/" + path);
         var target = item.has("remoteItem") ? item.path("remoteItem") : item;
@@ -103,8 +113,8 @@ public class AccountsResource {
             throw new BadRequestException("The selected item is not an accessible OneDrive folder");
         }
         saveSource(accountId, "PHOTOS", target.path("id").asText(), target.path("parentReference").path("driveId").asText(),
-                item.path("name").asText(request.path()));
-        return accounts();
+                item.path("name").asText(request.getPath()));
+        return Response.ok(accounts()).build();
     }
 
     private void saveSource(UUID accountId, String kind, String upstreamId, String driveId, String name) {
@@ -133,29 +143,33 @@ public class AccountsResource {
         });
     }
 
-    @PUT
-    @Path("/sources/{sourceId}")
-    public List<AccountView> select(@PathParam("sourceId") UUID sourceId, SourceSelection request) {
-        if (request == null || request.theme() == null || !List.of("emerald", "rose", "sky", "amber").contains(request.theme())) {
+    @Override
+    public Response selectAccountSource(UUID sourceId, SourceSelection request) {
+        if (request == null || request.getTheme() == null || request.getSelected() == null) {
             throw new BadRequestException("Choose a supported calendar theme");
         }
         long revision = store.inTransaction(manager -> {
             var source = java.util.Optional
                     .ofNullable(manager.find(DashboardSource.class, sourceId, LockModeType.PESSIMISTIC_WRITE))
                     .orElseThrow(jakarta.ws.rs.NotFoundException::new);
-            source.selected = request.selected();
-            source.theme = request.theme();
+            source.selected = request.getSelected();
+            source.theme = request.getTheme().value();
             manager.createQuery("update MicrosoftAccount set requested=true,retryAfter=null where id=?1")
                     .setParameter(1, source.accountId).executeUpdate();
             return DashboardStore.advanceRevision(manager);
         });
         changes.publish("ALL", revision);
-        return accounts();
+        return Response.ok(accounts()).build();
     }
 
-    @DELETE
-    @Path("/{accountId}")
-    public Response disconnect(@PathParam("accountId") UUID accountId) {
+    @Override
+    public Response requestSync() {
+        synchronization.requestSync();
+        return Response.ok(new QueuedSynchronization(QueuedSynchronization.StatusEnum.QUEUED)).build();
+    }
+
+    @Override
+    public Response disconnectAccount(UUID accountId) {
         var subscriptions = store.list("select id from GraphSubscription where accountId=?1", String.class, accountId);
         for (String subscription : subscriptions) {
             try {

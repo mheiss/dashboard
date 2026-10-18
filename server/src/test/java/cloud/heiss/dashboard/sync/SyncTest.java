@@ -1,14 +1,5 @@
 package cloud.heiss.dashboard.sync;
 
-import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
-import cloud.heiss.dashboard.microsoft.GraphFailure;
-import cloud.heiss.dashboard.calendar.CalendarSync;
-import cloud.heiss.dashboard.persistence.entity.DashboardSource;
-import cloud.heiss.dashboard.persistence.DashboardStore;
-import cloud.heiss.dashboard.microsoft.GraphClient;
-import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
-import cloud.heiss.dashboard.photos.PhotoSync;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -21,12 +12,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
-import io.quarkus.test.InjectMock;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
 import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -34,9 +19,26 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import cloud.heiss.dashboard.calendar.CalendarSync;
+import cloud.heiss.dashboard.microsoft.GraphClient;
+import cloud.heiss.dashboard.microsoft.GraphFailure;
+import cloud.heiss.dashboard.persistence.DashboardStore;
+import cloud.heiss.dashboard.persistence.entity.DashboardSource;
+import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
+import cloud.heiss.dashboard.persistence.model.SourceSnapshot;
+import cloud.heiss.dashboard.photos.PhotoSync;
+import io.quarkus.test.InjectMock;
+import io.quarkus.test.junit.QuarkusTest;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
+import jakarta.inject.Inject;
 
 /** Verifies sync leases, atomic calendar snapshots, resilient photo deltas, and subscriber lifecycle. */
 @QuarkusTest

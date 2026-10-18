@@ -28,12 +28,11 @@ VS Code's folder settings select Red Hat's Java formatter (`redhat.java`) and th
 
 Backend sources live under `cloud.heiss.dashboard`, grouped by responsibility:
 
-- `api`: GraphQL contracts and cached dashboard read models.
-- `api.model`: top-level records for GraphQL responses.
+- `api`: GraphQL contracts plus generated REST interfaces from the root OpenAPI contract.
+- `api.model`: GraphQL response records plus generated REST request/response models.
 - `calendar`: calendar synchronization and agenda date rules.
 - `config`: application configuration mapping.
 - `microsoft`: account/source management, OAuth, Graph requests, subscriptions, and webhooks.
-- `microsoft.model`: top-level account/source request and response records.
 - `openhab`: upstream item connection, security commands, doorbell/motion decisions, and GraphQL contracts.
 - `persistence`: Hibernate store and transaction helpers.
 - `persistence.entity`: one entity or composite ID class per file, including local dashboard users.
@@ -44,7 +43,7 @@ Backend sources live under `cloud.heiss.dashboard`, grouped by responsibility:
 - `security`: local sessions, browser request checks, and token encryption.
 - `sync`: background coordination and dashboard change notifications.
 
-Each class, record, and configuration interface has its own top-level file; response values and sync notifications use records rather than mutable DTO classes. Tests mirror the responsibility packages. Entity names and table mappings remain independent of the Java package layout; package moves require no Liquibase schema changes.
+Each handwritten class, record, and configuration interface has its own top-level file; handwritten response values and sync notifications use records. OpenAPI Generator creates REST interfaces and DTO classes under `build/generated/openapi`, not in the handwritten source tree. Tests mirror the responsibility packages. Entity names and table mappings remain independent of the Java package layout; package moves require no Liquibase schema changes.
 
 ## Configuration
 
@@ -112,6 +111,20 @@ H2 data persists across restarts in `dev/data/h2/dashboard.mv.db`; OneDrive orig
 Run `npm start` in the sibling UI directory for the Angular dev server. Its single `/api/**` proxy rule forwards all dashboard APIs, including WebSockets, to the backend on port 8080. It must not target openHAB or go2rtc directly. Configure those upstreams in `dev/config/application.properties` or through the environment as described below. The browser uses the Angular server's origin for both the UI and APIs; no separate origin configuration is needed. Local UI proxy files use `/api/**`, targeting `http://localhost:8080` with `ws: true`. Preserve the browser-facing host rather than enabling `changeOrigin`. Angular continues to serve SPA routes, assets, and development hot reload. For PostgreSQL development, configure its JDBC URL and credentials and change the dev JVM profiles in `build.gradle` to `dev`.
 
 ## Build And Test
+
+### OpenAPI Contracts
+
+The repository-root `../openapi.yaml` is the authoritative, editable REST contract shared by backend and frontend. It covers configuration, administrator sessions, account/source setup, synchronization, photo blobs, motion snapshots, and camera poster frames. Do not generate or overwrite this file from Java code.
+
+OpenAPI Generator's `jaxrs-spec` generator creates Jakarta REST interfaces and Jackson models in `build/generated/openapi`. Resource classes implement the generated interfaces, which own operation paths, parameters, and media types. Handwritten implementations contain business logic, runtime authorization, and validation, but no OpenAPI annotations. `compileJava` automatically depends on `openApiGenerate`; run `.\gradlew.bat openApiGenerate` to generate the backend sources independently, without building Angular or starting the server. Generated files are build outputs and must not be edited or committed.
+
+Angular's `npm run gen:api` reads the same root YAML and generates its service classes and TypeScript models. Frontend start/build commands regenerate these automatically. Neither generator requires the other project's build outputs, and there is no schema synchronization check or backend schema export/copy task.
+
+Gradle packages the root contract as `META-INF/openapi.yaml`. SmallRye annotation scanning is disabled, so `/q/openapi` serves this contract rather than inferring one from Java. API documentation endpoints require the administrator role. `POST /api/session/login` accepts JSON `{username, password}` and issues the existing encrypted HttpOnly cookie; cookie restoration, browser-origin safeguards, and JPA password verification are unchanged.
+
+GraphQL, WebSocket signaling, Microsoft webhooks, arbitrary transparent upstream proxying, and operational health endpoints remain outside this REST contract. The concrete camera-frame operation implements the generated interface and streams upstream responses without forwarding browser credentials.
+
+### Commands
 
 ```powershell
 .\gradlew.bat test

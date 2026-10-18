@@ -1,5 +1,15 @@
 package cloud.heiss.dashboard.proxy;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -7,15 +17,6 @@ import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.json.JsonObject;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Comparator;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.TimeUnit;
 
 public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleManager {
 
@@ -89,6 +90,16 @@ public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleMan
                     } else if (request.path().equals("/api/disconnect")) {
                         request.connection().close();
                     } else if (request.path().equals("/api/frame.jpeg")) {
+                        if ("upstream-error".equals(request.getParam("src"))) {
+                            request.response().setStatusCode(418).putHeader("Content-Type", "application/json")
+                                    .putHeader("Set-Cookie", "upstream-session=secret")
+                                    .putHeader("Connection", "x-upstream-private")
+                                    .putHeader("X-Upstream-Private", "not-forwarded")
+                                    .end(new JsonObject().put("uri", request.uri()).put("cookie", request.getHeader("Cookie"))
+                                            .put("authorization", request.getHeader("Authorization"))
+                                            .put("origin", request.getHeader("Origin")).encode());
+                            return;
+                        }
                         snapshotRequests.incrementAndGet();
                         snapshotAuthorization = request.getHeader("Authorization");
                         snapshotCookie = request.getHeader("Cookie");
@@ -126,7 +137,7 @@ public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleMan
     private void websocket(ServerWebSocket socket) {
         if (socket.path().equals("/ws")) {
             itemSockets.add(socket);
-            socket.closeHandler(ignored -> itemSockets.remove(socket));
+            socket.closeHandler(_ -> itemSockets.remove(socket));
         }
         socket.writeTextMessage(
                 new JsonObject().put("uri", socket.uri()).put("protocols", socket.headers().get("Sec-WebSocket-Protocol"))
