@@ -232,6 +232,32 @@ For openHAB HTTP requests, the backend replaces `Authorization` with the configu
 
 The integration proxy accepts WebSocket upgrades only at `/api/ws/openhab` and `/api/ws/webrtc`. Upgrades on the integration HTTP routes `/api/openhab` and `/api/webrtc` (including their subpaths) return HTTP 400; ordinary HTTP requests to the two WebSocket routes return HTTP 426. GraphQL independently supports WebSocket subscriptions at `/api/graphql`.
 
+### Reverse Proxy Configuration
+
+When an HTTPS reverse proxy forwards to Quarkus over HTTP, Quarkus must reconstruct the browser-facing origin from trusted forwarding headers. Add these settings to the private runtime `application.properties` for a proxy on the same machine:
+
+```properties
+quarkus.http.proxy.proxy-address-forwarding=true
+quarkus.http.proxy.allow-forwarded=false
+quarkus.http.proxy.allow-x-forwarded=true
+quarkus.http.proxy.enable-forwarded-host=true
+quarkus.http.proxy.trusted-proxies=127.0.0.1,::1
+```
+
+This example accepts the `X-Forwarded-*` family, not the standardized `Forwarded` header. Configure the proxy to overwrite client-supplied forwarding headers, send the original public scheme in `X-Forwarded-Proto`, and send the public authority in `X-Forwarded-Host`, for example `dashboard.home.arpa` or `dashboard.home.arpa:8443`. If it sends `X-Forwarded-Port`, that must also be the public port. Preserve the original browser `Origin` header, forward WebSocket upgrades, and use suitable idle timeouts.
+
+Traefik uses `X-Forwarded-Proto: wss` for secure WebSocket upgrades and `ws` for plain upgrades, while the browser's `Origin` uses `https` or `http`. For WebSocket origin checks only, the backend treats `wss` as `https` and `ws` as `http`. Host and port must still match, and secure/insecure origins are not interchangeable. These rules apply to both `/api/graphql` subscriptions and `/api/ws/webrtc` camera signaling.
+
+For a separate proxy, replace the loopback trust list with its actual connection source IP or hostname. For example:
+
+```properties
+quarkus.http.proxy.trusted-proxies=traefik.home.arpa,::1
+```
+
+Hostnames must resolve from the backend to the source IP of the proxy connection; Docker networking or NAT may make that different from the proxy's LAN address. Include `::1` only if an IPv6 loopback proxy is also used. Trust only the proxies that actually connect to Quarkus, restrict backend port access to them, and bind to a suitable private interface when the proxy is remote. Never expose the backend directly while trusting arbitrary forwarding headers. Restart the backend after changing properties.
+
+Missing forwarding or an incorrect trusted address can cause HTTP 403 on browser GraphQL POSTs and WebSocket handshakes, even though requests without `Origin` succeed and local development works. In that case, the origin filter sees the internal HTTP origin instead of the public HTTPS origin. Check the forwarded scheme, host, port, and connection source address before changing Keycloak settings. Keep origin checks enabled; do not add permissive CORS rules to work around incorrect forwarding.
+
 ### Security And Media Boundaries
 
 Read-only HTTP proxy requests, camera images, and camera-viewing signaling remain public. Other proxy HTTP methods and openHAB WebSocket upgrades require a valid bearer token with the `dashboard` client role `admin`. Proxy filters run after OIDC authentication and strip browser credentials before forwarding upstream. Restrict the dashboard to the trusted household network and scope the private openHAB token's permissions where supported.

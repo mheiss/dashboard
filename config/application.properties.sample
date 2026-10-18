@@ -51,3 +51,10 @@ quarkus.oidc.token.audience=dashboard
 # quarkus.log.file.path=/var/log/dashboard/app.log
 # quarkus.log.file.rotation.max-file-size=10M
 # quarkus.log.file.rotation.max-backup-index=5
+
+# (Optional) Quarkus behind a reverse Proxy (e.g: Traefik)
+# quarkus.http.proxy.proxy-address-forwarding=true
+# quarkus.http.proxy.allow-forwarded=false
+# quarkus.http.proxy.allow-x-forwarded=true
+# quarkus.http.proxy.enable-forwarded-host=true
+# quarkus.http.proxy.trusted-proxies=traefik.home.arpa,::1

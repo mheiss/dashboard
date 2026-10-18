@@ -192,6 +192,22 @@ First startup initializes the database schema; administrators are managed in Key
 
 Configure your HTTPS reverse proxy for `dashboard.home.arpa` with a certificate trusted by your viewing devices. Forward all requests unchanged to `http://127.0.0.1:8080`, including WebSocket upgrades, and use suitable WebSocket idle timeouts. Validate and reload the proxy configuration using its own tooling.
 
+When the proxy terminates HTTPS and connects to Quarkus over HTTP, add these settings to `/etc/dashboard/application.properties` for this same-machine deployment:
+
+```properties
+quarkus.http.proxy.proxy-address-forwarding=true
+quarkus.http.proxy.allow-forwarded=false
+quarkus.http.proxy.allow-x-forwarded=true
+quarkus.http.proxy.enable-forwarded-host=true
+quarkus.http.proxy.trusted-proxies=127.0.0.1,::1
+```
+
+The proxy must overwrite client-supplied forwarding headers and send the original public scheme, host, and port in `X-Forwarded-*`. Preserve the browser's `Origin` header. Traefik sends `wss` instead of `https` for secure WebSocket upgrades; the backend treats these schemes as equivalent for WebSocket origin checks while still requiring the host and port to match. Restart the dashboard after changing properties.
+
+For a proxy on another machine, replace loopback with its actual connection source IP or a hostname such as `traefik.home.arpa`. The hostname must resolve from the backend to the source IP Quarkus sees; container networking or NAT can change that address. Bind the backend to a suitable private interface and restrict its port to the proxy. Trust only the proxies that actually connect, not all addresses. See [the backend proxy configuration reference](server/README.md#reverse-proxy-configuration) on GitHub, or `BACKEND.md` in the release ZIP.
+
+Missing trusted forwarding can cause HTTP 403 on browser GraphQL POSTs and WebSocket handshakes even though requests without `Origin` succeed and local development works. Correct the forwarding configuration rather than disabling origin checks or adding permissive CORS rules.
+
 If using a private certificate authority, install its public root CA certificate in every client device's trust store; never distribute the CA's private key. Allow HTTPS on the LAN, keep port 8080 on loopback, and do not forward the dashboard to the internet.
 
 Open `https://dashboard.home.arpa/home` without certificate warnings. Click settings, sign in through Keycloak, and connect each owner's Microsoft account. Select calendars and enable OneDrive folders such as `Pictures/Camera Roll` in `/setup`. Synchronization normally runs every five minutes. Use `/home` as the wall tablet's start URL.
@@ -272,6 +288,7 @@ Start with `sudo journalctl -u dashboard -n 100 --no-pager`.
 | Service fails to start | Java 25 path, `latest` symlink, file permissions, and unreplaced properties placeholders. |
 | Database errors | PostgreSQL availability, credentials, and `USAGE, CREATE` privileges on the database's `public` schema. |
 | HTTPS or proxy errors | Local DNS, trusted CA, reverse proxy logs, and backend readiness on `127.0.0.1:8080`. |
+| GraphQL POSTs or WebSocket handshakes return 403 only behind the proxy | Enable trusted forwarding as described in step 6. Verify the proxy's source IP and the forwarded public scheme, host, and port; requests without `Origin` can succeed even when browser requests fail. |
 | `/api/config` returns 503 | Keycloak issuer ends in `/realms/<realm>` and camera IDs are unique. Inspect backend logs for configuration errors. |
 | Microsoft sign-in or requests fail | Redirect URI matches your public HTTPS URL; the proxy preserves the public host and scheme through trusted forwarding headers. Retain the original token key. |
 | API returns 401 after Keycloak login | Access token includes audience `dashboard`; frontend and backend use the same realm. Configure an access-token audience mapper and sign in again. |

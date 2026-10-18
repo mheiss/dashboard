@@ -162,6 +162,8 @@ Camera media still uses go2rtc's advertised WebRTC network candidates; signaling
 
 For the embedded production UI, configure the HTTPS reverse proxy for `dashboard.home.arpa` with a certificate trusted by viewing devices. Forward all requests unchanged to the Quarkus backend, normally `http://127.0.0.1:8080` on the same machine, and support WebSocket upgrades with suitable idle timeouts.
 
+If the proxy terminates HTTPS, also configure [trusted forwarding in Quarkus](../server/README.md#reverse-proxy-configuration) so the backend sees the public scheme, host, and port. Otherwise, legitimate browser GraphQL POSTs and WebSocket handshakes can return HTTP 403 while local development and requests without `Origin` still work. Traefik's `ws`/`wss` forwarded schemes are normalized by the backend for WebSocket origin checks. No frontend rebuild or CORS workaround is needed for proxy configuration changes.
+
 ## Developer Documentation
 
 ### Prerequisites
@@ -277,6 +279,7 @@ The Wallbox screen is implemented as an iframe in `src/app/feature-evcc/evcc.htm
 
 ### Common Troubleshooting
 
+- **GraphQL POSTs or WebSockets return 403 only in production**: verify [trusted reverse-proxy forwarding](../server/README.md#reverse-proxy-configuration), including the proxy's actual source IP and public scheme, host, and port. Restart the backend after correcting properties; keep origin checks enabled.
 - **Sign-in fails**: verify Keycloak reachability, public client `dashboard`, PKCE, redirect/web-origin allowlists, audience `dashboard`, and the `admin` client role.
 - **Calendars missing**: open Setup as admin, discover and enable the intended sources, then inspect account synchronization status.
 - **Gallery folders missing**: verify the selected server-side folder path is relative to the owner's drive root and accessible to that connected account.

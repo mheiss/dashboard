@@ -36,14 +36,24 @@ public class BrowserRequestFilter {
         try {
             URI source = URI.create(value);
             URI target = URI.create(request.absoluteURI());
+            String targetScheme = target.getScheme();
+            if ("websocket".equalsIgnoreCase(request.getHeader("Upgrade"))) {
+                if ("wss".equalsIgnoreCase(targetScheme)) {
+                    targetScheme = "https";
+                } else if ("ws".equalsIgnoreCase(targetScheme)) {
+                    targetScheme = "http";
+                }
+            }
             return source.getHost() != null && source.getUserInfo() == null && source.getHost().equalsIgnoreCase(target.getHost())
-                    && target.getScheme().equalsIgnoreCase(source.getScheme()) && port(source) == port(target);
+                    && targetScheme.equalsIgnoreCase(source.getScheme()) && port(source) == port(target);
         } catch (IllegalArgumentException exception) {
             return false;
         }
     }
 
     private int port(URI uri) {
-        return uri.getPort() == -1 ? ("https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80) : uri.getPort();
+        return uri.getPort() == -1
+                ? (("https".equalsIgnoreCase(uri.getScheme()) || "wss".equalsIgnoreCase(uri.getScheme())) ? 443 : 80)
+                : uri.getPort();
     }
 }
