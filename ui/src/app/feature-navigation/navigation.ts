@@ -15,12 +15,7 @@ export class Navigation {
   readonly router = inject(Router);
   readonly layout = inject(LayoutService);
 
-  private readonly allElements = entries();
-  readonly elements = computed(() =>
-    this.allElements.filter((entry) =>
-      this.layout.mobile$() ? entry.path !== '/home' : entry.path !== '/calendar' && entry.path !== '/gallery',
-    ),
-  );
+  readonly elements = entries();
   readonly activePath = signal('');
   readonly highlightedPath = computed(() => {
     const path = this.activePath();
@@ -40,7 +35,7 @@ export class Navigation {
     });
 
     effect(() => {
-      for (const element of this.allElements) {
+      for (const element of this.elements()) {
         element.active.set(element.path === this.highlightedPath());
       }
     });
