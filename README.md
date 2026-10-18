@@ -11,7 +11,7 @@ Smart Home Dashboard brings Microsoft calendars and OneDrive photos together wit
 
 ![Dashboard home screen with a color-coded family agenda, photos from this day in past years, and a travel-photo gallery](docs/images/dashboard-home.png)
 
-*Shard calendar on the left, a look back at this day in past years along with a gallery showing the latest photos on the right. Screenshots show the real app with fictional calendar entries and sample photography, not private household data. The current interface is in German.*
+*Shared calendar on the left, a look back at this day in past years along with a gallery showing the latest photos on the right. Screenshots show the real app with fictional calendar entries and sample photography, not private household data. The current interface is in German.*
 
 ## At A Glance
 
@@ -57,13 +57,11 @@ Sample photographs are from [Unsplash](https://unsplash.com/license). Original i
 
 ## Linux Setup
 
-Release packages currently cover fresh installations only. Updating existing installations between releases is not yet supported or documented.
-
 Run the downloaded release as a systemd service, with PostgreSQL and an HTTPS reverse proxy on the same machine. You need **Java 25**, **PostgreSQL**, **unzip**, **OpenSSL**, and an **HTTPS reverse proxy**. No Gradle, Node.js, or frontend build is needed.
 
 Install these using your distribution's packages or the official [Java](https://adoptium.net/temurin/releases/) and [PostgreSQL](https://www.postgresql.org/download/) instructions. Follow your reverse proxy's installation guide. Check that `/usr/bin/java -version` reports Java 25; substitute its actual path in the service if needed.
 
-This guide uses `https://dashboard.home.arpa`. Set up local DNS for that hostname and use it consistently in the proxy and Microsoft settings. **Keep the dashboard on your household network:** calendar and photo viewing are public to anyone who can reach it; only account setup requires the admin login.
+This guide uses `https://dashboard.home.arpa`. Set up local DNS for that hostname and use it consistently in the proxy, Microsoft, and Keycloak settings. **Keep the dashboard on your household network:** calendar, photo, camera viewing, and PIN submission are public to anyone who can reach it; account setup and arbitrary upstream writes require the admin login. The configured openHAB rules validate the submitted PIN.
 
 ### 1. Install The Release
 
@@ -82,7 +80,7 @@ Stop if checksum verification fails. These are first-install commands; do not ex
 | --- | --- |
 | `/opt/dashboard/releases/<version>/` | Extracted application, including `quarkus-app/` and `examples/`. |
 | `/opt/dashboard/latest` | Symlink to the active release directory. |
-| `/etc/dashboard/` | Private `application.properties` and public `config.json`. |
+| `/etc/dashboard/` | Private `application.properties` containing all runtime settings. |
 | `/var/lib/dashboard/media/` | Persistent writable photo cache and motion snapshots. PostgreSQL stores database data separately. |
 
 ### 2. Create The Database
@@ -119,32 +117,34 @@ sudo install -d -o root -g dashboard -m 0750 /etc/dashboard
 sudo install -d -o dashboard -g dashboard -m 0750 /var/lib/dashboard /var/lib/dashboard/media
 ```
 
-For a **first installation only**, copy the samples and edit them. Do not overwrite existing configuration:
+For a **first installation only**, copy the sample and edit it. Do not overwrite existing configuration:
 
 ```bash
 sudo install -o root -g dashboard -m 0640 /opt/dashboard/latest/examples/application.properties /etc/dashboard/application.properties
-sudo install -o root -g dashboard -m 0640 /opt/dashboard/latest/examples/config.json /etc/dashboard/config.json
 sudoedit /etc/dashboard/application.properties
-sudoedit /etc/dashboard/config.json
 ```
 
 In `application.properties`, replace every `REPLACE_...` placeholder with your database password, Microsoft client ID/secret, and a token-cache encryption key. Generate the key in a private terminal with `openssl rand -base64 32` for `dashboard.token-key`. Save it securely; it is required to decrypt saved Microsoft token caches.
 
-Configure the public Keycloak client `dashboard` in your realm, for example `https://login.home.arpa/realms/dashboard`, using Standard Flow and PKCE `S256`. Register `https://dashboard.home.arpa/auth/callback` and `https://dashboard.home.arpa/silent-check-sso.html` as redirect URIs, `https://dashboard.home.arpa/home` as a post-logout redirect, and the exact frontend web origin. Assign the client role `admin` to administrators and add an access-token audience mapper for `dashboard`. See [Keycloak Authentication](server/README.md#keycloak-authentication) for details.
+Configure the public Keycloak client `dashboard` in your realm, for example `https://login.home.arpa/realms/dashboard`, using Standard Flow and PKCE `S256`. Register `https://dashboard.home.arpa/auth/callback` as a redirect URI, `https://dashboard.home.arpa/home` as a post-logout redirect, and the exact frontend web origin. Assign the client role `admin` to administrators and add an access-token audience mapper for `dashboard`. See [Keycloak Authentication](server/README.md#keycloak-authentication) for details.
+
+The frontend loads its Keycloak server, realm, and client ID from the backend's public `/api/config` response. These values are derived from `quarkus.oidc.auth-server-url` and `quarkus.oidc.client-id` in backend configuration. Set the realm URL in the properties file, restart the backend, and reload the browser; no frontend rebuild is needed.
 
 Change the sample's paths and hostname as needed:
 
 ```properties
-dashboard.ui-config-file=/etc/dashboard/config.json
 dashboard.media-directory=/var/lib/dashboard/media
 dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/api/accounts/callback
+quarkus.oidc.auth-server-url=https://login.home.arpa/realms/dashboard
 ```
 
-Keep `quarkus.http.host=127.0.0.1` and the loopback proxy trust settings for this same-machine deployment. Leave `dashboard.microsoft.webhook-url` unset; scheduled synchronization needs no public webhook.
+Keep `quarkus.http.host=127.0.0.1` for this same-machine deployment. Configure Quarkus to accept forwarding headers only from your reverse proxy so it can determine the public host and HTTPS scheme correctly. Leave `dashboard.microsoft.webhook-url` unset; scheduled synchronization needs no public webhook.
+
+Provision media storage separately from configuration and application binaries. The default cache budgets are 10 GiB for originals and 1 GiB for thumbnails, plus motion snapshots and temporary downloads. Cache cleanup runs hourly, so allow extra free space; these budgets are not hard disk-capacity limits. See the backend configuration reference to adjust them.
 
 All dashboard APIs use `/api`; UI navigation stays at the HTTP root. Register the Microsoft Web redirect URI at `/api/accounts/callback`. If using public webhooks, configure the webhook URL and its public proxy rule for `/api/graph/webhook`.
 
-`config.json` holds the openHAB, EVCC, and camera settings, not Microsoft source selections. The backend exposes only `sitemapUrl`, `evccUrl`, and `cameras` through public `/api/config`; **never put credentials in the JSON file**. The properties file contains private secrets and must stay out of Git. Advanced runtime settings and environment overrides are covered in the backend reference: [server/README.md](server/README.md) on GitHub, or `BACKEND.md` in the release ZIP.
+`application.properties` holds backend credentials, authentication settings, and smart-home configuration. The backend exposes only `sitemapUrl`, `evccUrl`, `cameras`, and public `keycloak` connection settings through `/api/config`; it never serves the properties file or its secrets. Microsoft source selections are stored in the database. Keep the active properties file private and out of Git. Advanced runtime settings and environment overrides are covered in the backend reference: [server/README.md](server/README.md) on GitHub, or `BACKEND.md` in the release ZIP.
 
 ### 5. Start With Systemd
 
@@ -199,23 +199,31 @@ Open `https://dashboard.home.arpa/home` without certificate warnings. Click sett
 <details>
 <summary>Optional Smart-Home Integrations</summary>
 
-openHAB, EVCC, and go2rtc run separately. Configure their URLs and camera IDs in `/etc/dashboard/config.json`. Embedded views must be reachable from the tablet over HTTPS and allow iframe embedding.
+openHAB, EVCC, and go2rtc run separately. Configure their URLs, item mappings, and camera IDs in `/etc/dashboard/application.properties`. Embedded views must be reachable from the tablet over HTTPS and allow iframe embedding.
 
-The backend hosts the openHAB HTTP/WebSocket and go2rtc snapshot/signaling proxy routes. Keep the HTTPS proxy forwarding requests unchanged; do not add path rewrites or openHAB credentials to it. Configure upstream access in the **private** `/etc/dashboard/application.properties`, not the publicly served JSON:
+The backend hosts the openHAB HTTP/WebSocket and go2rtc snapshot/signaling proxy routes. Keep the HTTPS proxy forwarding requests unchanged; do not add path rewrites or openHAB credentials to it. Configure integration settings in the **private** properties file:
 
 ```properties
 dashboard.proxy.openhab-url=http://openhab.home.arpa:8080
 dashboard.proxy.openhab-token=REPLACE_OPENHAB_API_TOKEN
 dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
+dashboard.openhab.sitemap=https://openhab.home.arpa/basicui/app
+dashboard.openhab.items.security=Security
+dashboard.openhab.items.pin=Security_Pin
+dashboard.openhab.items.doorbell=Entrance_Bell_Switch
+dashboard.openhab.doorbell-camera=entry
+dashboard.evcc.url=https://evcc.home.arpa
+dashboard.protect.cameras[0].id=entry
+dashboard.protect.cameras[0].label=Eingang
 ```
 
 Use HTTP(S) origins without API paths or embedded credentials, reachable from the backend. Restart the dashboard after changing properties. Environment alternatives are `DASHBOARD_OPENHAB_URL`, `DASHBOARD_OPENHAB_TOKEN`, and `DASHBOARD_GO2RTC_URL`. Unconfigured integrations return HTTP 503; the rest of the dashboard remains available.
 
-The backend owns openHAB item states, PIN commands, and doorbell/motion decisions through one upstream connection. Clients receive camera-selection and security-state actions through `/api/graphql`, without parsing openHAB items. Motion snapshots are captured even without connected browsers and stored with metadata under `/var/lib/dashboard/media/protect/`; the newest 20 detection groups are shared through GraphQL and `/api/media/protect/{id}`. Restart the backend after changing item or camera mappings in `config.json`.
+The backend owns openHAB item states, PIN commands, and doorbell/motion decisions through one upstream connection. Clients receive camera-selection and security-state actions through `/api/graphql`, without parsing openHAB items. Motion snapshots are captured even without connected browsers and stored with metadata under `/var/lib/dashboard/media/protect/`; the newest 20 detection groups are shared through GraphQL and `/api/media/protect/{id}`. Camera indices determine display order; each camera requires a unique ID and a label. Restart the backend after changing settings, then reload the browser.
 
-Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. Camera viewing and stored history remain public; PIN commands, upstream HTTP writes, and the openHAB WebSocket bridge require the `dashboard` client's `admin` role. Keep the deployment on the trusted household network and protect the private token.
+Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. Camera viewing, stored history, and GraphQL PIN submission are public; arbitrary upstream HTTP writes and the openHAB WebSocket bridge require the `dashboard` client's `admin` role. Keep the deployment on the trusted household network and protect the private token.
 
-Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `protect.cameras`. WebRTC media still connects using go2rtc's advertised network candidates; the backend proxies signaling, not media. Embedded openHAB and EVCC pages still require direct browser access.
+Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `dashboard.protect.cameras[n].id`. WebRTC media still connects using go2rtc's advertised network candidates; the backend proxies signaling, not media. Embedded openHAB and EVCC pages still require direct browser access.
 
 Verify initial openHAB states, live item updates, commands, camera snapshots, and live video through the dashboard origin. The backend reference's **Smart-Home Proxy** section covers timeouts, troubleshooting, and tests: [server/README.md](server/README.md#smart-home-proxy) on GitHub, or `BACKEND.md` in the release ZIP.
 
@@ -229,9 +237,30 @@ sudo journalctl -u dashboard -n 100 --no-pager
 sudo systemctl restart dashboard
 ```
 
-Restart after changing backend properties. After changing the unit, run `sudo systemctl daemon-reload` first. Public JSON edits need only a browser reload.
+Restart after changing any application properties, then reload the browser to obtain updated public settings. After changing the unit, run `sudo systemctl daemon-reload` before restarting.
 
 Renew expiring Microsoft client secrets in the properties file and restart. Manage administrator credentials and the `dashboard` client role `admin` in Keycloak.
+
+### Optional File Logging
+
+To also write `/var/log/dashboard/app.log`, add these properties to `/etc/dashboard/application.properties`:
+
+```properties
+quarkus.log.file.enabled=true
+quarkus.log.file.path=/var/log/dashboard/app.log
+quarkus.log.file.rotation.max-file-size=10M
+quarkus.log.file.rotation.max-backup-index=5
+```
+
+Run `sudo systemctl edit dashboard` and add a service override:
+
+```ini
+[Service]
+LogsDirectory=dashboard
+LogsDirectoryMode=0750
+```
+
+Systemd creates the log directory with the service user's ownership and makes it writable despite `ProtectSystem=strict`. Run `sudo systemctl daemon-reload` and `sudo systemctl restart dashboard`. Console logging continues to journald; set `quarkus.log.console.enabled=false` only if file-only application logging is desired.
 
 ## Troubleshooting
 
@@ -242,9 +271,11 @@ Start with `sudo journalctl -u dashboard -n 100 --no-pager`.
 | Service fails to start | Java 25 path, `latest` symlink, file permissions, and unreplaced properties placeholders. |
 | Database errors | PostgreSQL availability, credentials, and `USAGE, CREATE` privileges on the database's `public` schema. |
 | HTTPS or proxy errors | Local DNS, trusted CA, reverse proxy logs, and backend readiness on `127.0.0.1:8080`. |
-| `/api/config` returns 503 | `/etc/dashboard/config.json` exists, contains valid JSON, and is readable by `dashboard`. |
+| `/api/config` returns 503 | Keycloak issuer ends in `/realms/<realm>` and camera IDs are unique. Inspect backend logs for configuration errors. |
 | Microsoft sign-in or requests fail | Redirect URI matches your public HTTPS URL; the proxy preserves the public host and scheme through trusted forwarding headers. Retain the original token key. |
+| API returns 401 after Keycloak login | Access token includes audience `dashboard`; frontend and backend use the same realm. Configure an access-token audience mapper and sign in again. |
 | Calendar or gallery is empty | Connect accounts, select and enable sources, then allow time for synchronization. |
+| Image downloads report no space left | Check free bytes and inodes on the configured media directory's filesystem and available backing storage on the host. Allow space beyond the cache budgets for concurrent downloads. |
 
 ## For Contributors
 

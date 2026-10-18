@@ -471,6 +471,7 @@ components:
       - sitemapUrl
       - evccUrl
       - cameras
+      - keycloak
       properties:
         sitemapUrl:
           type: string
@@ -480,6 +481,21 @@ components:
           type: object
           additionalProperties:
             type: string
+        keycloak:
+          $ref: "#/components/schemas/KeycloakConfiguration"
+    KeycloakConfiguration:
+      type: object
+      required:
+      - url
+      - realm
+      - clientId
+      properties:
+        url:
+          type: string
+        realm:
+          type: string
+        clientId:
+          type: string
   securitySchemes:
     bearerAuth:
       type: http

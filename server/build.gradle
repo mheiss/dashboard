@@ -165,7 +165,6 @@ tasks.register('prepareDevConfig') {
     description = 'Creates missing backend and UI development configuration from sample files.'
     def configs = [
         [source: file('../config/application-dev.properties.sample'), target: file('dev/config/application.properties')],
-        [source: file('../config/config.sample.json'), target: file('dev/config/config.json')],
         [source: file('../ui/src/proxy/proxy.dev.sample.json'), target: file('../ui/src/proxy/proxy.dev.json')]
     ]
     inputs.files(configs.collect { it.source })
@@ -208,11 +207,7 @@ tasks.register('distributionZip', Zip) {
     from('README.md') {
         rename { 'BACKEND.md' }
     }
-    from('examples/config.sample.json') {
-        into 'examples'
-        rename { 'config.json' }
-    }
-    from('examples/application.properties.sample') {
+    from('../config/application.properties.sample') {
         into 'examples'
         rename { 'application.properties' }
     }

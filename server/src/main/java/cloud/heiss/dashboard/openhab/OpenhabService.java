@@ -9,7 +9,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.Objects;
@@ -31,6 +30,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cloud.heiss.dashboard.config.DashboardConfig;
+import cloud.heiss.dashboard.config.CameraConfig;
 import cloud.heiss.dashboard.config.IntegrationProxyConfig;
 import cloud.heiss.dashboard.protect.MotionSnapshots;
 import cloud.heiss.dashboard.sync.DashboardAction;
@@ -88,7 +88,7 @@ public class OpenhabService {
         try {
             items = loadItems();
             snapshots.prune();
-        } catch (IOException | RuntimeException failure) {
+        } catch (RuntimeException failure) {
             LOG.warn("Cannot initialize openHAB item handling", failure);
         }
     }
@@ -130,7 +130,7 @@ public class OpenhabService {
                             connected.abort();
                         }
                     });
-        } catch (IOException | RuntimeException failure) {
+        } catch (RuntimeException failure) {
             connecting.set(false);
             LOG.warn("Cannot configure backend openHAB connection", failure);
         }
@@ -233,17 +233,15 @@ public class OpenhabService {
     }
 
     /**
-     * Reads the public dashboard configuration and constructs a fresh item-state model.
+     * Constructs a fresh item-state model from runtime properties.
      *
      * @return the configured item mappings with no initialized states
-     * @throws IOException if the configuration cannot be read or is not a JSON object
      */
-    private OpenhabItems loadItems() throws IOException {
-        JsonNode settings = mapper.readTree(Path.of(config.uiConfigFile()).toFile());
-        if (settings == null || !settings.isObject()) {
-            throw new IOException("openHAB settings must be an object");
-        }
-        return new OpenhabItems(settings);
+    private OpenhabItems loadItems() {
+        var openhab = config.openhab();
+        return new OpenhabItems(openhab.items().security().orElse(""), openhab.items().pin().orElse(""),
+                openhab.items().doorbell().orElse(""), openhab.doorbellCamera().orElse(""),
+                config.protect().cameras().stream().map(CameraConfig::id).toList());
     }
 
     /**

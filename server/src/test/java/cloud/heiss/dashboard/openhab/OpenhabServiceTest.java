@@ -90,6 +90,9 @@ class OpenhabServiceTest {
             assertEquals("1234", status().getString("pin"));
             assertEquals("fixture-openhab-token", status().getString("commandAuthorization"));
             graphql("mutation { submitSecurityPin(pin: \"not-a-pin\") }").then().body("errors.size()", equalTo(1));
+            given().auth().oauth2(OidcTestResource.token(Map.of())).contentType("application/json")
+                    .body(Map.of("query", "mutation { submitSecurityPin(pin: \"1234\") }")).post("/api/graphql").then()
+                    .statusCode(200).body("errors", equalTo(null)).body("data.submitSecurityPin", equalTo(true));
         }
 
         var actions = new LinkedBlockingQueue<DashboardAction>();
@@ -118,21 +121,7 @@ class OpenhabServiceTest {
      * @return the HTTP response for assertions
      */
     private io.restassured.response.Response graphql(String query) {
-        var request = given().contentType("application/json").body(Map.of("query", query));
-        if (query.startsWith("mutation")) {
-            request.auth().oauth2(OidcTestResource.adminToken());
-        }
-        return request.post("/api/graphql");
-    }
-
-    @Test
-    void pinMutationRequiresDashboardAdminRole() {
-        var mutation = Map.of("query", "mutation { submitSecurityPin(pin: \"1234\") }");
-        given().contentType("application/json").body(mutation).post("/api/graphql").then().statusCode(200)
-                .body("errors.size()", equalTo(1)).body("data.submitSecurityPin", equalTo(null));
-        given().auth().oauth2(OidcTestResource.token(Map.of())).contentType("application/json").body(mutation)
-                .post("/api/graphql").then().statusCode(200).body("errors.size()", equalTo(1))
-                .body("data.submitSecurityPin", equalTo(null));
+        return given().contentType("application/json").body(Map.of("query", query)).post("/api/graphql");
     }
 
     /**

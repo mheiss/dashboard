@@ -1,12 +1,11 @@
 package cloud.heiss.dashboard.config;
 
-import java.io.IOException;
-import java.util.Map;
+import java.util.LinkedHashMap;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import cloud.heiss.dashboard.api.ConfigurationApi;
+import cloud.heiss.dashboard.api.model.KeycloakConfiguration;
 import cloud.heiss.dashboard.api.model.UiConfiguration;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -16,7 +15,7 @@ import jakarta.ws.rs.ServiceUnavailableException;
 import jakarta.ws.rs.core.Response;
 
 /**
- * Serves public UI settings from a backend-owned runtime file before sign-in.
+ * Projects public UI settings from backend runtime properties before sign-in.
  */
 @ApplicationScoped
 @Path("/")
@@ -25,26 +24,32 @@ public class UiConfigResource implements ConfigurationApi {
 
     @Inject
     DashboardConfig config;
-    @Inject
-    ObjectMapper mapper;
+
+    @ConfigProperty(name = "quarkus.oidc.auth-server-url")
+    String issuerUrl;
+
+    @ConfigProperty(name = "quarkus.oidc.client-id")
+    String clientId;
 
     @Override
     public Response getConfiguration() {
-        try {
-            JsonNode settings = mapper.readTree(java.nio.file.Path.of(config.uiConfigFile()).toFile());
-            if (settings == null || !settings.isObject()) {
-                throw new ServiceUnavailableException("UI configuration must be a JSON object");
+        var cameras = new LinkedHashMap<String, String>();
+        for (var camera : config.protect().cameras()) {
+            if (cameras.putIfAbsent(camera.id(), camera.label()) != null) {
+                throw new ServiceUnavailableException("Camera IDs must be unique");
             }
-            JsonNode cameras = settings.path("protect").path("cameras");
-            Map<String, String> cameraNames = cameras.isObject()
-                    ? mapper.convertValue(cameras, new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                    })
-                    : Map.of();
-            var publicSettings = new UiConfiguration(settings.path("openhab").path("sitemap").asText(),
-                    settings.path("evcc").path("url").asText(), cameraNames);
-            return Response.ok(publicSettings).header("Cache-Control", "no-store").build();
-        } catch (IOException failure) {
-            throw new ServiceUnavailableException("UI configuration is unavailable");
         }
+        var publicSettings = new UiConfiguration(config.openhab().sitemap().orElse(""), config.evcc().url().orElse(""), cameras,
+                keycloakConfiguration());
+        return Response.ok(publicSettings).header("Cache-Control", "no-store").build();
+    }
+
+    private KeycloakConfiguration keycloakConfiguration() {
+        String issuer = issuerUrl.replaceFirst("/+$", "");
+        int realmPath = issuer.lastIndexOf("/realms/");
+        if (realmPath < 0 || realmPath + 8 == issuer.length()) {
+            throw new ServiceUnavailableException("Keycloak issuer must contain a realm");
+        }
+        return new KeycloakConfiguration(issuer.substring(0, realmPath), issuer.substring(realmPath + 8), clientId);
     }
 }

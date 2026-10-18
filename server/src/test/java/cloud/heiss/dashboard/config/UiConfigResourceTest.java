@@ -5,64 +5,70 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import cloud.heiss.dashboard.api.model.UiConfiguration;
+import io.smallrye.config.SmallRyeConfigBuilder;
 import jakarta.ws.rs.ServiceUnavailableException;
 
 /**
- * Verifies runtime UI configuration reloads and safe failures for unavailable
- * or invalid files.
+ * Verifies typed runtime properties, public configuration projection, and Keycloak settings.
  */
 class UiConfigResourceTest {
 
-    @TempDir
-    Path directory;
+    @Test
+    void cameraPropertiesPreserveIndexOrderAndAllowEmptyConfiguration() {
+        var config = new SmallRyeConfigBuilder().withMapping(ProtectConfig.class, "dashboard.protect")
+                .withDefaultValue("dashboard.protect.cameras[1].id", "entry")
+                .withDefaultValue("dashboard.protect.cameras[1].label", "Entrance")
+                .withDefaultValue("dashboard.protect.cameras[0].id", "garden")
+                .withDefaultValue("dashboard.protect.cameras[0].label", "Garden").build()
+                .getConfigMapping(ProtectConfig.class, "dashboard.protect");
+        assertEquals("garden", config.cameras().getFirst().id());
+        assertEquals("Entrance", config.cameras().getLast().label());
+        assertEquals(0, new SmallRyeConfigBuilder().withMapping(ProtectConfig.class, "dashboard.protect").build()
+                .getConfigMapping(ProtectConfig.class, "dashboard.protect").cameras().size());
+    }
 
     UiConfigResource resource;
-    Path file;
+    ObjectMapper mapper = new ObjectMapper();
 
     @BeforeEach
     void setup() {
-        file = directory.resolve("config.json");
         resource = new UiConfigResource();
         resource.config = mock(DashboardConfig.class);
-        resource.mapper = new ObjectMapper();
-        when(resource.config.uiConfigFile()).thenReturn(file.toString());
+        resource.issuerUrl = "https://login.home.arpa/realms/dashboard";
+        resource.clientId = "dashboard";
+        settings(Map.of());
     }
 
-    @Test
-    void reloadsTheFileOnEachRequest() throws Exception {
-        Files.writeString(file, "{\"evcc\":{\"url\":\"https://first.example.lan\"}}");
-        try (var response = resource.getConfiguration()) {
-            assertEquals("https://first.example.lan", ((UiConfiguration) response.getEntity()).getEvccUrl());
-            assertEquals("no-store", response.getHeaderString("Cache-Control"));
-        }
-        Files.writeString(file, "{\"evcc\":{\"url\":\"https://second.example.lan\"}}");
-        try (var response = resource.getConfiguration()) {
-            assertEquals("https://second.example.lan", ((UiConfiguration) response.getEntity()).getEvccUrl());
-        }
+    private void settings(Map<String, String> properties) {
+        var config = new SmallRyeConfigBuilder().withMapping(OpenhabConfig.class, "dashboard.openhab")
+                .withMapping(EvccConfig.class, "dashboard.evcc").withMapping(ProtectConfig.class, "dashboard.protect")
+                .withDefaultValues(properties).build();
+        when(resource.config.openhab()).thenReturn(config.getConfigMapping(OpenhabConfig.class, "dashboard.openhab"));
+        when(resource.config.evcc()).thenReturn(config.getConfigMapping(EvccConfig.class, "dashboard.evcc"));
+        when(resource.config.protect()).thenReturn(config.getConfigMapping(ProtectConfig.class, "dashboard.protect"));
     }
 
     @Test
     void exposesOnlyFrontendSettingsWithCameraOrderPreserved() throws Exception {
-        Files.writeString(file, """
-                {"openhab":{"sitemap":"https://openhab.example.lan/basicui/app","items":{"pin":"Private_Pin"}},
-                 "evcc":{"url":"https://evcc.example.lan"},
-                 "protect":{"cameras":{"garden":"Garden","entry":"Entrance"}},"secret":"private"}
-                """);
+        settings(Map.of("dashboard.openhab.sitemap", "https://openhab.home.arpa/basicui/app", "dashboard.openhab.items.pin",
+                "Private_Pin", "dashboard.evcc.url", "https://evcc.home.arpa", "dashboard.protect.cameras[0].id", "garden",
+                "dashboard.protect.cameras[0].label", "Garden", "dashboard.protect.cameras[1].id", "entry",
+                "dashboard.protect.cameras[1].label", "Entrance"));
         try (var response = resource.getConfiguration()) {
-            assertEquals(resource.mapper.readTree("""
-                    {"sitemapUrl":"https://openhab.example.lan/basicui/app","evccUrl":"https://evcc.example.lan",
-                     "cameras":{"garden":"Garden","entry":"Entrance"}}
-                        """), resource.mapper.valueToTree(response.getEntity()));
+            assertEquals(mapper.readTree("""
+                    {"sitemapUrl":"https://openhab.home.arpa/basicui/app","evccUrl":"https://evcc.home.arpa",
+                     "cameras":{"garden":"Garden","entry":"Entrance"},
+                     "keycloak":{"url":"https://login.home.arpa","realm":"dashboard","clientId":"dashboard"}}
+                        """), mapper.valueToTree(response.getEntity()));
+            assertEquals("no-store", response.getHeaderString("Cache-Control"));
             var cameras = ((UiConfiguration) response.getEntity()).getCameras().keySet().iterator();
             assertEquals("garden", cameras.next());
             assertEquals("entry", cameras.next());
@@ -71,28 +77,44 @@ class UiConfigResourceTest {
 
     @Test
     void missingSettingsHaveFrontendCompatibleDefaults() throws Exception {
-        Files.writeString(file, "{}");
         try (var response = resource.getConfiguration()) {
-            assertEquals(resource.mapper.readTree("{\"sitemapUrl\":\"\",\"evccUrl\":\"\",\"cameras\":{}}"),
-                    resource.mapper.valueToTree(response.getEntity()));
+            assertEquals(mapper.readTree("""
+                    {"sitemapUrl":"","evccUrl":"","cameras":{},
+                     "keycloak":{"url":"https://login.home.arpa","realm":"dashboard","clientId":"dashboard"}}
+                    """), mapper.valueToTree(response.getEntity()));
         }
     }
 
     @Test
-    void missingFileReturnsServiceUnavailable() {
-        var failure = assertThrows(ServiceUnavailableException.class, resource::getConfiguration);
-        assertEquals(503, failure.getResponse().getStatus());
+    void derivesKeycloakSettingsFromTheBackendIssuer() throws Exception {
+        resource.issuerUrl = "https://login.home.arpa/auth/realms/household/";
+        resource.clientId = "household-dashboard";
+        try (var response = resource.getConfiguration()) {
+            var keycloak = ((UiConfiguration) response.getEntity()).getKeycloak();
+            assertEquals("https://login.home.arpa/auth", keycloak.getUrl());
+            assertEquals("household", keycloak.getRealm());
+            assertEquals("household-dashboard", keycloak.getClientId());
+        }
     }
 
     @Test
-    void malformedJsonReturnsServiceUnavailable() throws Exception {
-        Files.writeString(file, "{invalid");
+    void missingRealmReturnsServiceUnavailable() throws Exception {
+        resource.issuerUrl = "https://login.home.arpa";
+        assertThrows(ServiceUnavailableException.class, resource::getConfiguration);
+        resource.issuerUrl = "https://login.home.arpa/realms/";
         assertThrows(ServiceUnavailableException.class, resource::getConfiguration);
     }
 
     @Test
-    void nonObjectJsonReturnsServiceUnavailable() throws Exception {
-        Files.writeString(file, "[]");
+    void duplicateCameraIdsReturnServiceUnavailable() {
+        settings(Map.of("dashboard.protect.cameras[0].id", "entry", "dashboard.protect.cameras[0].label", "Entrance",
+                "dashboard.protect.cameras[1].id", "entry", "dashboard.protect.cameras[1].label", "Duplicate"));
         assertThrows(ServiceUnavailableException.class, resource::getConfiguration);
+    }
+
+    @Test
+    void cameraPropertiesRequireBothIdAndLabel() {
+        assertThrows(io.smallrye.config.ConfigValidationException.class,
+                () -> settings(Map.of("dashboard.protect.cameras[0].id", "entry")));
     }
 }

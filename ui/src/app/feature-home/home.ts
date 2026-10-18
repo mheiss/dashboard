@@ -6,7 +6,6 @@ import { Calendar } from './calendar/calendar';
 import { GalleryComponent } from './gallery/gallery';
 import { Pin } from './pin/pin';
 import { LayoutService } from '../utils/layout.service';
-import { LoginPromptService } from '../feature-setup/login';
 
 @Component({
   selector: 'app-home',
@@ -15,13 +14,11 @@ import { LoginPromptService } from '../feature-setup/login';
   imports: [Calendar, GalleryComponent],
 })
 export class Home {
-  private readonly login = inject(LoginPromptService);
   readonly dialog = inject(PopupService);
   readonly layout = inject(LayoutService);
   readonly routeData = toSignal(inject(ActivatedRoute).data, { requireSync: true });
 
-  async openKeypad() {
-    if (!(await this.login.requireAdmin())) return;
+  openKeypad() {
     this.dialog.open(Pin, {
       disableClose: true,
     });

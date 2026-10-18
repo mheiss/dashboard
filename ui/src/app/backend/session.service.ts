@@ -2,19 +2,19 @@ import { HttpInterceptorFn } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import Keycloak from 'keycloak-js';
 import { from, switchMap } from 'rxjs';
+import { AppConfigService } from '../feature-config/config.service';
 
 @Injectable({ providedIn: 'root' })
 export class SessionService {
-  private readonly keycloak = new Keycloak({
-    url: 'https://login.heiss.cloud',
-    realm: 'cloud',
-    clientId: 'dashboard',
-  });
+  private readonly config = inject(AppConfigService);
+  private keycloak!: Keycloak;
   readonly session = signal<{ username: string; admin: boolean } | null>(null);
   readonly error = signal<string | null>(null);
   private readonly initialized = this.initialize();
 
   private async initialize() {
+    const config = await this.config.load();
+    this.keycloak = new Keycloak(config.keycloak);
     const location = new URL(window.location.href);
     const code = location.searchParams.get('microsoft_code');
     const state = location.searchParams.get('microsoft_state');
@@ -48,7 +48,7 @@ export class SessionService {
   private updateSession() {
     this.session.set(this.keycloak.authenticated ? {
       username: this.keycloak.tokenParsed?.['preferred_username'] ?? '',
-      admin: this.keycloak.hasResourceRole('admin', 'dashboard'),
+      admin: this.keycloak.hasResourceRole('admin', this.config.config().keycloak.clientId),
     } : null);
   }
 

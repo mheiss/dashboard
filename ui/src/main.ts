@@ -5,7 +5,6 @@ import { ApplicationConfig, inject, LOCALE_ID, provideAppInitializer, provideBro
 import { bootstrapApplication } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import { AppComponent } from './app/app';
-import { ConfigurationService } from './app/backend/generated/services/configuration.service';
 import { provideApiConfiguration } from './app/backend/generated/api-configuration';
 import { bearerInterceptor, SessionService } from './app/backend/session.service';
 import { AppConfigService } from './app/feature-config/config.service';
@@ -22,12 +21,10 @@ export const appConfig: ApplicationConfig = {
       registerLocaleData(localeDeAt);
 
       const appService = inject(AppConfigService);
-      const api = inject(ConfigurationService);
       const session = inject(SessionService);
 
+      await appService.load();
       await session.load();
-      const config = await api.getConfiguration();
-      appService.config.set(config);
       return Promise.resolve();
     }),
     provideRouter(routes),

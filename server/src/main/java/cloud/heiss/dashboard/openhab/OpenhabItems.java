@@ -4,8 +4,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 /**
  * Maps configured openHAB items to security state and camera actions.
  * Synchronized state access lets initial REST reads and live events share one model without overwriting newer updates.
@@ -23,15 +21,18 @@ public class OpenhabItems {
     /**
      * Derives item mappings from the dashboard's openHAB settings and configured camera keys.
      *
-     * @param settings the dashboard's public JSON configuration
+     * @param security the security state item name
+     * @param pin the PIN command item name
+     * @param doorbell the doorbell item name
+     * @param doorbellCamera the camera selected by doorbell updates
+     * @param cameraIds the configured camera IDs
      */
-    public OpenhabItems(JsonNode settings) {
-        JsonNode openhab = settings.path("openhab");
-        security = openhab.path("items").path("security").asText();
-        pin = openhab.path("items").path("pin").asText();
-        doorbell = openhab.path("items").path("doorbell").asText();
-        doorbellCamera = openhab.path("doorbellCamera").asText();
-        settings.path("protect").path("cameras").fieldNames().forEachRemaining(camera -> {
+    public OpenhabItems(String security, String pin, String doorbell, String doorbellCamera, Iterable<String> cameraIds) {
+        this.security = security;
+        this.pin = pin;
+        this.doorbell = doorbell;
+        this.doorbellCamera = doorbellCamera;
+        cameraIds.forEach(camera -> {
             if (!camera.isEmpty()) {
                 String prefix = Character.toUpperCase(camera.charAt(0)) + camera.substring(1) + "_Camera_";
                 cameras.put(prefix + "Motion", new CameraAction(camera, "motion"));

@@ -26,7 +26,8 @@ class UiHostingTest {
     @Test
     void publicConfigurationRemainsAnApiResponse() {
         given().when().get("/api/config").then().statusCode(200).contentType("application/json")
-                .body("cameras.entry", equalTo("Eingang")).body("size()", equalTo(3));
+                .body("cameras.entry", equalTo("Eingang")).body("keycloak.realm", equalTo("dashboard"))
+                .body("keycloak.clientId", equalTo("dashboard")).body("size()", equalTo(4));
     }
 
     @Test

@@ -35,11 +35,6 @@ public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleMan
     public Map<String, String> start() {
         try {
             data = Files.createTempDirectory("dashboard-integration-fixture-");
-            Files.writeString(data.resolve("config.json"), """
-                    {"openhab":{"sitemap":"http://openhab.fixture/basicui",
-                    "items":{"security":"Armed","pin":"Pin","doorbell":"Bell"},"doorbellCamera":"front"},
-                    "evcc":{"url":"http://evcc.fixture"},"protect":{"cameras":{"front":"Front","back":"Back"}}}
-                    """);
         } catch (Exception failure) {
             throw new IllegalStateException("Cannot create integration fixture settings", failure);
         }
@@ -129,9 +124,15 @@ public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleMan
             throw new IllegalStateException("Cannot start proxy fixture", exception);
         }
         String url = "http://127.0.0.1:" + server.actualPort();
-        return Map.of("dashboard.proxy.openhab-url", url, "dashboard.proxy.go2rtc-url", url, "dashboard.proxy.openhab-token",
-                "fixture-openhab-token", "dashboard.ui-config-file", data.resolve("config.json").toString(),
-                "dashboard.media-directory", data.resolve("media").toString());
+        return Map.ofEntries(Map.entry("dashboard.proxy.openhab-url", url), Map.entry("dashboard.proxy.go2rtc-url", url),
+                Map.entry("dashboard.proxy.openhab-token", "fixture-openhab-token"),
+                Map.entry("dashboard.media-directory", data.resolve("media").toString()),
+                Map.entry("dashboard.openhab.sitemap", "http://openhab.fixture/basicui"),
+                Map.entry("dashboard.openhab.items.security", "Armed"), Map.entry("dashboard.openhab.items.pin", "Pin"),
+                Map.entry("dashboard.openhab.items.doorbell", "Bell"), Map.entry("dashboard.openhab.doorbell-camera", "front"),
+                Map.entry("dashboard.evcc.url", "http://evcc.fixture"), Map.entry("dashboard.protect.cameras[0].id", "front"),
+                Map.entry("dashboard.protect.cameras[0].label", "Front"), Map.entry("dashboard.protect.cameras[1].id", "back"),
+                Map.entry("dashboard.protect.cameras[1].label", "Back"));
     }
 
     private void websocket(ServerWebSocket socket) {

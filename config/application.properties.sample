@@ -12,7 +12,6 @@ quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
 
 # Dashboard configuration
 dashboard.token-key=REPLACE_SAVED_TOKEN_KEY
-dashboard.ui-config-file=config/config.json
 dashboard.media-directory=C:/dashboard-data/media
 dashboard.zone=Europe/Vienna
 
@@ -25,10 +24,26 @@ dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/api/accounts/callba
 quarkus.oidc.auth-server-url=https://login.home.arpa/realms/dashboard
 quarkus.oidc.token.audience=dashboard
 
-# (Optional) SmartHome integrations
+# (Optional) OpenHAB integration
+# dashboard.openhab.sitemap=https://openhab.home.arpa/basicui/app
+# dashboard.openhab.items.security=Security
+# dashboard.openhab.items.pin=Security_Pin
+# dashboard.openhab.items.doorbell=Entrance_Bell_Switch
+# dashboard.openhab.doorbell-camera=entry
 # dashboard.proxy.openhab-url=http://localhost:8082
 # dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
+
+# (Optional) EVCC integration
+# dashboard.evcc.url=https://evcc.home.arpa
+
+# (Optional) UniFi Protect integration
 # dashboard.proxy.go2rtc-url=http://localhost:1984
+# dashboard.protect.cameras[0].id=entry
+# dashboard.protect.cameras[0].label=Eingang
+# dashboard.protect.cameras[1].id=garden
+# dashboard.protect.cameras[1].label=Garten
+# dashboard.protect.cameras[2].id=patio
+# dashboard.protect.cameras[2].label=Terrasse
 
 # (Optional) Logging configuration
 # quarkus.log.file.enabled=true

@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.List;
 
 /**
  * Verifies configured camera routing and state-transition rules independently of upstream transport.
@@ -19,13 +19,9 @@ class OpenhabItemsTest {
      *
      * @param doorbellCamera the camera key used by doorbell events
      * @return the configured model with no initial states
-     * @throws Exception if the fixture configuration cannot be parsed
      */
-    private OpenhabItems items(String doorbellCamera) throws Exception {
-        return new OpenhabItems(new ObjectMapper().readTree("""
-                {"openhab":{"items":{"security":"Armed","pin":"Pin","doorbell":"Bell"},
-                "doorbellCamera":"%s"},"protect":{"cameras":{"front":"Front","back":"Back"}}}
-                """.formatted(doorbellCamera)));
+    private OpenhabItems items(String doorbellCamera) {
+        return new OpenhabItems("Armed", "Pin", "Bell", doorbellCamera, List.of("front", "back"));
     }
 
     /**

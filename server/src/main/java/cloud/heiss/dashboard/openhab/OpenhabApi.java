@@ -14,7 +14,6 @@ import cloud.heiss.dashboard.sync.DashboardChanges;
 import io.smallrye.graphql.api.Subscription;
 import io.smallrye.mutiny.Multi;
 import jakarta.annotation.security.PermitAll;
-import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 
 /**
@@ -62,7 +61,6 @@ public class OpenhabApi {
      * @throws jakarta.ws.rs.ServiceUnavailableException if configuration or upstream communication prevents submission
      */
     @Mutation
-    @RolesAllowed("admin")
     public boolean submitSecurityPin(@Name("pin") String pin) {
         return openhab.submitPin(pin);
     }

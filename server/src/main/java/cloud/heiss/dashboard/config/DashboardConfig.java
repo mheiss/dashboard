@@ -12,7 +12,11 @@ public interface DashboardConfig {
 
     String uiBasePath();
 
-    String uiConfigFile();
+    OpenhabConfig openhab();
+
+    EvccConfig evcc();
+
+    ProtectConfig protect();
 
     Optional<String> tokenKey();
 

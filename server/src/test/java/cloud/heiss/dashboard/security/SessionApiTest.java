@@ -50,7 +50,8 @@ class SessionApiTest {
         given().when().get("/api/config").then().statusCode(200).contentType("application/json")
                 .header("Cache-Control", "no-store").body("sitemapUrl", equalTo("https://openhab.example.lan/basicui/app"))
                 .body("evccUrl", equalTo("https://evcc.example.lan")).body("cameras.entry", equalTo("Eingang"))
-                .body("size()", equalTo(3));
+                .body("keycloak.realm", equalTo("dashboard")).body("keycloak.clientId", equalTo("dashboard"))
+                .body("size()", equalTo(4));
         given().header("Origin", "https://attacker.example").when().get("/api/config").then().statusCode(403);
     }
 

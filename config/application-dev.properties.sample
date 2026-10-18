@@ -1,11 +1,6 @@
-# Dev
-%dev.dashboard.media-directory=./dev/data/onedrive
-%dev.dashboard.ui-config-file=./dev/config/config.json
-
-# Optional integrations used in development as well.
-# %dev.dashboard.proxy.openhab-url=http://openhab.example.lan:8080
-# %dev.dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
-# %dev.dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
+# Dev settings
+dashboard.media-directory=./dev/data/onedrive
+dashboard.token-key=my-secret-dev-token
 
 # H2 Development database
 %h2.quarkus.datasource.db-kind=h2
@@ -22,3 +17,24 @@ dashboard.microsoft.redirect-uri=http://localhost:4200/api/accounts/callback
 # Keycloak authentication
 quarkus.oidc.auth-server-url=https://login.home.arpa/realms/dashboard
 quarkus.oidc.token.audience=dashboard
+
+# (Optional) OpenHAB integration
+# dashboard.proxy.openhab-url=http://localhost:8082
+# dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
+# dashboard.openhab.sitemap=https://openhab.home.arpa/basicui/app
+# dashboard.openhab.items.security=Security
+# dashboard.openhab.items.pin=Security_Pin
+# dashboard.openhab.items.doorbell=Entrance_Bell_Switch
+# dashboard.openhab.doorbell-camera=entry
+
+# (Optional) EVCC integration
+# dashboard.evcc.url=https://evcc.home.arpa
+
+# (Optional) UniFi Protect integration
+# dashboard.proxy.go2rtc-url=http://localhost:1984
+# dashboard.protect.cameras[0].id=entry
+# dashboard.protect.cameras[0].label=Eingang
+# dashboard.protect.cameras[1].id=garden
+# dashboard.protect.cameras[1].label=Garten
+# dashboard.protect.cameras[2].id=patio
+# dashboard.protect.cameras[2].label=Terrasse
