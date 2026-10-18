@@ -1,0 +1,24 @@
+# Dev
+%dev.dashboard.media-directory=./dev/data/onedrive
+%dev.dashboard.ui-config-file=./dev/config/config.json
+
+# Optional integrations used in development as well.
+# %dev.dashboard.proxy.openhab-url=http://openhab.example.lan:8080
+# %dev.dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
+# %dev.dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
+
+# H2 Development database
+%h2.quarkus.datasource.db-kind=h2
+%h2.quarkus.datasource.devservices.enabled=false
+%h2.quarkus.datasource.jdbc.url=jdbc:h2:file:./dev/data/h2/dashboard;MODE=PostgreSQL;DB_CLOSE_ON_EXIT=FALSE
+%h2.quarkus.datasource.password=sa
+%h2.quarkus.datasource.username=sa
+
+# Microsoft authentication
+dashboard.microsoft.client-id=REPLACE_MICROSOFT_CLIENT_ID
+dashboard.microsoft.client-secret=REPLACE_MICROSOFT_CLIENT_SECRET_VALUE
+dashboard.microsoft.redirect-uri=http://localhost:4200/api/accounts/callback
+
+# Keycloak authentication
+quarkus.oidc.auth-server-url=https://login.home.arpa/realms/dashboard
+quarkus.oidc.token.audience=dashboard

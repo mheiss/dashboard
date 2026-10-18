@@ -147,18 +147,25 @@ tasks.named('compileJava') {
     dependsOn tasks.named('genApi')
 }
 
+def openApiResources = layout.buildDirectory.dir('generated/openapi-resources')
+
+tasks.register('copyOpenApiSpec', Sync) {
+    from('../openapi.yaml')
+    into(openApiResources.map { it.dir('META-INF') })
+}
+
+sourceSets.main.resources.srcDir(openApiResources)
+
 tasks.named('processResources') {
-    from('../openapi.yaml') {
-        into 'META-INF'
-    }
+    dependsOn tasks.named('copyOpenApiSpec')
 }
 
 tasks.register('prepareDevConfig') {
     group = 'quarkus'
     description = 'Creates missing backend and UI development configuration from sample files.'
     def configs = [
-        [source: file('examples/application-dev.properties.sample'), target: file('dev/config/application.properties')],
-        [source: file('examples/config.sample.json'), target: file('dev/config/config.json')],
+        [source: file('../config/application-dev.properties.sample'), target: file('dev/config/application.properties')],
+        [source: file('../config/config.sample.json'), target: file('dev/config/config.json')],
         [source: file('../ui/src/proxy/proxy.dev.sample.json'), target: file('../ui/src/proxy/proxy.dev.json')]
     ]
     inputs.files(configs.collect { it.source })

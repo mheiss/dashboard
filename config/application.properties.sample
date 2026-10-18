@@ -1,32 +1,38 @@
 # Copy to config/application.properties on the deployment machine, then replace
 # every REPLACE_ value. Never commit or distribute the active file with secrets.
 
+# Quarkus configuration
+quarkus.http.host=127.0.0.1
+quarkus.http.port=8080
+
+# Database configuration
 quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/dashboard
 quarkus.datasource.username=dashboard
 quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
 
+# Dashboard configuration
 dashboard.token-key=REPLACE_SAVED_TOKEN_KEY
-dashboard.ui-base-path=/
 dashboard.ui-config-file=config/config.json
 dashboard.media-directory=C:/dashboard-data/media
 dashboard.zone=Europe/Vienna
 
-# Optional integrations; configure private upstreams here, not in public config.json.
-# dashboard.proxy.openhab-url=http://openhab.example.lan:8080
-# dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
-# dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
-
+# Microsoft authentication
 dashboard.microsoft.client-id=REPLACE_MICROSOFT_CLIENT_ID
 dashboard.microsoft.client-secret=REPLACE_MICROSOFT_CLIENT_SECRET_VALUE
 dashboard.microsoft.redirect-uri=https://dashboard.home.arpa/api/accounts/callback
 
-quarkus.http.host=127.0.0.1
-quarkus.http.port=8080
-quarkus.http.proxy.proxy-address-forwarding=true
-quarkus.http.proxy.allow-forwarded=false
-quarkus.http.proxy.allow-x-forwarded=true
-quarkus.http.proxy.trusted-proxies=127.0.0.1,::1
-
-# Keycloak bearer tokens; the dashboard client role admin authorizes changes.
+# Keycloak authentication
 quarkus.oidc.auth-server-url=https://login.home.arpa/realms/dashboard
 quarkus.oidc.token.audience=dashboard
+
+# (Optional) SmartHome integrations
+# dashboard.proxy.openhab-url=http://localhost:8082
+# dashboard.proxy.openhab-token=REPLACE_OPENHAB_TOKEN
+# dashboard.proxy.go2rtc-url=http://localhost:1984
+
+# (Optional) Logging configuration
+# quarkus.log.file.enabled=true
+# quarkus.log.console.enabled=false
+# quarkus.log.file.path=/var/log/dashboard/app.log
+# quarkus.log.file.rotation.max-file-size=10M
+# quarkus.log.file.rotation.max-backup-index=5

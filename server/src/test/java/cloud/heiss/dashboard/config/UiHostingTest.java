@@ -30,12 +30,13 @@ class UiHostingTest {
     }
 
     @Test
-    void sessionEndpointStillRequiresAuthentication() {
-        given().when().get("/api/session").then().statusCode(401);
+    void accountEndpointStillRequiresAuthentication() {
+        given().when().get("/api/accounts").then().statusCode(401);
     }
 
     @Test
     void apiNamespaceDoesNotFallBackToTheSpa() {
+        given().when().get("/api/session").then().statusCode(404);
         given().when().get("/api/missing").then().statusCode(404);
         given().when().get("/api").then().statusCode(404);
     }

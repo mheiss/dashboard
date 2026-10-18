@@ -29,11 +29,9 @@ export class SessionService {
     this.keycloak.onTokenExpired = () => void this.accessToken();
     try {
       await this.keycloak.init({
-        onLoad: 'check-sso',
+        onLoad: code && state ? 'check-sso' : undefined,
         pkceMethod: 'S256',
         checkLoginIframe: false,
-        silentCheckSsoRedirectUri: new URL('silent-check-sso.html', document.baseURI).href,
-        silentCheckSsoFallback: false,
         responseMode: 'query',
         redirectUri: new URL('auth/callback', document.baseURI).href,
       });

@@ -12,6 +12,7 @@ import { PopupService } from '../popup/popup.service';
   template: `
     <app-popup title="Einstellungen">
         <div class="grid gap-3 p-6 max-sm:p-4">
+          <p>Dieser Bereich erfordert eine Anmeldung mit Administratorberechtigung. Zur Anmeldung wirst du zu Keycloak weitergeleitet und kehrst danach zum Dashboard zurück.</p>
           @if (session.session() && !session.session()?.admin) {
             <p role="alert">Keine Administratorberechtigung.</p>
           }
