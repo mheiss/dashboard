@@ -61,7 +61,7 @@ Run the downloaded release as a systemd service, with PostgreSQL and an HTTPS re
 
 Install these using your distribution's packages or the official [Java](https://adoptium.net/temurin/releases/) and [PostgreSQL](https://www.postgresql.org/download/) instructions. Follow your reverse proxy's installation guide. Check that `/usr/bin/java -version` reports Java 25; substitute its actual path in the service if needed.
 
-This guide uses `https://dashboard.home.arpa`. Set up local DNS for that hostname and use it consistently in the proxy, Microsoft, and Keycloak settings. **Keep the dashboard on your household network:** calendar, photo, camera viewing, and PIN submission are public to anyone who can reach it; account setup and arbitrary upstream writes require the admin login. The configured openHAB rules validate the submitted PIN.
+This guide uses `https://dashboard.home.arpa`. Set up local DNS for that hostname and use it consistently in the proxy, Microsoft, and Keycloak settings. **Keep the dashboard on your household network:** calendar, photo, and camera viewing are public to anyone who can reach it; account setup and arbitrary upstream writes require the admin login.
 
 ### 1. Install The Release
 
@@ -201,6 +201,8 @@ Open `https://dashboard.home.arpa/home` without certificate warnings. Click sett
 
 openHAB, EVCC, and go2rtc run separately. Configure their URLs, item mappings, and camera IDs in `/etc/dashboard/application.properties`. Embedded views must be reachable from the tablet over HTTPS and allow iframe embedding.
 
+On desktop and mobile, navigation hides OpenHAB when `dashboard.openhab.sitemap` is empty or whitespace-only, Wallbox when `dashboard.evcc.url` is empty or whitespace-only, and Kamera when no cameras are configured. These rules hide navigation links only; they do not disable routes or change access permissions. Restart the backend and reload the browser after changing properties.
+
 The backend hosts the openHAB HTTP/WebSocket and go2rtc snapshot/signaling proxy routes. Keep the HTTPS proxy forwarding requests unchanged; do not add path rewrites or openHAB credentials to it. Configure integration settings in the **private** properties file:
 
 ```properties
@@ -209,7 +211,6 @@ dashboard.proxy.openhab-token=REPLACE_OPENHAB_API_TOKEN
 dashboard.proxy.go2rtc-url=http://127.0.0.1:1984
 dashboard.openhab.sitemap=https://openhab.home.arpa/basicui/app
 dashboard.openhab.items.security=Security
-dashboard.openhab.items.pin=Security_Pin
 dashboard.openhab.items.doorbell=Entrance_Bell_Switch
 dashboard.openhab.doorbell-camera=entry
 dashboard.evcc.url=https://evcc.home.arpa
@@ -219,9 +220,9 @@ dashboard.protect.cameras[0].label=Eingang
 
 Use HTTP(S) origins without API paths or embedded credentials, reachable from the backend. Restart the dashboard after changing properties. Environment alternatives are `DASHBOARD_OPENHAB_URL`, `DASHBOARD_OPENHAB_TOKEN`, and `DASHBOARD_GO2RTC_URL`. Unconfigured integrations return HTTP 503; the rest of the dashboard remains available.
 
-The backend owns openHAB item states, PIN commands, and doorbell/motion decisions through one upstream connection. Clients receive camera-selection and security-state actions through `/api/graphql`, without parsing openHAB items. Motion snapshots are captured even without connected browsers and stored with metadata under `/var/lib/dashboard/media/protect/`; the newest 20 detection groups are shared through GraphQL and `/api/media/protect/{id}`. Camera indices determine display order; each camera requires a unique ID and a label. Restart the backend after changing settings, then reload the browser.
+The backend owns openHAB item states and doorbell/motion decisions through one upstream connection. Clients receive camera-selection and security-state actions through `/api/graphql`, without parsing openHAB items. Motion snapshots are captured even without connected browsers and stored with metadata under `/var/lib/dashboard/media/protect/`; the newest 20 detection groups are shared through GraphQL and `/api/media/protect/{id}`. Camera indices determine display order; each camera requires a unique ID and a label. Restart the backend after changing settings, then reload the browser.
 
-Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. Camera viewing, stored history, and GraphQL PIN submission are public; arbitrary upstream HTTP writes and the openHAB WebSocket bridge require the `dashboard` client's `admin` role. Keep the deployment on the trusted household network and protect the private token.
+Camera signaling uses `/api/ws/webrtc`; live preview frames use `/api/webrtc/*`. The backend injects openHAB authentication and removes go2rtc's upstream `Origin` header. Camera viewing and stored history are public; arbitrary upstream HTTP writes and the openHAB WebSocket bridge require the `dashboard` client's `admin` role. Keep the deployment on the trusted household network and protect the private token.
 
 Configure [go2rtc](https://github.com/AlexxIT/go2rtc/) with streams named `unifi_<cameraId>` and `unifi_<cameraId>_medium`, matching `dashboard.protect.cameras[n].id`. WebRTC media still connects using go2rtc's advertised network candidates; the backend proxies signaling, not media. Embedded openHAB and EVCC pages still require direct browser access.
 

@@ -1,6 +1,6 @@
 # Dashboard Backend
 
-Quarkus owns Microsoft authentication, scheduled synchronization, calendar grouping, OneDrive metadata, photo paging, disk caching, openHAB item handling, and motion snapshot storage. Angular reads the cached household view through public GraphQL and receives dataset invalidations and client actions over `graphql-transport-ws` without login. Metadata queries never call Microsoft. Binary media uses public HTTP; originals are downloaded only when requested. Account/source setup and arbitrary upstream HTTP writes require a Keycloak access token with the `dashboard` client's `admin` role. GraphQL PIN submission is public; the backend validates its numeric format and forwards it using private openHAB credentials.
+Quarkus owns Microsoft authentication, scheduled synchronization, calendar grouping, OneDrive metadata, photo paging, disk caching, openHAB item handling, and motion snapshot storage. Angular reads the cached household view through public GraphQL and receives dataset invalidations and client actions over `graphql-transport-ws` without login. Metadata queries never call Microsoft. Binary media uses public HTTP; originals are downloaded only when requested. Account/source setup and arbitrary upstream HTTP writes require a Keycloak access token with the `dashboard` client's `admin` role.
 
 ## Requirements
 
@@ -76,7 +76,6 @@ All settings, including public view URLs and backend item mappings, belong in th
 ```properties
 dashboard.openhab.sitemap=https://openhab.home.arpa/basicui/app
 dashboard.openhab.items.security=Security
-dashboard.openhab.items.pin=Security_Pin
 dashboard.openhab.items.doorbell=Entrance_Bell_Switch
 dashboard.openhab.doorbell-camera=entry
 dashboard.evcc.url=https://evcc.home.arpa
@@ -106,7 +105,7 @@ Create the client role `admin` under `dashboard` and assign it to administrators
 
 To configure the audience explicitly, open **Clients > dashboard > Client scopes > dashboard-dedicated**, choose **Add mapper > By configuration > Audience**, set **Included Client Audience** to `dashboard`, and enable **Add to access token**. Sign in again after saving so a fresh access token contains the audience. The `aud` claim identifies the intended API; `azp` identifies the requesting client and does not replace the audience check.
 
-The frontend uses `keycloak-js` with Authorization Code Flow and PKCE, in-memory tokens, refresh before protected requests, and Keycloak logout. Public views and PIN entry do not prompt for sign-in or trigger an authentication redirect. Account setup prompts for sign-in before privileged actions. After a Microsoft account callback, the UI temporarily stores the returned code/state in `sessionStorage` and restores the Keycloak session through a top-level SSO redirect. An active Keycloak session avoids another login-button click; tokens remain in memory. Completing the Microsoft connection is an authenticated POST bound to the initiating administrator. Authentication does not use hidden iframes.
+The frontend uses `keycloak-js` with Authorization Code Flow and PKCE, in-memory tokens, refresh before protected requests, and Keycloak logout. Public views do not prompt for sign-in or trigger an authentication redirect. Account setup prompts for sign-in before privileged actions. After a Microsoft account callback, the UI temporarily stores the returned code/state in `sessionStorage` and restores the Keycloak session through a top-level SSO redirect. An active Keycloak session avoids another login-button click; tokens remain in memory. Completing the Microsoft connection is an authenticated POST bound to the initiating administrator. Authentication does not use hidden iframes.
 
 Tests use a local discovery/JWKS server and freshly signed fixture tokens, without contacting the live realm. Live user login, role assignment, redirect allowlists, and logout still require a configured Keycloak client and a real user.
 
@@ -122,7 +121,7 @@ Application tables use short, lowercase singular names: `appuser`, `account`, `s
 2. Configure delegated `User.Read`, `Calendars.Read`, and `Files.Read`. The server requests `offline_access` during authorization. It uses the consumers authority, authorization code flow, PKCE, and an admin-bound, ten-minute state token.
 3. Open `/home`, click the settings icon, and sign in through Keycloak from the popup. Open `/setup` and connect each owner's Microsoft account.
 4. Select discovered calendars. Add OneDrive folder paths relative to the drive root, then enable them. New sources are disabled until selected. All selected accounts feed the same household view.
-5. Open `/home` on viewing devices. Microsoft credentials are never needed on those devices; public reads and PIN submission are available without authentication, while account/source changes require the Keycloak client role.
+5. Open `/home` on viewing devices. Microsoft credentials are never needed on those devices; public reads are available without authentication, while account/source changes require the Keycloak client role.
 
 Reconnect accounts marked `RECONNECT_REQUIRED` from setup. Failed syncs retain last-good data. Disconnect removes source membership and unreferenced metadata; stale/unreferenced disk files are removed during subsequent synchronization or hourly cleanup. Files already being streamed remain pinned until the response closes. Quotas are temporarily soft while files are pinned.
 
@@ -235,7 +234,7 @@ The integration proxy accepts WebSocket upgrades only at `/api/ws/openhab` and `
 
 ### Security And Media Boundaries
 
-Read-only HTTP proxy requests, camera images, and camera-viewing signaling remain public. Other proxy HTTP methods and openHAB WebSocket upgrades require a valid bearer token with the `dashboard` client role `admin`. PIN commands use the public GraphQL HTTP mutation, which accepts only a numeric PIN for the configured item; openHAB rules decide whether that PIN is valid. Proxy filters run after OIDC authentication and strip browser credentials before forwarding upstream. Restrict the dashboard to the trusted household network and scope the private openHAB token's permissions where supported.
+Read-only HTTP proxy requests, camera images, and camera-viewing signaling remain public. Other proxy HTTP methods and openHAB WebSocket upgrades require a valid bearer token with the `dashboard` client role `admin`. Proxy filters run after OIDC authentication and strip browser credentials before forwarding upstream. Restrict the dashboard to the trusted household network and scope the private openHAB token's permissions where supported.
 
 The UI and APIs share one public scheme, host, and port. No configured origin list or application-specific request header is needed. The backend compares standard browser `Origin` headers with the request's public origin and rejects mismatches, including on WebSocket upgrades. For unsafe HTTP methods and WebSocket upgrades, Fetch Metadata and a supplied `Referer` also reject cross-origin requests when applicable. Non-browser clients can call APIs without browser metadata; origin checks are not authentication. The public webhook is exempt, and cross-site OAuth callback navigation remains supported.
 
@@ -245,11 +244,11 @@ The camera bridge proxies WebRTC signaling, not the WebRTC media connection. Con
 
 ### Backend Item Handling
 
-The backend maintains one openHAB item connection, independent of browser sessions. It reads initial states through authenticated REST, processes `ItemStateUpdatedEvent` messages, sends five-second heartbeats, and reconnects after connection failures. Runtime properties supply `dashboard.openhab.items.security`, `dashboard.openhab.items.pin`, `dashboard.openhab.items.doorbell`, `dashboard.openhab.doorbell-camera`, and `dashboard.protect.cameras[n].id`. Restart the backend after changing these mappings.
+The backend maintains one openHAB item connection, independent of browser sessions. It reads initial states through authenticated REST, processes `ItemStateUpdatedEvent` messages, sends five-second heartbeats, and reconnects after connection failures. Runtime properties supply `dashboard.openhab.items.security`, `dashboard.openhab.items.doorbell`, `dashboard.openhab.doorbell-camera`, and `dashboard.protect.cameras[n].id`. Restart the backend after changing these mappings.
 
-Each configured camera registers `<CapitalizedCameraId>_Camera_Motion` and `<CapitalizedCameraId>_Camera_SmartMotion`. Motion transitions to ON from a known non-ON state select the matching camera and queue a snapshot. Initial ON states and repeated ON motion updates do not create detections. Positive doorbell updates select the configured doorbell camera without taking a motion snapshot. PIN commands are sent to the configured PIN item through backend REST; clients never interpret upstream item topics or submit arbitrary item names.
+Each configured camera registers `<CapitalizedCameraId>_Camera_Motion` and `<CapitalizedCameraId>_Camera_SmartMotion`. Motion transitions to ON from a known non-ON state select the matching camera and queue a snapshot. Initial ON states and repeated ON motion updates do not create detections. Positive doorbell updates select the configured doorbell camera without taking a motion snapshot. Clients never interpret upstream item topics.
 
-The public `dashboardAction` GraphQL subscription delivers `SHOW_CAMERA`, `SECURITY_STATE`, `SNAPSHOTS_CHANGED`, and an initial `SYNC`. Camera actions are not replayed to new clients. Angular only wakes the tablet, navigates to the requested camera, renders security state, and refreshes the snapshot gallery. `securityArmed` returns the current state, or null before a successful state read; `submitSecurityPin` submits a numeric PIN without logging its value.
+The public `dashboardAction` GraphQL subscription delivers `SHOW_CAMERA`, `SECURITY_STATE`, `SNAPSHOTS_CHANGED`, and an initial `SYNC`. Camera actions are not replayed to new clients. Angular only wakes the tablet, navigates to the requested camera, renders security state, and refreshes the snapshot gallery. `securityArmed` returns the current state, or null before a successful state read.
 
 The backend downloads snapshots directly from go2rtc, including when no browser is open. Two capture workers and a queue of 32 requests bound concurrency; each JPEG is limited to 20 MiB with a ten-second download timeout. A capture failure is logged without preventing camera navigation. Multiple browsers do not multiply captures.
 
@@ -290,7 +289,7 @@ All dashboard HTTP APIs and WebSockets share the `/api` namespace; SPA navigatio
 Register the Microsoft Web redirect URI and set `MICROSOFT_REDIRECT_URI` to the public `/api/accounts/callback` URL. If using Microsoft webhooks, configure `MICROSOFT_WEBHOOK_URL` and its public proxy rule for `/api/graph/webhook`.
 
 - `GET /api/config`: public UI configuration projected from backend properties, with `Cache-Control: no-store`; invalid Keycloak realm settings or duplicate camera IDs return HTTP 503.
-- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries; cached `securityArmed` and `motionGroups`; the public `submitSecurityPin` mutation with numeric-format validation.
+- `POST /api/graphql`: public bounded `agenda`, `calendars`, `images`, `image`, `moments`, and `syncStatus` queries; cached `securityArmed` and `motionGroups`.
 - `WS /api/graphql`: public `dashboardChanged` and `dashboardAction`; subscribers receive an initial revision or `SYNC`, not historical camera actions.
 - `GET /api/media/images/{opaque-id}/thumbnail` and `/original`: public access, private ETag caching, streamed bytes.
 - `GET /api/media/protect/{opaque-id}`: public stored motion JPEGs with private caching.
