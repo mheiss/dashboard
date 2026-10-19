@@ -15,6 +15,9 @@ const BUFFER_TIMEOUT = 10_000;
  */
 const STALE_TIMEOUT = 5_000;
 
+const STARTUP_TIMEOUT = 30_000;
+const HEALTH_STALL_GRACE = 2_000;
+
 export class WebRTCStream {
   private readonly webSocket: WebSocket;
   private peerConnection: RTCPeerConnection | null = null;
@@ -27,18 +30,23 @@ export class WebRTCStream {
   private stopTimer: number | undefined = undefined;
   private shallStream = false;
   private reconnectPending = false;
-  private healthCheckRunning = false;
+  private healthCheckPeer: RTCPeerConnection | null = null;
   private staleSince: number | null = null;
   private bufferingSince: number | null = null;
   private hasDecodedFrame = false;
   private lastWebSocketError: string | null = null;
+  private startedAt: number | null = null;
+  private disconnectedSince: number | null = null;
+  private previousVideoReport: RTCInboundRtpStreamStats | null = null;
+  private reconnectReason: string | null = null;
+  private lastDiagnosticAt = 0;
 
   constructor(
     private cameraApi: CameraService,
     private camera: string,
     private debug: DebugService,
   ) {
-    this.webSocket = new WebSocket(getWebSocketUrl('/api/ws/webrtc?src=' + encodeURIComponent(camera)));
+    this.webSocket = new WebSocket(getWebSocketUrl('/api/ws/webrtc?src=' + encodeURIComponent(camera)), [], { startClosed: true });
     this.webSocket.onopen = async () => this.onWebSocketOpen();
     this.webSocket.onclose = async (e) => this.onWebSocketClose(e);
     this.webSocket.onmessage = (e) => this.onWebSocketMessage(e);
@@ -76,24 +84,35 @@ export class WebRTCStream {
       this.stopTimer = undefined;
       this.shallStream = false;
       this.reconnectPending = false;
-      this.resetHealthState();
+      this.cleanupPeerConnection();
+      this.markStreamOffline();
       this.webSocket.close();
     }, 30_000);
   }
 
-  /** Checks whether the socket is open and the peer connection exists. */
+  /** Checks whether a peer connection exists independently of signaling. */
   private hasOpenConnection(): boolean {
-    return this.webSocket.readyState === WebSocket.OPEN && this.peerConnection !== null;
+    return this.peerConnection !== null && this.peerConnection.connectionState !== 'closed';
   }
 
   /** Decides whether start should trigger a reconnect attempt. */
   private shouldReconnectOnStart(): boolean {
-    return this.webSocket.readyState !== WebSocket.OPEN && this.webSocket.readyState !== WebSocket.CONNECTING && !this.reconnectPending;
+    return (
+      !this.hasOpenConnection() &&
+      this.webSocket.readyState !== WebSocket.OPEN &&
+      this.webSocket.readyState !== WebSocket.CONNECTING &&
+      !this.reconnectPending
+    );
   }
 
   /** Returns whether the current health-check cycle should be skipped. */
   private shouldSkipHealthCheck(): boolean {
-    return this.healthCheckRunning || this.reconnectPending || !this.shallStream || !this.hasOpenConnection();
+    return (
+      (this.healthCheckPeer !== null && this.healthCheckPeer === this.peerConnection) ||
+      this.reconnectPending ||
+      !this.shallStream ||
+      !this.hasOpenConnection()
+    );
   }
 
   /** Returns whether an in-flight health-check result should be ignored. */
@@ -106,7 +125,11 @@ export class WebRTCStream {
     this.staleSince = null;
     this.bufferingSince = null;
     this.hasDecodedFrame = false;
-    this.streamReport.next(createEmptyReport());
+    this.startedAt = null;
+    this.disconnectedSince = null;
+    this.previousVideoReport = null;
+    this.lastDiagnosticAt = 0;
+    this.streamReport.next({ ...createEmptyReport(), reconnectReason: this.reconnectReason });
   }
 
   /** Stops and disposes the current peer connection if present. */
@@ -115,12 +138,17 @@ export class WebRTCStream {
       return;
     }
 
-    this.peerConnection.getSenders().forEach((sender) => {
-      this.peerConnection?.removeTrack(sender);
+    const peerConnection = this.peerConnection;
+    this.peerConnection = null;
+    peerConnection.onconnectionstatechange = null;
+    peerConnection.oniceconnectionstatechange = null;
+    peerConnection.onicecandidate = null;
+    peerConnection.ontrack = null;
+    peerConnection.getSenders().forEach((sender) => {
       sender.track?.stop();
     });
-    this.peerConnection.close();
-    this.peerConnection = null;
+    peerConnection.getReceivers().forEach((receiver) => receiver.track?.stop());
+    peerConnection.close();
   }
 
   /** Marks the stream as offline and clears transient state. */
@@ -137,13 +165,13 @@ export class WebRTCStream {
     }
 
     this.reconnectPending = true;
+    this.reconnectReason = reason;
+    this.logDiagnostics('Reconnect: ' + reason);
+    this.cleanupPeerConnection();
+    this.media.next(null);
     this.resetHealthState();
     this.status.next('connecting');
     this.debug.log('%s: Reconnecting WebRTC stream (%s).', this.camera, reason);
-
-    if (this.webSocket.readyState === WebSocket.CLOSING) {
-      return;
-    }
 
     this.webSocket.reconnect(1000, reason);
   }
@@ -159,7 +187,7 @@ export class WebRTCStream {
           URL.revokeObjectURL(oldValue);
         }
       })
-      .catch((error) => this.debug.log('%s: Camera poster request failed.', this.camera, error));
+      .catch((error) => this.debug.log('%s: Camera poster request failed. %s', this.camera, error));
   }
 
   /** Creates a fresh peer connection when the signaling socket opens. */
@@ -169,41 +197,62 @@ export class WebRTCStream {
       return;
     }
 
+    if (this.peerConnection?.connectionState === 'connected' && !this.reconnectPending) {
+      this.webSocket.close(1000, 'WebRTC media established');
+      return;
+    }
+
     this.lastWebSocketError = null;
     this.reconnectPending = false;
     this.resetHealthState();
+    this.startedAt = Date.now();
     this.status.next('connecting');
 
     // Peer connection with LAN/VPN only, no public STUN/TURN
     this.cleanupPeerConnection();
-    this.peerConnection = new RTCPeerConnection({ iceServers: [] });
-    this.peerConnection.addTransceiver('video', { direction: 'recvonly' });
-    this.peerConnection.onicecandidate = (event) => this.onIceCandidate(event);
-    this.peerConnection.ontrack = (ev) => this.onTrack(ev);
+    const peerConnection = new RTCPeerConnection({ iceServers: [] });
+    this.peerConnection = peerConnection;
+    peerConnection.onconnectionstatechange = () => this.onConnectionStateChange(peerConnection);
+    peerConnection.oniceconnectionstatechange = () => this.onConnectionStateChange(peerConnection);
+    peerConnection.onicecandidate = (event) => {
+      if (this.peerConnection === peerConnection) this.onIceCandidate(event);
+    };
+    peerConnection.ontrack = (event) => {
+      if (this.peerConnection === peerConnection) this.onTrack(event);
+    };
 
-    const offer = await this.peerConnection.createOffer();
-    await this.peerConnection.setLocalDescription(offer);
+    try {
+      peerConnection.addTransceiver('video', { direction: 'recvonly' });
+      const offer = await peerConnection.createOffer();
+      if (this.peerConnection !== peerConnection) return;
+      await peerConnection.setLocalDescription(offer);
+      if (this.peerConnection !== peerConnection || this.webSocket.readyState !== WebSocket.OPEN) return;
 
-    const sdp = this.peerConnection.localDescription?.sdp;
-    if (sdp) {
-      this.webSocket.send(JSON.stringify({ type: 'webrtc/offer', value: sdp }));
+      const sdp = peerConnection.localDescription?.sdp;
+      if (sdp) {
+        this.webSocket.send(JSON.stringify({ type: 'webrtc/offer', value: sdp }));
+      }
+      this.debug.log('%s: Starting a new WebRTC connection.', this.camera);
+    } catch (error) {
+      if (this.peerConnection !== peerConnection) return;
+      this.debug.log('%s: WebRTC offer failed. %s', this.camera, error);
+      this.requestReconnect('Offer failed');
     }
-
-    this.debug.log('%s: Starting a new WebRTC connection.', this.camera);
   }
 
   /** Cleans up the current connection and reconnects when required. */
   private async onWebSocketClose(e: CloseEvent) {
     const socketError = this.lastWebSocketError;
     this.lastWebSocketError = null;
-    const wasReconnectPending = this.reconnectPending;
-    this.reconnectPending = false;
-    this.cleanupPeerConnection();
-    this.markStreamOffline();
 
-    if (wasReconnectPending) {
-      this.reconnectPending = this.shallStream;
+    if (this.reconnectPending) {
       this.debug.log('%s: Socket closed for reconnect. %s', this.camera, this.describeWebSocketClose(e));
+      return;
+    }
+
+    if (this.shallStream && this.peerConnection?.connectionState === 'connected') {
+      this.webSocket.close();
+      this.debug.log('%s: Signaling closed; keeping WebRTC media. %s', this.camera, this.describeWebSocketClose(e));
       return;
     }
 
@@ -216,6 +265,18 @@ export class WebRTCStream {
 
     this.reconnectPending = false;
     this.debug.log('%s: Closed WebRTC connection and stopped streaming.', this.camera);
+  }
+
+  private onConnectionStateChange(peerConnection: RTCPeerConnection) {
+    if (this.peerConnection !== peerConnection || !this.shallStream || this.reconnectPending) return;
+    this.debug.log('%s: Peer state=%s, ICE state=%s.', this.camera, peerConnection.connectionState, peerConnection.iceConnectionState);
+    if (peerConnection.connectionState === 'failed' || peerConnection.iceConnectionState === 'failed') {
+      this.requestReconnect('Peer connection failed');
+    } else if (peerConnection.connectionState === 'disconnected' || peerConnection.iceConnectionState === 'disconnected') {
+      this.disconnectedSince ??= Date.now();
+    } else {
+      this.disconnectedSince = null;
+    }
   }
 
   /** Logs unexpected signaling socket errors. */
@@ -239,30 +300,39 @@ export class WebRTCStream {
 
   /** Applies incoming signaling messages to the peer connection. */
   private async onWebSocketMessage(msg: MessageEvent) {
-    if (!this.peerConnection) {
+    const peerConnection = this.peerConnection;
+    if (!peerConnection || this.reconnectPending) {
       this.debug.log('%s: Ignoring signaling message without peer connection.', this.camera);
       return;
     }
-    const data = JSON.parse(msg.data);
-    switch (data.type) {
-      case 'webrtc/candidate':
-        const candidate = new RTCIceCandidate({ candidate: data.value, sdpMid: '0' });
-        await this.peerConnection.addIceCandidate(candidate);
-        break;
-      case 'webrtc/answer':
-        const remoteDesc = { type: 'answer', sdp: data.value } as RTCSessionDescriptionInit;
-        await this.peerConnection.setRemoteDescription(remoteDesc);
-        break;
-      default:
-        this.debug.log('%s: Unknown data received: %s', this.camera, data);
-        break;
+    try {
+      const data = JSON.parse(msg.data);
+      switch (data.type) {
+        case 'webrtc/candidate':
+          await peerConnection.addIceCandidate({ candidate: data.value, sdpMid: '0' });
+          break;
+        case 'webrtc/answer':
+          await peerConnection.setRemoteDescription({ type: 'answer', sdp: data.value });
+          break;
+        case 'error':
+          this.debug.log('%s: Signaling error: %s', this.camera, data.value);
+          this.requestReconnect('Signaling error');
+          break;
+        default:
+          this.debug.log('%s: Unknown data received: %s', this.camera, JSON.stringify(data));
+          break;
+      }
+    } catch (error) {
+      if (this.peerConnection !== peerConnection) return;
+      this.debug.log('%s: Signaling message failed. %s', this.camera, error);
+      this.requestReconnect('Signaling message failed');
     }
   }
 
   /** Publishes the received media track and marks the stream connected. */
   private onTrack(ev: RTCTrackEvent) {
     this.debug.log('%s: Received new media track.', this.camera);
-    this.media.next(ev.streams[0] ?? null);
+    this.media.next(ev.streams[0] ?? new MediaStream([ev.track]));
     this.staleSince = null;
     this.status.next('connected');
   }
@@ -270,22 +340,19 @@ export class WebRTCStream {
   /** Updates the stream status from the latest transport stats. */
   private updateHealthStatus(currentReport: StreamReport) {
     const lastReport = this.streamReport.value;
-    const hasPreviousReport = lastReport.timestamp > 0;
+    const now = Date.now();
 
     if (currentReport.frames > 0) {
       this.hasDecodedFrame = true;
     }
 
     this.streamReport.next(currentReport);
-    if (!hasPreviousReport) {
-      return;
-    }
 
     const deltaFrames = currentReport.frames - lastReport.frames;
     const deltaBytes = currentReport.bytes - lastReport.bytes;
 
     // Stream is actively delivering frames and data
-    if (deltaFrames > 0 && deltaBytes > 0) {
+    if (deltaFrames > 0) {
       if (this.staleSince || this.bufferingSince) {
         this.debug.log('%s: Streaming.', this.camera);
       }
@@ -295,51 +362,41 @@ export class WebRTCStream {
       return;
     }
 
-    // Bytes are arriving but frames not yet decoded (waiting for keyframe or decoder)
-    if (deltaBytes > 0 && deltaFrames === 0) {
-      if (this.bufferingSince === null) {
-        this.bufferingSince = Date.now();
-        this.debug.log('%s: Buffering.', this.camera);
-      }
+    if (!this.hasDecodedFrame) {
+      this.status.next('startup');
+      return;
+    }
 
-      if (this.hasDecodedFrame) {
+    this.bufferingSince ??= now;
+    if (deltaBytes > 0) {
+      this.staleSince = null;
+      if (now - this.bufferingSince >= HEALTH_STALL_GRACE) {
         this.status.next('buffering');
-      } else {
-        this.status.next('startup');
       }
-
-      // During startup on slower devices, wait for the first decoded frame instead of
-      // reconnecting and restarting the keyframe/decode wait from scratch.
-      if (this.hasDecodedFrame && Date.now() - this.bufferingSince > BUFFER_TIMEOUT) {
-        this.debug.log('%s: Buffering timeout. Reconnecting.', this.camera);
+      if (now - this.bufferingSince > BUFFER_TIMEOUT) {
         this.requestReconnect('Buffering timeout');
       }
       return;
     }
 
-    // No data arriving at all - connection is dead
-    this.bufferingSince = null;
-    if (this.staleSince === null) {
-      this.staleSince = Date.now();
-      this.debug.log('%s: Stream is dead.', this.camera);
+    this.staleSince ??= now;
+    if (now - this.staleSince >= HEALTH_STALL_GRACE) {
+      this.status.next('dead');
     }
-    this.status.next('dead');
-
-    // Reconnect after some seconds of no data
-    if (Date.now() - this.staleSince > STALE_TIMEOUT) {
+    if (now - this.staleSince > STALE_TIMEOUT) {
       this.requestReconnect('Stream dead');
     }
   }
 
   /** Sends newly gathered ICE candidates to the signaling socket. */
   private onIceCandidate(event: RTCPeerConnectionIceEvent) {
-    if (!event.candidate || this.webSocket.readyState !== WebSocket.OPEN) {
+    if (this.webSocket.readyState !== WebSocket.OPEN) {
       return;
     }
-    const candidate = event.candidate;
+    const candidate = event.candidate?.toJSON().candidate ?? '';
 
     this.debug.log('%s: Got new ICE candidate.', this.camera);
-    this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate.toJSON().candidate }));
+    this.webSocket.send(JSON.stringify({ type: 'webrtc/candidate', value: candidate }));
   }
 
   /** Periodically checks whether the active stream is still healthy. */
@@ -349,43 +406,111 @@ export class WebRTCStream {
       return;
     }
 
+    const peerConnection = this.peerConnection;
+    if (!peerConnection) return;
     try {
-      this.healthCheckRunning = true;
-      const currentReport = await this.getStreamReport();
-      if (this.shouldAbortHealthCheck()) {
+      this.healthCheckPeer = peerConnection;
+      const currentReport = await this.getStreamReport(peerConnection);
+      if (this.peerConnection !== peerConnection || this.shouldAbortHealthCheck()) {
         return;
       }
 
       this.updateHealthStatus(currentReport);
+      if (this.reconnectPending) return;
+
+      const now = Date.now();
+      if (this.disconnectedSince !== null && now - this.disconnectedSince > STALE_TIMEOUT) {
+        this.requestReconnect('Peer disconnected');
+      } else if (!this.hasDecodedFrame && this.startedAt !== null && now - this.startedAt > STARTUP_TIMEOUT) {
+        this.requestReconnect('Startup timeout');
+      } else if (this.hasDecodedFrame && peerConnection.connectionState === 'connected' && this.webSocket.readyState === WebSocket.OPEN) {
+        this.webSocket.close(1000, 'WebRTC media established');
+      }
+
+      if (!this.reconnectPending && now - this.lastDiagnosticAt >= 10_000) {
+        this.lastDiagnosticAt = now;
+        this.logDiagnostics('Health');
+      }
     } catch (error) {
-      this.debug.log('%s: Health check failed.', this.camera, error);
+      if (this.peerConnection !== peerConnection || !this.shallStream) return;
+      this.debug.log('%s: Health check failed. %s', this.camera, error);
       this.requestReconnect('Health check failure');
     } finally {
-      this.healthCheckRunning = false;
+      if (this.healthCheckPeer === peerConnection) {
+        this.healthCheckPeer = null;
+      }
     }
   }
 
   /** Returns the current inbound video statistics for the stream. */
-  private async getStreamReport(): Promise<StreamReport> {
-    if (!this.hasOpenConnection()) {
-      return createEmptyReport();
-    }
-    const peerConnection = this.peerConnection;
-    if (!peerConnection) {
-      return createEmptyReport();
-    }
-
+  private async getStreamReport(peerConnection: RTCPeerConnection): Promise<StreamReport> {
     const stats = await peerConnection.getStats();
     const videoReport = Array.from(stats.values()).find(
-      (report): report is RTCStats & { kind?: string; bytesReceived?: number; framesDecoded?: number } => {
-        const inboundReport = report as RTCStats & { kind?: string; bytesReceived?: number; framesDecoded?: number };
-        return inboundReport.type === 'inbound-rtp' && inboundReport.kind === 'video';
-      },
+      (report): report is RTCInboundRtpStreamStats => report.type === 'inbound-rtp' && report.kind === 'video',
     );
 
+    const transport = videoReport?.transportId ? stats.get(videoReport.transportId) : undefined;
+    const pair = transport?.selectedCandidatePairId ? stats.get(transport.selectedCandidatePairId) : undefined;
+    const localCandidate = pair?.localCandidateId ? stats.get(pair.localCandidateId) : undefined;
+    const remoteCandidate = pair?.remoteCandidateId ? stats.get(pair.remoteCandidateId) : undefined;
+    const diagnostics: Partial<StreamReport> = {
+      connectionState: peerConnection.connectionState,
+      iceConnectionState: peerConnection.iceConnectionState,
+      reconnectReason: this.reconnectReason,
+      roundTripTimeMs: pair?.currentRoundTripTime != null ? pair.currentRoundTripTime * 1000 : null,
+      transport: localCandidate
+        ? [localCandidate.protocol, localCandidate.candidateType, remoteCandidate?.candidateType, localCandidate.relayProtocol]
+            .filter(Boolean)
+            .join('/')
+        : null,
+    };
+
     if (!videoReport) {
-      return createEmptyReport();
+      return createStreamReport(this.streamReport.value.frames, this.streamReport.value.bytes, diagnostics);
     }
-    return createStreamReport(videoReport.framesDecoded ?? 0, videoReport.bytesReceived ?? 0);
+
+    const previous = this.previousVideoReport?.id === videoReport.id ? this.previousVideoReport : null;
+    const seconds = previous ? (videoReport.timestamp - previous.timestamp) / 1000 : 0;
+    const deltaFrames = previous ? (videoReport.framesDecoded ?? 0) - (previous.framesDecoded ?? 0) : 0;
+    const deltaBytes = previous ? (videoReport.bytesReceived ?? 0) - (previous.bytesReceived ?? 0) : 0;
+    const deltaEmitted = previous ? (videoReport.jitterBufferEmittedCount ?? 0) - (previous.jitterBufferEmittedCount ?? 0) : 0;
+    if (this.peerConnection === peerConnection) {
+      this.previousVideoReport = videoReport;
+    }
+
+    return createStreamReport(videoReport.framesDecoded ?? 0, videoReport.bytesReceived ?? 0, {
+      ...diagnostics,
+      fps: seconds > 0 && deltaFrames >= 0 ? deltaFrames / seconds : null,
+      bitrate: seconds > 0 && deltaBytes >= 0 ? (deltaBytes * 8) / seconds : null,
+      packetsLost: videoReport.packetsLost ?? null,
+      packetsReceived: videoReport.packetsReceived ?? null,
+      framesDropped: videoReport.framesDropped ?? null,
+      jitterMs: videoReport.jitter != null ? videoReport.jitter * 1000 : null,
+      decodeTimeMs:
+        previous?.totalDecodeTime != null && videoReport.totalDecodeTime != null && deltaFrames > 0
+          ? ((videoReport.totalDecodeTime - previous.totalDecodeTime) * 1000) / deltaFrames
+          : null,
+      jitterBufferDelayMs:
+        previous?.jitterBufferDelay != null && videoReport.jitterBufferDelay != null && deltaEmitted > 0
+          ? ((videoReport.jitterBufferDelay - previous.jitterBufferDelay) * 1000) / deltaEmitted
+          : null,
+      pliCount: videoReport.pliCount ?? null,
+      nackCount: videoReport.nackCount ?? null,
+    });
+  }
+
+  private logDiagnostics(reason: string) {
+    this.debug.log(
+      '%s: %s %s',
+      this.camera,
+      reason,
+      JSON.stringify({
+        ...this.streamReport.value,
+        status: this.status.value,
+        connectionState: this.peerConnection?.connectionState ?? null,
+        iceConnectionState: this.peerConnection?.iceConnectionState ?? null,
+        reconnectReason: this.reconnectReason,
+      }),
+    );
   }
 }

@@ -16,6 +16,8 @@ export class WebRTCService {
   private readonly debug = inject(DebugService);
   private readonly visibility = inject(VisibilityService);
   private readonly streams = new Map<string, WebRTCStream>();
+  private readonly consumers = new Map<string, number>();
+  private readonly resumeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private screenOn = true;
 
   constructor() {
@@ -35,6 +37,9 @@ export class WebRTCService {
       this.streams.set(streamName, stream);
     }
 
+    this.consumers.set(streamName, (this.consumers.get(streamName) ?? 0) + 1);
+    clearTimeout(this.resumeTimers.get(streamName));
+    this.resumeTimers.delete(streamName);
     const offer = stream.start();
     if (!this.screenOn) {
       stream.stop();
@@ -48,26 +53,40 @@ export class WebRTCService {
    */
   stop(camera: Camera, quality: StreamQuality = 'medium') {
     const streamName = this.buildStreamName(camera, quality);
-    let stream = this.streams.get(streamName);
-    if (stream) {
-      stream.stop();
+    const count = this.consumers.get(streamName) ?? 0;
+    if (count > 1) {
+      this.consumers.set(streamName, count - 1);
+      return;
     }
+    this.consumers.delete(streamName);
+    clearTimeout(this.resumeTimers.get(streamName));
+    this.resumeTimers.delete(streamName);
+    this.streams.get(streamName)?.stop();
   }
 
   /**
    * Stops all streams when the screen turns off.
    */
   private stopAllStreams() {
+    this.resumeTimers.forEach((timer) => clearTimeout(timer));
+    this.resumeTimers.clear();
     this.streams.forEach((stream) => stream.stop());
   }
 
   /**
-   * Starts all known streams again when the screen turns on.
+   * Resumes streams with active viewers when the screen turns on.
    * Add a small delay between starting each stream to avoid overwhelming the system with simultaneous stream startups.
    */
   private startAllStreams() {
-    Array.from(this.streams.values()).forEach((stream, index) => {
-      setTimeout(() => stream.start(), index * PLAY_DELAY);
+    Array.from(this.consumers.keys()).forEach((streamName, index) => {
+      clearTimeout(this.resumeTimers.get(streamName));
+      const timer = setTimeout(() => {
+        this.resumeTimers.delete(streamName);
+        if (this.screenOn && this.consumers.has(streamName)) {
+          this.streams.get(streamName)?.start();
+        }
+      }, index * PLAY_DELAY);
+      this.resumeTimers.set(streamName, timer);
     });
   }
 

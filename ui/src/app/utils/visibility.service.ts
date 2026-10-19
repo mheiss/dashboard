@@ -20,19 +20,17 @@ export class VisibilityService {
 
   constructor() {
     const visibilityChange$ = fromEvent(document, 'visibilitychange').pipe(map(() => document.visibilityState === 'visible'));
-    const focus$ = fromEvent(window, 'focus').pipe(map(() => true));
-    const blur$ = fromEvent(window, 'blur').pipe(map(() => false));
 
     // Detect if the screen was turned on again after being off for a longer time (e.g. suspended)
     const suspendedRecovery$ = interval(1000).pipe(
       map(() => Date.now()),
       pairwise(),
       filter(([prev, now]) => now - prev > 3000),
-      map(() => true),
+      map(() => this.getInitialScreenState()),
     );
 
     // Merge all events that indicate the screen might be on or off and maintain the current state
-    const state$ = merge(visibilityChange$, focus$, blur$, suspendedRecovery$).pipe(
+    const state$ = merge(visibilityChange$, suspendedRecovery$).pipe(
       startWith(this.getInitialScreenState()),
       takeUntilDestroyed(),
       distinctUntilChanged(),

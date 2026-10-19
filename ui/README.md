@@ -12,6 +12,12 @@ See the [project overview](../README.md) for features and screenshots, and the [
 - **Protected setup**: Administrators connect Microsoft accounts and select calendar and photo sources. Everyday views do not prompt for sign-in.
 - **Kiosk lifecycle**: Camera streams and gallery work react to screen visibility. Fully Kiosk Browser integration supports waking the tablet for backend camera actions.
 
+## Camera Diagnostics
+
+Select the camera's status dot to toggle stream diagnostics. The overlay shows sampled FPS and bitrate, cumulative packet loss and dropped frames, jitter, RTT, per-frame decode time, jitter-buffer delay, selected ICE transport, and the last reconnect reason. Unsupported browser statistics appear as `n/a`. The console records diagnostics every ten seconds and immediately before reconnecting.
+
+WebRTC media continues after the signaling WebSocket closes; the player deliberately closes signaling after receiving decoded video. Brief stalls have a two-second status grace period. Recovery retains the five-second no-data and ten-second buffering timeouts, with a separate thirty-second limit for receiving the first decoded frame. Camera changes release the previous stream, shared viewers retain it until the last viewer leaves, and screen wake resumes only requested streams. Window focus alone does not determine screen visibility.
+
 ## Technology And Structure
 
 The UI uses Angular standalone components and routing, RxJS for asynchronous data, Tailwind CSS for styling, and Lucide icons. Keycloak's JavaScript adapter handles administrator sessions; GraphQL subscriptions provide live updates.

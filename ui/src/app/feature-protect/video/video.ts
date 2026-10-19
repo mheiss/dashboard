@@ -3,7 +3,7 @@ import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Camera, StreamQuality } from '../protect.model';
 import { WebRTCService } from '../webrtc/webrtc.service';
 import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
-import { Status } from '../webrtc/webrtc.model';
+import { Status, StreamReport } from '../webrtc/webrtc.model';
 
 @Component({
   selector: 'app-video',
@@ -27,6 +27,7 @@ export class Video implements OnInit, OnChanges {
 
   readonly videoElement = viewChild.required<ElementRef<HTMLVideoElement>>('videoElement');
   private streamChanged = new Subject<void>();
+  private activeStream: { camera: Camera; quality: StreamQuality } | null = null;
   private panzoom: PanzoomObject;
 
   private readonly onWheel = (event: WheelEvent) => {
@@ -48,14 +49,15 @@ export class Video implements OnInit, OnChanges {
 
   ngOnChanges(): void {
     this.streamChanged.next();
+    this.releaseStream();
     this.panzoom?.reset();
     if (!this.play()) {
-      this.webRtc.stop(this.camera(), this.quality());
       this.video.set(null);
       this.classes.set(null);
       this.statusText.set(null);
       return;
     }
+    this.activeStream = { camera: this.camera(), quality: this.quality() };
     const offer = this.webRtc.start(this.camera(), this.quality());
     offer.media.pipe(takeUntil(this.streamChanged)).subscribe((media) => {
       this.video.set(media);
@@ -68,8 +70,7 @@ export class Video implements OnInit, OnChanges {
       this.statusText.set(this.toStatusText(status));
     });
     offer.report.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((stats) => {
-      const time = new Date(stats.timestamp);
-      this.stats.set(`Time: ${time.toLocaleString()} Frames: ${stats.frames} Bytes: ${stats.bytes}`);
+      this.stats.set(this.formatStats(stats));
     });
   }
 
@@ -77,12 +78,35 @@ export class Video implements OnInit, OnChanges {
     this.videoElement();
     this.streamChanged.next();
     this.streamChanged.complete();
-    this.webRtc.stop(this.camera(), this.quality());
+    this.releaseStream();
 
     const videoElement = this.videoElement().nativeElement;
     if (videoElement) {
       videoElement.removeEventListener('wheel', this.onWheel);
     }
+    this.panzoom?.destroy();
+  }
+
+  private releaseStream(): void {
+    if (this.activeStream) {
+      this.webRtc.stop(this.activeStream.camera, this.activeStream.quality);
+      this.activeStream = null;
+    }
+  }
+
+  private formatStats(report: StreamReport): string {
+    const metric = (value: number | null, unit: string, digits = 1) => (value === null ? 'n/a' : value.toFixed(digits) + unit);
+    return [
+      `FPS: ${metric(report.fps, '')} | Bitrate: ${metric(report.bitrate === null ? null : report.bitrate / 1000, ' kbps')}`,
+      `Frames: ${report.frames} | Bytes: ${report.bytes}`,
+      `Lost / received packets (total): ${metric(report.packetsLost, '', 0)} / ${metric(report.packetsReceived, '', 0)}`,
+      `Dropped frames (total): ${metric(report.framesDropped, '', 0)} | PLI / NACK: ${metric(report.pliCount, '', 0)} / ${metric(report.nackCount, '', 0)}`,
+      `Jitter: ${metric(report.jitterMs, ' ms')} | RTT: ${metric(report.roundTripTimeMs, ' ms')}`,
+      `Decode: ${metric(report.decodeTimeMs, ' ms/frame')} | Jitter buffer: ${metric(report.jitterBufferDelayMs, ' ms')}`,
+      `Peer: ${report.connectionState ?? 'n/a'} | ICE: ${report.iceConnectionState ?? 'n/a'}`,
+      `Transport: ${report.transport ?? 'n/a'} | Last reconnect: ${report.reconnectReason ?? 'none'}`,
+      `Sample: ${report.timestamp ? new Date(report.timestamp).toLocaleTimeString() : 'n/a'}`,
+    ].join('\n');
   }
 
   private toCssClass(health: Status) {

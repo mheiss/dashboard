@@ -6,14 +6,30 @@
     [poster]="poster()"
     muted
     autoplay
+    playsinline
   ></video>
   @if (statusText(); as text) {
-    <div class="absolute top-2 left-2 rounded bg-black/35 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-white/75 backdrop-blur-sm">{{ text }}</div>
+    <div
+      class="absolute top-2 left-2 rounded bg-black/35 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-white/75 backdrop-blur-sm"
+    >
+      {{ text }}
+    </div>
   }
-  <div class="absolute top-2 right-2" (click)="showStats.set(!showStats())">
+  <button
+    type="button"
+    class="absolute top-2 right-2 z-20 flex h-4 w-4 items-center justify-center"
+    aria-label="Stream diagnostics"
+    title="Stream diagnostics"
+    [attr.aria-pressed]="showStats()"
+    (click)="showStats.set(!showStats())"
+  >
     <div [classList]="classes()"></div>
-  </div>
+  </button>
   @if (showStats()) {
-    <div class="absolute bottom-2 left-2 text-xs text-white">{{ stats() }}</div>
+    <div
+      class="absolute bottom-2 left-2 z-10 max-h-[calc(100%-2.5rem)] max-w-[calc(100%-1rem)] overflow-y-auto rounded bg-black/75 p-2 text-[10px] wrap-break-word whitespace-pre-line text-white"
+    >
+      {{ stats() }}
+    </div>
   }
 </div>

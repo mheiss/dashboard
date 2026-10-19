@@ -22,6 +22,21 @@ export interface StreamReport {
   frames: number;
   bytes: number;
   timestamp: number;
+  fps: number | null;
+  bitrate: number | null;
+  packetsLost: number | null;
+  packetsReceived: number | null;
+  framesDropped: number | null;
+  jitterMs: number | null;
+  roundTripTimeMs: number | null;
+  decodeTimeMs: number | null;
+  jitterBufferDelayMs: number | null;
+  pliCount: number | null;
+  nackCount: number | null;
+  transport: string | null;
+  connectionState: RTCPeerConnectionState | null;
+  iceConnectionState: RTCIceConnectionState | null;
+  reconnectReason: string | null;
 }
 
 /**
@@ -29,8 +44,7 @@ export interface StreamReport {
  */
 export function createEmptyReport(): StreamReport {
   return {
-    frames: 0,
-    bytes: 0,
+    ...createStreamReport(0, 0),
     timestamp: 0,
   };
 }
@@ -38,10 +52,26 @@ export function createEmptyReport(): StreamReport {
 /**
  * Returns a new stream report with the given values.
  */
-export function createStreamReport(frames: number, bytes: number): StreamReport {
+export function createStreamReport(frames: number, bytes: number, diagnostics: Partial<StreamReport> = {}): StreamReport {
   return {
     frames: frames,
     bytes: bytes,
     timestamp: Date.now(),
+    fps: null,
+    bitrate: null,
+    packetsLost: null,
+    packetsReceived: null,
+    framesDropped: null,
+    jitterMs: null,
+    roundTripTimeMs: null,
+    decodeTimeMs: null,
+    jitterBufferDelayMs: null,
+    pliCount: null,
+    nackCount: null,
+    transport: null,
+    connectionState: null,
+    iceConnectionState: null,
+    reconnectReason: null,
+    ...diagnostics,
   };
 }
