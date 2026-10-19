@@ -11,6 +11,7 @@ quarkus.datasource.username=dashboard
 quarkus.datasource.password=REPLACE_DATABASE_PASSWORD
 
 # Dashboard configuration
+# Choose a long, unique passphrase; no special encoding is required. Keep it unchanged and backed up.
 dashboard.token-key=REPLACE_SAVED_TOKEN_KEY
 dashboard.media-directory=C:/dashboard-data/media
 dashboard.zone=Europe/Vienna
