@@ -66,7 +66,8 @@ class MediaServiceTest {
     }
 
     PhotoSnapshot photo(String version) {
-        return new PhotoSnapshot(UUID.randomUUID(), "drive", "photo", "Photo.jpg", Instant.EPOCH, Instant.EPOCH, version);
+        return new PhotoSnapshot(UUID.randomUUID(), "drive", "photo", "Photo.jpg", Instant.EPOCH, Instant.EPOCH, version, null,
+                null);
     }
 
     @Test

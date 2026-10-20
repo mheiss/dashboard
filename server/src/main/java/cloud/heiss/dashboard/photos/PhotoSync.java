@@ -128,7 +128,8 @@ public class PhotoSync {
         }
         var old = new HashSet<>(manager
                 .createQuery("select p from Photo p join PhotoMembership m on m.photoId=p.id where m.sourceId=?1", Photo.class)
-                .setParameter(1, source.id()).getResultList().stream().map(photo -> photo.id + ":" + photo.version).toList());
+                .setParameter(1, source.id()).getResultList().stream()
+                .map(photo -> photo.id + ":" + photo.version + ":" + photo.width + ":" + photo.height).toList());
         var next = new HashSet<String>();
         var memberships = new HashSet<UUID>();
         manager.createQuery("delete from PhotoMembership where sourceId=?1").setParameter(1, source.id()).executeUpdate();
@@ -166,6 +167,10 @@ public class PhotoSync {
             photo.takenYear = date == null ? null : date.getYear();
             photo.modifiedAt = modified;
             photo.version = version;
+            int width = target.path("image").path("width").asInt(0);
+            int height = target.path("image").path("height").asInt(0);
+            photo.width = width > 0 && height > 0 ? width : null;
+            photo.height = width > 0 && height > 0 ? height : null;
             if (found.isEmpty()) {
                 manager.persist(photo);
             }
@@ -173,7 +178,7 @@ public class PhotoSync {
             membership.photoId = photoId;
             membership.sourceId = source.id();
             manager.persist(membership);
-            next.add(photoId + ":" + version);
+            next.add(photoId + ":" + version + ":" + photo.width + ":" + photo.height);
         }
         manager.flush();
         manager.createQuery("delete from Photo p where not exists (select 1 from PhotoMembership m where m.photoId=p.id)")

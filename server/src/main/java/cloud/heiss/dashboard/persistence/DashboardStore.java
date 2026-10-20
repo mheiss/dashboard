@@ -117,7 +117,7 @@ public class DashboardStore {
 
     public static PhotoSnapshot photo(cloud.heiss.dashboard.persistence.entity.Photo entity) {
         return new PhotoSnapshot(entity.id, entity.driveId, entity.upstreamId, entity.name, entity.takenAt, entity.modifiedAt,
-                entity.version);
+                entity.version, entity.width, entity.height);
     }
 
 }

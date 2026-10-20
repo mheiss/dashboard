@@ -38,4 +38,6 @@ public class Photo {
     public Instant modifiedAt;
     @Column(nullable = false, columnDefinition = "text")
     public String version;
+    public Integer width;
+    public Integer height;
 }

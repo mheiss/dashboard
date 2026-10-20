@@ -31,7 +31,8 @@ class MediaResourceTest {
         resource.store = mock(DashboardStore.class);
         resource.media = mock(MediaService.class);
         resource.request = mock(Request.class);
-        photo = new PhotoSnapshot(UUID.randomUUID(), "drive", "photo", "Photo.jpg", Instant.EPOCH, Instant.EPOCH, "v1");
+        photo = new PhotoSnapshot(UUID.randomUUID(), "drive", "photo", "Photo.jpg", Instant.EPOCH, Instant.EPOCH, "v1", null,
+                null);
         when(resource.store.photo(photo.id())).thenReturn(photo);
         when(resource.media.open(photo, false)).thenReturn(new ByteArrayInputStream(new byte[] { 1 }));
     }

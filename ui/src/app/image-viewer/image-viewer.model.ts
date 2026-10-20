@@ -8,6 +8,8 @@ export interface ViewerImage {
   id: string;
   name: string;
   takenAt: Date;
+  width?: number | null;
+  height?: number | null;
   original$: Observable<Blob | null>;
   thumbnail$: Observable<Blob | null>;
 }

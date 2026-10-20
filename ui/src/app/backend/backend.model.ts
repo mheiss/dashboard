@@ -26,6 +26,8 @@ export interface BackendImage {
   modifiedAt: string;
   thumbnailUrl: string;
   originalUrl: string;
+  width: number | null;
+  height: number | null;
 }
 
 export interface ImagePage {
@@ -53,7 +55,7 @@ export interface DashboardAction {
   armed: boolean | null;
 }
 
-export const IMAGE_FIELDS = 'id name takenAt modifiedAt thumbnailUrl originalUrl';
+export const IMAGE_FIELDS = 'id name takenAt modifiedAt thumbnailUrl originalUrl width height';
 export const CALENDAR_FIELDS = 'id subject startsAt endsAt isAllDay calendar { id name theme }';
 
 export const CALENDAR_THEMES: Record<string, string> = {

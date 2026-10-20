@@ -61,6 +61,8 @@ class DashboardReadTest {
                 entity.takenYear = 2020;
                 entity.modifiedAt = timestamp;
                 entity.version = "v1";
+                entity.width = 1200;
+                entity.height = 1800;
                 store.persist(entity);
                 var membership = new PhotoMembership();
                 membership.photoId = photo;
@@ -76,6 +78,8 @@ class DashboardReadTest {
             assertEquals(2, first.items().size());
             assertEquals(1, second.items().size());
             var image = first.items().getFirst();
+            assertEquals(1200, image.width());
+            assertEquals(1800, image.height());
             assertTrue(image.thumbnailUrl().startsWith("/api/media/images/" + image.id() + "/thumbnail?"));
             assertTrue(image.originalUrl().startsWith("/api/media/images/" + image.id() + "/original?"));
             assertTrue(first.hasNextPage());

@@ -49,19 +49,29 @@
         </div>
       }
     }
-    <cdk-virtual-scroll-viewport #gallery class="photo-viewport" [itemSize]="200">
-      <div
-        *cdkVirtualFor="let row of rows(); trackBy: trackByImageIds"
-        class="photo-row"
-        [style.gridTemplateColumns]="'repeat(' + columns() + ', minmax(0, 1fr))'"
-      >
-        @for (image of row; track image.id) {
-          <button type="button" class="photo-tile" (click)="openDetailView(image)" [title]="image.name" aria-haspopup="dialog">
-            <img [alt]="image.name" [blobSrc]="image.thumbnail$ | async" />
-            <span class="photo-caption">{{ image.takenAt | date: 'dd. MMM yyyy' }}</span>
-          </button>
+    <div #gallery class="photo-viewport">
+      <div class="photo-canvas" [style.height.px]="totalHeight()">
+        @for (row of virtualItems(); track row.key) {
+          <div
+            class="photo-grid"
+            [attr.data-index]="row.index"
+            [style.height.px]="row.size"
+            [style.transform]="'translateY(' + row.start + 'px)'"
+          >
+            @for (image of rowImages(row.index); track image.id) {
+              <button type="button" class="photo-tile" (click)="openDetailView(image)" [title]="image.name" aria-haspopup="dialog">
+                <img
+                  [alt]="image.name"
+                  [blobSrc]="image.thumbnail$ | async"
+                  [style.aspect-ratio]="aspectRatio(image)"
+                  (load)="imageLoaded(image, row.index, $event)"
+                />
+                <span class="photo-caption">{{ image.takenAt | date: 'dd. MMM yyyy' }}</span>
+              </button>
+            }
+          </div>
         }
       </div>
-    </cdk-virtual-scroll-viewport>
+    </div>
   </div>
 </div>

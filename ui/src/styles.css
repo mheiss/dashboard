@@ -304,6 +304,11 @@ body {
     object-fit: cover;
     transition: transform 250ms;
   }
+  .photo-tile img {
+    height: auto;
+    aspect-ratio: auto 3 / 2;
+    object-fit: contain;
+  }
   .moment-caption {
     position: absolute;
     inset: 0;
@@ -366,10 +371,21 @@ body {
   .photo-viewport {
     height: 100%;
     width: 100%;
+    overflow-y: auto;
+    overflow-anchor: none;
   }
-  .photo-row {
+  .photo-canvas {
+    position: relative;
+    width: 100%;
+  }
+  .photo-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
     display: grid;
-    height: 200px;
+    grid-template-columns: repeat(var(--gallery-columns, 4), minmax(0, 1fr));
+    align-items: start;
     gap: 10px;
     padding: 0 0 10px;
   }
@@ -379,7 +395,7 @@ body {
     min-height: 0;
     overflow: hidden;
     border-radius: 6px;
-    background: linear-gradient(135deg, #e9eef0, #f5f7f8);
+    background: transparent;
     text-align: left;
   }
   .photo-caption {
@@ -399,8 +415,7 @@ body {
   .photo-tile:focus-visible .photo-caption {
     opacity: 1;
   }
-  .moment-tile:hover img,
-  .photo-tile:hover img {
+  .moment-tile:hover img {
     transform: scale(1.025);
   }
   .gallery-empty {
@@ -423,7 +438,7 @@ body {
     position: absolute;
     inset: 0;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(var(--gallery-columns, 4), minmax(0, 1fr));
     grid-auto-rows: 190px;
     align-content: start;
     gap: 10px;
@@ -620,8 +635,9 @@ body {
     .navigation-link {
       padding: 10px 16px;
     }
+    .photo-grid,
     .gallery-placeholder {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(var(--gallery-columns, 3), minmax(0, 1fr));
     }
   }
   @media (max-width: 639px) {
@@ -660,8 +676,9 @@ body {
     .moment-tile {
       height: 126px;
     }
+    .photo-grid,
     .gallery-placeholder {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(var(--gallery-columns, 3), minmax(0, 1fr));
     }
     .photo-caption {
       opacity: 1;
@@ -691,8 +708,7 @@ body {
     .home-gallery {
       animation: none;
     }
-    .moment-tile:hover img,
-    .photo-tile:hover img {
+    .moment-tile:hover img {
       transform: none;
     }
   }

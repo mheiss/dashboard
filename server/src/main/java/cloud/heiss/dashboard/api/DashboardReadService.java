@@ -142,7 +142,7 @@ public class DashboardReadService {
         String version = Integer.toUnsignedString(photo.version().hashCode());
         return new Image(photo.id().toString(), photo.name(), photo.takenAt() == null ? null : photo.takenAt().toString(),
                 photo.modifiedAt().toString(), "/api/media/images/" + photo.id() + "/thumbnail?v=" + version,
-                "/api/media/images/" + photo.id() + "/original?v=" + version);
+                "/api/media/images/" + photo.id() + "/original?v=" + version, photo.width(), photo.height());
     }
 
     public List<Moment> moments(String referenceDate) {

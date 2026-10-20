@@ -208,6 +208,17 @@ class SyncTest {
         long revision = store.revision();
         photos.sync(currentSource());
         assertEquals(revision, store.revision());
+        UUID photoId = store.list("select photoId from PhotoMembership where sourceId=?1", UUID.class, source).getFirst();
+        assertNull(store.photo(photoId).width());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) page.path("value").get(0)).putObject("image").put("width", 1200)
+                .put("height", 1800);
+        photos.sync(currentSource());
+        org.junit.jupiter.api.Assertions.assertTrue(store.revision() > revision);
+        assertEquals(1200, store.photo(photoId).width());
+        assertEquals(1800, store.photo(photoId).height());
+        revision = store.revision();
+        photos.sync(currentSource());
+        assertEquals(revision, store.revision());
         when(graph.pages(eq(account), anyString(), any())).thenAnswer(invocation -> {
             Consumer<JsonNode> consumer = invocation.getArgument(2);
             consumer.accept(mapper.readTree("{\"value\":[{\"id\":\"picture\",\"deleted\":{}}]}"));

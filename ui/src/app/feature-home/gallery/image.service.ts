@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, debounceTime, defer, filter, of, shareReplay } from 'rxjs';
+import { catchError, debounceTime, defer, filter, of, ReplaySubject, share } from 'rxjs';
 import { BackendImage, BackendMoment, IMAGE_FIELDS, ImagePage } from '../../backend/backend.model';
 import { BackendService } from '../../backend/backend.service';
 import { MediaService } from '../../backend/generated/services/media.service';
@@ -118,7 +118,9 @@ export class ImageService {
       previous.takenAt === source.takenAt &&
       previous.modifiedAt === source.modifiedAt &&
       previous.thumbnailUrl === source.thumbnailUrl &&
-      previous.originalUrl === source.originalUrl
+      previous.originalUrl === source.originalUrl &&
+      previous.width === source.width &&
+      previous.height === source.height
     )
       return existing;
     const blob = (url: string, original: boolean) =>
@@ -127,13 +129,15 @@ export class ImageService {
         const params = { id: source.id, v: version };
         return original ? this.media.getImageOriginal(params) : this.media.getImageThumbnail(params);
       }).pipe(
-        shareReplay({ bufferSize: 1, refCount: true }),
+        share({ connector: () => new ReplaySubject<Blob | null>(1), resetOnComplete: true, resetOnRefCountZero: true }),
         catchError(() => of(null)),
       );
     const image: ViewerImage = {
       id: source.id,
       name: source.name,
       takenAt: new Date(source.takenAt ?? source.modifiedAt),
+      width: source.width,
+      height: source.height,
       thumbnail$: blob(source.thumbnailUrl, false),
       original$: blob(source.originalUrl, true),
     };
