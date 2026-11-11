@@ -3,6 +3,7 @@ package cloud.heiss.dashboard.api;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -18,6 +19,8 @@ import cloud.heiss.dashboard.api.model.CalendarEntry;
 import cloud.heiss.dashboard.api.model.CalendarInfo;
 import cloud.heiss.dashboard.api.model.Image;
 import cloud.heiss.dashboard.api.model.ImagePage;
+import cloud.heiss.dashboard.api.model.MemoryDate;
+import cloud.heiss.dashboard.api.model.MemoryDay;
 import cloud.heiss.dashboard.api.model.Moment;
 import cloud.heiss.dashboard.calendar.AgendaDates;
 import cloud.heiss.dashboard.config.DashboardConfig;
@@ -164,6 +167,65 @@ public class DashboardReadService {
             }
         }
         return result;
+    }
+
+    public List<MemoryDate> memoryDates(Integer month, Integer photoYear) {
+        int currentYear = LocalDate.now(ZoneId.of(config.zone())).getYear();
+        validateMemoryFilters(month, photoYear, currentYear);
+        var query = new StringBuilder("select p.takenMonth,p.takenDay,count(distinct p.takenYear)").append(VISIBLE_PHOTOS)
+                .append("and p.takenYear>=1900 and p.takenYear<?1");
+        var parameters = new ArrayList<Object>();
+        parameters.add(currentYear);
+        if (month != null) {
+            query.append(" and p.takenMonth=?").append(parameters.size() + 1);
+            parameters.add(month);
+        }
+        if (photoYear != null) {
+            query.append(" and p.takenYear=?").append(parameters.size() + 1);
+            parameters.add(photoYear);
+        }
+        query.append(" group by p.takenMonth,p.takenDay order by p.takenMonth desc,p.takenDay desc");
+        return store.list(query.toString(), Object[].class, parameters.toArray()).stream().map(
+                row -> new MemoryDate(((Number) row[0]).intValue(), ((Number) row[1]).intValue(), ((Number) row[2]).intValue()))
+                .toList();
+    }
+
+    public List<Integer> memoryYears() {
+        int currentYear = LocalDate.now(ZoneId.of(config.zone())).getYear();
+        return store.list("select distinct p.takenYear" + VISIBLE_PHOTOS
+                + "and p.takenYear>=1900 and p.takenYear<?1 order by p.takenYear desc", Integer.class, currentYear);
+    }
+
+    public MemoryDay memoryDay(int month, int day) {
+        validateMemoryDay(month, day);
+        int currentYear = LocalDate.now(ZoneId.of(config.zone())).getYear();
+        var photoYears = store.list("select distinct p.takenYear" + VISIBLE_PHOTOS
+                + "and p.takenMonth=?1 and p.takenDay=?2 and p.takenYear>=1900 and p.takenYear<?3 " + "order by p.takenYear desc",
+                Integer.class, month, day, currentYear);
+        var images = new ArrayList<Image>();
+        for (Integer photoYear : photoYears.stream().limit(4).toList()) {
+            var photos = store.page("select p" + VISIBLE_PHOTOS + "and p.takenMonth=?1 and p.takenDay=?2 and p.takenYear=?3 "
+                    + "order by coalesce(p.takenAt,p.modifiedAt) desc,p.id desc", Photo.class, 1, month, day, photoYear);
+            if (!photos.isEmpty()) {
+                images.add(image(DashboardStore.photo(photos.getFirst())));
+            }
+        }
+        return images.isEmpty() ? null : new MemoryDay(month, day, images);
+    }
+
+    private static void validateMemoryFilters(Integer month, Integer photoYear, int currentYear) {
+        if (month != null && (month < 1 || month > 12)) {
+            throw new BadRequestException("Memory month must be between 1 and 12");
+        }
+        if (photoYear != null && (photoYear < 1900 || photoYear >= currentYear)) {
+            throw new BadRequestException("Photo year must be a past year from 1900 onward");
+        }
+    }
+
+    private static void validateMemoryDay(int month, int day) {
+        if (month < 1 || month > 12 || day < 1 || day > YearMonth.of(2000, month).lengthOfMonth()) {
+            throw new BadRequestException("Invalid memory month or day");
+        }
     }
 
     public List<AccountStatus> status() {

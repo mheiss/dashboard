@@ -9,6 +9,8 @@ import java.time.ZoneOffset;
 import java.util.Comparator;
 import java.util.UUID;
 
+import org.jboss.logging.Logger;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 import cloud.heiss.dashboard.config.DashboardConfig;
@@ -28,6 +30,8 @@ import jakarta.persistence.LockModeType;
 @ApplicationScoped
 public class CalendarSync {
 
+    private static final Logger LOG = Logger.getLogger(CalendarSync.class);
+
     @Inject
     GraphClient graph;
 
@@ -41,6 +45,10 @@ public class CalendarSync {
     DashboardChanges changes;
 
     public void sync(SourceSnapshot source) {
+        long startedAt = System.nanoTime();
+        String accountName = safeName(store.account(source.accountId()).name());
+        String sourceName = safeName(source.name());
+        LOG.infof("Calendar sync started accountName=\"%s\" sourceName=\"%s\"", accountName, sourceName);
         ZoneId zone = ZoneId.of(config.zone());
         LocalDate today = LocalDate.now(zone);
         String range = "?startDateTime=" + GraphClient.segment(today.minusDays(1).atStartOfDay(zone).toInstant().toString())
@@ -92,6 +100,8 @@ public class CalendarSync {
         if (revision >= 0) {
             changes.publish("CALENDAR", revision);
         }
+        LOG.infof("Calendar sync completed accountName=\"%s\" sourceName=\"%s\" events=%d changed=%s durationMs=%d", accountName,
+                sourceName, desired.size(), revision >= 0, (System.nanoTime() - startedAt) / 1_000_000);
     }
 
     public static Occurrence occurrence(UUID sourceId, JsonNode event, ZoneId zone) {
@@ -104,6 +114,14 @@ public class CalendarSync {
         return new Occurrence(UUID.nameUUIDFromBytes((sourceId + ":" + upstream).getBytes(StandardCharsets.UTF_8)), upstream,
                 event.path("subject").asText(""), start, end, event.path("isAllDay").asBoolean(),
                 start.atZone(zone).toLocalDate(), end.atZone(zone).toLocalDate());
+    }
+
+    private static String safeName(String value) {
+        if (value == null || value.isBlank()) {
+            return "unnamed";
+        }
+        String safe = value.replaceAll("[\\p{Cntrl}]", " ").replace('"', '\'');
+        return safe.length() <= 80 ? safe : safe.substring(0, 77) + "...";
     }
 
     public static Instant graphInstant(String date) {

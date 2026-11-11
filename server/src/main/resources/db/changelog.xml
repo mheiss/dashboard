@@ -9,4 +9,14 @@
             <column name="height" type="INT"/>
         </addColumn>
     </changeSet>
+    <changeSet id="source-sync-details" author="dashboard">
+        <addColumn tableName="source">
+            <column name="sync_status" type="VARCHAR(20)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sync_error" type="${textType}"/>
+            <column name="sync_last_sync" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="file_count" type="INT"/>
+        </addColumn>
+    </changeSet>
 </databaseChangeLog>

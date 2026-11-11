@@ -1,10 +1,10 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, debounceTime, defer, filter, of, ReplaySubject, share } from 'rxjs';
-import { BackendImage, BackendMoment, IMAGE_FIELDS, ImagePage } from '../../backend/backend.model';
+import { BackendImage, BackendMemoryDate, BackendMemoryDay, IMAGE_FIELDS, ImagePage } from '../../backend/backend.model';
 import { BackendService } from '../../backend/backend.service';
 import { MediaService } from '../../backend/generated/services/media.service';
-import { Moment } from './gallery.model';
+import { MemoryDay } from './gallery.model';
 import { ViewerImage } from '../../image-viewer/image-viewer.model';
 
 @Injectable({ providedIn: 'root' })
@@ -13,13 +13,22 @@ export class ImageService {
   private readonly media = inject(MediaService);
   readonly loading = signal(false);
   readonly images = signal<ViewerImage[]>([]);
-  readonly moments = signal<Moment[]>([]);
+  readonly memoryDates = signal<BackendMemoryDate[]>([]);
+  readonly memoryYears = signal<number[]>([]);
+  readonly selectedMemory = signal<MemoryDay | null>(null);
+  readonly archiveDates = signal<BackendMemoryDate[]>([]);
   readonly imageCount = signal(0);
   readonly error = signal<string | null>(null);
+  readonly memoryLoading = signal(false);
+  readonly memoryError = signal<string | null>(null);
+  readonly archiveLoading = signal(false);
+  readonly archiveError = signal<string | null>(null);
   private cursor: string | null = null;
   private hasMore = true;
   private loadingMore = false;
   private version = 0;
+  private memoryVersion = 0;
+  private archiveVersion = 0;
   private readonly imageSources = new WeakMap<ViewerImage, BackendImage>();
 
   constructor() {
@@ -48,23 +57,15 @@ export class ImageService {
         collected.push(...page.items);
         after = page.endCursor;
       } while (collected.length < desired && page.hasNextPage);
-      const result = await this.backend.query<{ moments: BackendMoment[] }>(`query { moments { date images { ${IMAGE_FIELDS} } } }`);
-      if (version !== this.version) return;
-      const existing = new Map([...this.moments().flatMap((moment) => moment.images), ...this.images()].map((image) => [image.id, image]));
-      this.images.set(collected.map((image) => this.adapt(image, existing.get(image.id))));
-      for (const image of this.images()) existing.set(image.id, image);
-      this.moments.set(
-        result.moments
-          .filter((moment) => moment.images.length > 0)
-          .map((moment) => {
-            const images = moment.images.map((image) => {
-              const adapted = this.adapt(image, existing.get(image.id));
-              existing.set(image.id, adapted);
-              return adapted;
-            });
-            return { date: moment.date, day: Number(moment.date.slice(-2)), images, poster: signal(images[0]) };
-          }),
+      const memoryIndex = await this.backend.query<{ memoryDates: BackendMemoryDate[]; memoryYears: number[] }>(
+        'query MemoryIndex { memoryDates { month day photoYearCount } memoryYears }',
       );
+      if (version !== this.version) return;
+      const previousMemoryImages = this.selectedMemory()?.images ?? [];
+      const existing = new Map([...previousMemoryImages, ...this.images()].map((image) => [image.id, image]));
+      this.images.set(collected.map((image) => this.adapt(image, existing.get(image.id))));
+      this.memoryDates.set(memoryIndex.memoryDates);
+      this.memoryYears.set(memoryIndex.memoryYears);
       this.cursor = page.endCursor;
       this.hasMore = page.hasNextPage;
       this.imageCount.set(page.totalCount);
@@ -107,6 +108,73 @@ export class ImageService {
       { first, after },
     );
     return response.images;
+  }
+
+  async loadMemoryDay(date: BackendMemoryDate, previousDates: BackendMemoryDate[]) {
+    const version = ++this.memoryVersion;
+    const existingMemoryImages = this.selectedMemory()?.images ?? [];
+    this.selectedMemory.set(null);
+    this.memoryLoading.set(true);
+    this.memoryError.set(null);
+    try {
+      const dates = [date, ...previousDates];
+      const variables: Record<string, number> = {};
+      const selections = dates.map((memoryDate, index) => {
+        variables[`month${index}`] = memoryDate.month;
+        variables[`day${index}`] = memoryDate.day;
+        return `memory${index}: memoryDay(month: $month${index}, day: $day${index}) {
+          month day images { ${IMAGE_FIELDS} }
+        }`;
+      });
+      const declarations = dates.map((_, index) => `$month${index}: Int!, $day${index}: Int!`).join(', ');
+      const result = await this.backend.query<Record<string, BackendMemoryDay | null>>(
+        `query MemoryDays(${declarations}) { ${selections.join('\n')} }`,
+        variables,
+      );
+      if (version !== this.memoryVersion) return;
+      const existingImages = [...existingMemoryImages, ...this.images()];
+      const existing = new Map(existingImages.map((image) => [image.id, image]));
+      const sameDayImages = (result['memory0']?.images ?? []).map((image) => this.adapt(image, existing.get(image.id)));
+      const previousMemories = dates.slice(1).flatMap((memoryDate, index) => {
+        const image = result[`memory${index + 1}`]?.images[0];
+        return image ? [{ image: this.adapt(image, existing.get(image.id)), count: memoryDate.photoYearCount }] : [];
+      });
+      const images = [...sameDayImages.slice(0, 1), ...previousMemories.map((memory) => memory.image)];
+      this.selectedMemory.set(
+        images.length
+          ? {
+              month: date.month,
+              day: date.day,
+              images,
+              sameDayImages,
+              memoryCounts: [date.photoYearCount, ...previousMemories.map((memory) => memory.count)],
+            }
+          : null,
+      );
+    } catch {
+      if (version === this.memoryVersion) this.memoryError.set('Erinnerungen konnten nicht geladen werden.');
+    } finally {
+      if (version === this.memoryVersion) this.memoryLoading.set(false);
+    }
+  }
+
+  async loadArchiveDates(month: number | null, photoYear: number | null) {
+    const version = ++this.archiveVersion;
+    this.archiveLoading.set(true);
+    this.archiveError.set(null);
+    try {
+      const result = await this.backend.query<{ memoryDates: BackendMemoryDate[] }>(
+        `query MemoryDates($month: Int, $photoYear: Int) {
+          memoryDates(month: $month, photoYear: $photoYear) { month day photoYearCount }
+        }`,
+        { month, photoYear },
+      );
+      if (version === this.archiveVersion) this.archiveDates.set(result.memoryDates);
+    } catch {
+      if (version === this.archiveVersion) this.archiveError.set('Erinnerungen konnten nicht geladen werden.');
+    } finally {
+      if (version === this.archiveVersion) this.archiveLoading.set(false);
+    }
   }
 
   private adapt(source: BackendImage, existing?: ViewerImage): ViewerImage {

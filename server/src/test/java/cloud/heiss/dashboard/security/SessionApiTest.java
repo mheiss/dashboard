@@ -5,14 +5,21 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,6 +29,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import cloud.heiss.dashboard.persistence.DashboardStore;
 import cloud.heiss.dashboard.persistence.entity.DashboardSource;
 import cloud.heiss.dashboard.persistence.entity.MicrosoftAccount;
+import cloud.heiss.dashboard.microsoft.GraphClient;
+import io.quarkus.test.InjectMock;
 import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.common.QuarkusTestResource;
 import io.quarkus.test.junit.QuarkusTest;
@@ -44,6 +53,8 @@ class SessionApiTest {
     DashboardStore store;
     @Inject
     ObjectMapper mapper;
+    @InjectMock
+    GraphClient graph;
 
     @Test
     void uiConfigurationIsAvailableBeforeLogin() {
@@ -125,6 +136,47 @@ class SessionApiTest {
             given().auth().oauth2(token).when().delete("/api/accounts/" + account.id).then().statusCode(204);
             assertEquals(0, store.sources(account.id).size());
             assertEquals(revision + 2, store.revision());
+        } finally {
+            store.update("delete from MicrosoftAccount where id=?1", account.id);
+        }
+    }
+
+    @Test
+    void adminBrowsesAndAddsARealOneDriveFolder() throws Exception {
+        var account = new MicrosoftAccount();
+        account.id = UUID.randomUUID();
+        account.microsoftId = account.id.toString();
+        account.name = "Folder picker fixture";
+        account.tokenCache = "Encrypted fixture";
+        store.persist(account);
+        var page = mapper.readTree("""
+                {"value":[
+                {"id":"folder-id","name":"Trips","folder":{},"parentReference":{"driveId":"drive-id"}},
+                {"id":"shared-link-id","name":"Shared trips","remoteItem":{"id":"shared-folder-id","folder":{},
+                "parentReference":{"driveId":"shared-drive-id"}}},
+                {"id":"file-id","name":"readme.txt","file":{},"parentReference":{"driveId":"drive-id"}}]}
+                """);
+        when(graph.pages(eq(account.id), anyString(), any())).thenAnswer(invocation -> {
+            Consumer<JsonNode> consumer = invocation.getArgument(2);
+            consumer.accept(page);
+            return null;
+        });
+        String token = OidcTestResource.adminToken();
+        try {
+            given().auth().oauth2(token).when().get("/api/accounts/" + account.id + "/folders").then().statusCode(200)
+                    .body("folders.size()", equalTo(2)).body("folders[0].name", equalTo("Trips"))
+                    .body("folders[0].id", equalTo("folder-id")).body("folders[1].name", equalTo("Shared trips"))
+                    .body("folders[1].id", equalTo("shared-folder-id"));
+            when(graph.get(eq(account.id), anyString())).thenReturn(mapper.readTree("""
+                    {"id":"folder-id","name":"Trips","folder":{},"parentReference":{"driveId":"drive-id"}}
+                    """));
+            given().auth().oauth2(token).contentType("application/json").body(Map.of("id", "folder-id", "driveId", "drive-id"))
+                    .when().post("/api/accounts/" + account.id + "/folders").then().statusCode(200)
+                    .body("find { it.id == '" + account.id + "' }.sources[0].name", equalTo("Trips"));
+            var added = store.sources(account.id).getFirst();
+            assertEquals("folder-id", added.upstreamId());
+            assertEquals("Trips", added.name());
+            assertTrue(added.selected());
         } finally {
             store.update("delete from MicrosoftAccount where id=?1", account.id);
         }

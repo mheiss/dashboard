@@ -1,6 +1,7 @@
 package cloud.heiss.dashboard.persistence.entity;
 
 import java.util.UUID;
+import java.time.Instant;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -30,4 +31,12 @@ public class DashboardSource {
     public boolean selected;
     @Column(name = "delta", columnDefinition = "text")
     public String deltaLink;
+    @Column(name = "sync_status", nullable = false, length = 20)
+    public String syncStatus = "PENDING";
+    @Column(name = "sync_error", columnDefinition = "text")
+    public String syncError;
+    @Column(name = "sync_last_sync")
+    public Instant syncLastSync;
+    @Column(name = "file_count")
+    public Integer fileCount;
 }

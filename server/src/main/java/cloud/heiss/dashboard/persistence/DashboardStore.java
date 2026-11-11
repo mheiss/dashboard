@@ -112,7 +112,8 @@ public class DashboardStore {
 
     public static SourceSnapshot source(DashboardSource entity) {
         return new SourceSnapshot(entity.id, entity.accountId, entity.kind, entity.upstreamId, entity.driveId, entity.name,
-                entity.theme, entity.selected, entity.deltaLink);
+                entity.theme, entity.selected, entity.deltaLink, entity.syncStatus, entity.syncError, entity.syncLastSync,
+                entity.fileCount);
     }
 
     public static PhotoSnapshot photo(cloud.heiss.dashboard.persistence.entity.Photo entity) {

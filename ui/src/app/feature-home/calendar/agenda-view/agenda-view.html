@@ -15,7 +15,7 @@
         @if (day.allDay.length > 0) {
           <div class="all-day-events">
             @for (event of day.allDay; track event.id) {
-              <div class="agenda-event all-day-event border-blue-300 bg-blue-100" [ngClass]="event.myConfig.tailwindClasses">
+              <div class="agenda-event all-day-event" [ngClass]="event.myConfig.tailwindClasses">
                 <span class="event-subject">{{ event.subject }}</span>
                 <span class="event-time">Ganztägig</span>
               </div>
@@ -23,7 +23,7 @@
           </div>
         }
         @for (event of agendaEvents()[$index]; track event.id) {
-          <div class="agenda-event border-blue-300 bg-blue-100" [ngClass]="event.tailwindClasses">
+          <div class="agenda-event" [ngClass]="event.tailwindClasses">
             <span class="event-subject">{{ event.subject }}</span>
             <span class="event-time">{{ event.start | date: 'HH:mm' }} - {{ event.end | date: 'HH:mm' }}</span>
           </div>

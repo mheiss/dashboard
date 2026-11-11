@@ -181,6 +181,38 @@ paths:
       security:
       - bearerAuth: []
   /api/accounts/{accountId}/folders:
+    get:
+      summary: Browse OneDrive folders
+      operationId: browseAccountFolders
+      tags:
+      - Accounts
+      parameters:
+      - name: accountId
+        in: path
+        required: true
+        schema:
+          $ref: "#/components/schemas/UUID"
+      - name: parentId
+        in: query
+        schema:
+          type: string
+      - name: driveId
+        in: query
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Folders in the requested OneDrive location
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FolderList"
+        "400":
+          description: Invalid folder location
+        "404":
+          description: Account or folder not found
+      security:
+      - bearerAuth: []
     post:
       summary: Add an accessible OneDrive folder
       operationId: addAccountFolder
@@ -406,12 +438,39 @@ components:
     FolderRequest:
       type: object
       required:
-      - path
+      - id
+      - driveId
       properties:
-        path:
+        id:
           type: string
-          maxLength: 1024
+          maxLength: 255
           minLength: 1
+        driveId:
+          type: string
+          maxLength: 255
+          minLength: 1
+    FolderList:
+      type: object
+      required:
+      - folders
+      properties:
+        folders:
+          type: array
+          items:
+            $ref: "#/components/schemas/FolderItem"
+    FolderItem:
+      type: object
+      required:
+      - id
+      - driveId
+      - name
+      properties:
+        id:
+          type: string
+        driveId:
+          type: string
+        name:
+          type: string
     QueuedSynchronization:
       type: object
       required:
@@ -444,12 +503,19 @@ components:
       - name
       - theme
       - selected
+      - syncStatus
+      - syncError
+      - syncLastSync
+      - fileCount
       properties:
         id:
           type: string
           format: uuid
         kind:
           type: string
+          enum:
+          - CALENDAR
+          - PHOTOS
         name:
           type: string
         theme:
@@ -461,6 +527,26 @@ components:
           - amber
         selected:
           type: boolean
+        syncStatus:
+          type: string
+          enum:
+          - PENDING
+          - SYNCING
+          - SYNCED
+          - ERROR
+        syncError:
+          type:
+          - string
+          - "null"
+        syncLastSync:
+          type:
+          - string
+          - "null"
+          format: date-time
+        fileCount:
+          type:
+          - integer
+          - "null"
     UUID:
       type: string
       format: uuid

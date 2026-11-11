@@ -1,36 +1,71 @@
 <div class="photo-gallery">
-  @if (momentsByDay().length) {
-    <header class="section-heading memories-heading">
-      <div>
-        <span class="section-kicker">Erinnerungen</span>
-        <h2>An diesem Tag</h2>
-      </div>
-    </header>
-    <div class="moment-strip">
-      @for (moment of momentsByDay(); track moment.date) {
-        <button type="button" class="moment-tile" (click)="openMomentView(moment)" [title]="moment.poster().name" aria-haspopup="dialog">
-          <img [alt]="moment.poster().name" [blobSrc]="moment.poster().thumbnail$ | async" />
-          <div class="moment-caption">
-            <span class="moment-day">{{ moment.day }}</span>
-            <span class="moment-month">{{ moment.poster().takenAt | date: 'MMMM' }}</span>
-          </div>
-          <span class="photo-count">{{ moment.images.length }}</span>
-        </button>
-      }
-    </div>
-  }
   <header class="section-heading photos-heading">
     <div>
       <span class="section-kicker">Fotothek</span>
       <h2>Galerie</h2>
     </div>
-    <div class="gallery-status" role="status">
-      @if (service.loading()) {
-        <span class="loading-ring" aria-label="Fotos werden geladen"></span>
-      }
-      <span class="quiet-count">{{ imageCount() }} Fotos</span>
+    <div class="gallery-actions">
+      <button type="button" class="memory-all-days" (click)="openMemoryBrowser('archive')">
+        <svg lucideCalendarDays aria-hidden="true"></svg>
+        <span>Alle Tage</span>
+      </button>
+      <div class="gallery-status" role="status">
+        @if (service.loading()) {
+          <span class="loading-ring" aria-label="Fotos werden geladen"></span>
+        }
+        <span class="quiet-count">{{ imageCount() }} Fotos</span>
+      </div>
     </div>
   </header>
+  @if (memoryDate()) {
+    <div class="moment-strip">
+      @if (service.memoryLoading() && !memoryImages().length) {
+        @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+          <div class="moment-placeholder" aria-hidden="true"></div>
+        }
+      } @else {
+        @for (image of memoryImages(); track image.id; let index = $index) {
+          <div class="moment-card">
+            <button type="button" class="moment-tile" (click)="openMomentView(image)" [title]="image.name" aria-haspopup="dialog">
+              <img [alt]="image.name" [blobSrc]="image.thumbnail$ | async" />
+              <div class="moment-caption">
+                <span class="moment-day">{{ image.takenAt | date: 'd' }}</span>
+                <span class="moment-month">{{ image.takenAt | date: 'MMMM yyyy' }}</span>
+              </div>
+            </button>
+            @if (service.selectedMemory()?.memoryCounts?.[index]; as count) {
+              <span class="moment-count" [attr.aria-label]="count + ' Erinnerungen an diesem Tag'">
+                {{ count }}
+              </span>
+            }
+          </div>
+        }
+      }
+      <button
+        type="button"
+        class="moment-step moment-step-older"
+        (click)="browseOlderMemory()"
+        [disabled]="!canBrowseOlder()"
+        title="Älterer Erinnerungstag"
+        aria-label="Älterer Erinnerungstag"
+      >
+        <svg lucideChevronRight aria-hidden="true"></svg>
+      </button>
+      <button
+        type="button"
+        class="moment-step moment-step-newer"
+        (click)="browseNewerMemory()"
+        [disabled]="!canBrowseNewer()"
+        title="Neuerer Erinnerungstag"
+        aria-label="Neuerer Erinnerungstag"
+      >
+        <svg lucideChevronLeft aria-hidden="true"></svg>
+      </button>
+      @if (service.memoryError()) {
+        <p class="memory-error" role="status">{{ service.memoryError() }}</p>
+      }
+    </div>
+  }
   <div class="gallery-body">
     @if (service.error()) {
       <p class="agenda-empty" role="status">{{ service.error() }}</p>

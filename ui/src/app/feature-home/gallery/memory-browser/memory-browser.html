@@ -1,0 +1,93 @@
+<div class="memory-browser">
+  <header class="memory-browser-head">
+    <div>
+      <span class="section-kicker">Rückblicke</span>
+      <h2>{{ data.mode === 'date' ? 'Erinnerungen finden' : 'Vergangene Tage' }}</h2>
+    </div>
+    <button type="button" class="memory-close" (click)="close()" aria-label="Schließen" title="Schließen">
+      <svg lucideX aria-hidden="true"></svg>
+    </button>
+  </header>
+  <div class="memory-filters">
+    <label class="memory-filter">
+      <span>Monat</span>
+      <select [value]="monthFilter() ?? ''" (change)="onMonthChange($event)">
+        <option value="">Alle Monate</option>
+        @for (month of monthNames; track $index) {
+          <option [value]="$index + 1">{{ month }}</option>
+        }
+      </select>
+    </label>
+    <label class="memory-filter">
+      <span>Fotojahr</span>
+      <select [value]="photoYearFilter() ?? ''" (change)="onPhotoYearChange($event)">
+        <option value="">Alle Fotojahre</option>
+        @for (year of service.memoryYears(); track year) {
+          <option [value]="year">{{ year }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <div class="memory-browser-body">
+    <section class="memory-calendar-panel" aria-label="Kalender mit Erinnerungstagen">
+      <header class="memory-calendar-head">
+        <button type="button" class="memory-month-step" (click)="shiftMonth(-1)" aria-label="Vorheriger Monat" title="Vorheriger Monat">
+          <svg lucideChevronLeft aria-hidden="true"></svg>
+        </button>
+        <h3>{{ monthNames[calendarMonth() - 1] }} {{ calendarYear() }}</h3>
+        <button type="button" class="memory-month-step" (click)="shiftMonth(1)" aria-label="Nächster Monat" title="Nächster Monat">
+          <svg lucideChevronRight aria-hidden="true"></svg>
+        </button>
+      </header>
+      <div class="memory-weekdays" aria-hidden="true">
+        @for (weekday of weekdays; track weekday) {
+          <span>{{ weekday }}</span>
+        }
+      </div>
+      <div class="memory-calendar-grid">
+        @for (day of calendarCells(); track $index) {
+          @if (day === null) {
+            <span aria-hidden="true"></span>
+          } @else {
+            <button
+              type="button"
+              class="memory-calendar-day"
+              [class.has-memory]="hasMemory(day)"
+              [class.is-selected]="isSelected(day)"
+              [disabled]="!hasMemory(day)"
+              [attr.aria-label]="day + '. ' + monthNames[calendarMonth() - 1] + ', ' + photoYearCount(day) + ' Fotojahre'"
+              [attr.aria-pressed]="isSelected(day)"
+              (click)="selectCalendarDay(day)"
+            >
+              {{ day }}
+              @if (hasMemory(day)) {
+                <span class="sr-only">{{ photoYearCount(day) }} Fotojahre</span>
+              }
+            </button>
+          }
+        }
+      </div>
+      <p class="memory-calendar-note">Punkte markieren Tage mit Erinnerungen.</p>
+    </section>
+    <section class="memory-archive-panel" aria-label="Erinnerungstage">
+      <h3 class="memory-list-head">{{ monthFilter() === null ? 'Alle Erinnerungstage' : 'Erinnerungen im ' + monthNames[monthFilter()! - 1] }}</h3>
+      @if (service.archiveLoading()) {
+        <p class="memory-empty" role="status">Tage werden geladen …</p>
+      } @else if (service.archiveError()) {
+        <p class="memory-empty" role="alert">{{ service.archiveError() }}</p>
+      } @else if (!service.archiveDates().length) {
+        <p class="memory-empty">Keine Erinnerungen für diese Auswahl.</p>
+      } @else {
+        <div class="memory-day-list" aria-live="polite">
+          @for (date of service.archiveDates(); track date.month + '-' + date.day) {
+            <button type="button" class="memory-archive-day" (click)="selectDate(date)">
+              <span class="memory-archive-date">{{ dateLabel(date) }}</span>
+              <span class="memory-archive-count">{{ date.photoYearCount }} Fotojahre</span>
+              <svg lucideChevronRight aria-hidden="true"></svg>
+            </button>
+          }
+        </div>
+      }
+    </section>
+  </div>
+</div>

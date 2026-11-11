@@ -26,7 +26,26 @@
       <span>{{ item.name }}</span>
     </a>
   }
-  <a routerLink="/setup" class="navigation-link navigation-settings" title="Einstellungen" aria-label="Einstellungen" [class.is-active]="activePath() === '/setup'">
+  <button
+    type="button"
+    class="navigation-link navigation-theme"
+    [attr.aria-label]="theme.isDark() ? 'Zum hellen Design wechseln' : 'Zum dunklen Design wechseln'"
+    [title]="theme.isDark() ? 'Helles Design' : 'Dunkles Design'"
+    (click)="theme.toggle()"
+  >
+    @if (theme.isDark()) {
+      <svg lucideSun aria-hidden="true"></svg><span class="max-sm:sr-only">Hell</span>
+    } @else {
+      <svg lucideMoon aria-hidden="true"></svg><span class="max-sm:sr-only">Dunkel</span>
+    }
+  </button>
+  <a
+    routerLink="/setup"
+    class="navigation-link navigation-settings"
+    title="Einstellungen"
+    aria-label="Einstellungen"
+    [class.is-active]="activePath() === '/setup'"
+  >
     <svg lucideSettings aria-hidden="true"></svg><span class="max-sm:sr-only">Einstellungen</span>
   </a>
 </div>

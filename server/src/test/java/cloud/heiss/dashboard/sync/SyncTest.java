@@ -105,7 +105,7 @@ class SyncTest {
         var subscription = notifications.stream().subscribe().with(change -> {
             if (change.dataset().equals("ALL"))
                 initial.countDown();
-            if (change.dataset().equals("SYNC_STATUS"))
+            if (change.dataset().equals("SYNC_STATUS") && store.account(account).status().equals("CONNECTED"))
                 completed.countDown();
         });
         try {
@@ -114,11 +114,28 @@ class SyncTest {
             org.junit.jupiter.api.Assertions.assertTrue(completed.await(10, java.util.concurrent.TimeUnit.SECONDS));
             assertEquals("CONNECTED", store.account(account).status());
             org.junit.jupiter.api.Assertions.assertNotNull(store.account(account).lastSync());
+            assertEquals("SYNCED", currentSource().syncStatus());
+            org.junit.jupiter.api.Assertions.assertNotNull(currentSource().syncLastSync());
             assertEquals(false,
                     store.list("select requested from MicrosoftAccount where id=?1", Boolean.class, account).getFirst());
         } finally {
             subscription.cancel();
         }
+    }
+
+    @Test
+    void interruptedSyncWithFutureLeaseIsQueuedAgain() {
+        Instant now = Instant.now();
+        store.update("update MicrosoftAccount set status='SYNCING',requested=false,lastSync=?1,leaseUntil=?2,retryAfter=?3 "
+                + "where id=?4", now, now.plusSeconds(600), now.plusSeconds(300), account);
+
+        coordinator.recoverInterruptedSyncs();
+
+        assertEquals("ERROR", store.account(account).status());
+        assertEquals("Previous synchronization was interrupted; retry queued", store.account(account).error());
+        assertEquals(true, store.list("select requested from MicrosoftAccount where id=?1", Boolean.class, account).getFirst());
+        assertNull(store.list("select leaseUntil from MicrosoftAccount where id=?1", Instant.class, account).getFirst());
+        assertNull(store.list("select retryAfter from MicrosoftAccount where id=?1", Instant.class, account).getFirst());
     }
 
     @Test
@@ -197,6 +214,7 @@ class SyncTest {
         var folder = source("PHOTOS");
         JsonNode page = mapper.readTree("""
                 {"value":[{"id":"picture","name":"Photo.jpg","parentReference":{"id":"folder","driveId":"drive"},
+                "file":{"mimeType":"image/jpeg"},
                 "photo":{"takenDateTime":"2020-10-08T10:00:00Z"},"eTag":"v1","lastModifiedDateTime":"2020-10-08T10:00:00Z"}]}
                 """);
         when(graph.pages(eq(account), anyString(), any())).thenAnswer(invocation -> {
@@ -205,6 +223,7 @@ class SyncTest {
             return "https://graph.microsoft.com/v1.0/fixture/delta?token=one";
         });
         photos.sync(folder);
+        assertEquals(1, currentSource().fileCount());
         long revision = store.revision();
         photos.sync(currentSource());
         assertEquals(revision, store.revision());
@@ -238,6 +257,7 @@ class SyncTest {
         });
         photos.sync(currentSource());
         assertEquals(0, store.list("select photoId from PhotoMembership where sourceId=?1", UUID.class, source).size());
+        assertEquals(0, currentSource().fileCount());
     }
 
     @Test
@@ -260,4 +280,5 @@ class SyncTest {
                 String.class, source);
         assertEquals(List.of("Shared.jpg"), rows);
     }
+
 }

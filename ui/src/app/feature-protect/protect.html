@@ -24,12 +24,12 @@
           @for (camera of cameras(); track camera.camera) {
             <div
               class="relative block w-full shrink-0 overflow-hidden rounded-md border-2 border-transparent"
-              [class.border-emerald-600]="pinned() === camera.camera"
+              [class.border-violet-500]="pinned() === camera.camera"
             >
               <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" />
               <button
                 type="button"
-                class="absolute inset-0 text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
+                class="absolute inset-0 text-left focus-visible:outline-2 focus-visible:outline-violet-500"
                 [attr.aria-label]="cameraLabel(camera.camera)"
                 [attr.aria-pressed]="pinned() === camera.camera"
                 (click)="pinned.set(camera.camera)"
@@ -57,7 +57,7 @@
           <button
             type="button"
             aria-haspopup="dialog"
-            class="relative w-36 shrink-0 overflow-hidden rounded-md border border-gray-200 text-left focus-visible:outline-2 focus-visible:outline-emerald-600"
+            class="relative w-36 shrink-0 overflow-hidden rounded-md border border-(--line) text-left focus-visible:outline-2 focus-visible:outline-violet-500"
             [title]="
               cameraLabel(snapshot.camera) +
               ' - ' +
@@ -87,7 +87,7 @@
         }
       </div>
     } @else {
-      <p class="min-w-0 flex-1 text-sm text-gray-500">Noch keine Bewegung erkannt.</p>
+      <p class="min-w-0 flex-1 text-sm text-[color:var(--muted)]">Noch keine Bewegung erkannt.</p>
     }
   </section>
 </div>

@@ -123,7 +123,7 @@ export class Video implements OnInit, OnChanges {
       case 'buffering':
         return classes + ' bg-amber-500';
       case 'streaming':
-        return classes + ' bg-green-400';
+        return classes + ' bg-blue-400';
       case 'dead':
         return classes + ' bg-red-500';
     }

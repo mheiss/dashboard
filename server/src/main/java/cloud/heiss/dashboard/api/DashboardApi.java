@@ -12,6 +12,8 @@ import cloud.heiss.dashboard.api.model.Agenda;
 import cloud.heiss.dashboard.api.model.CalendarInfo;
 import cloud.heiss.dashboard.api.model.Image;
 import cloud.heiss.dashboard.api.model.ImagePage;
+import cloud.heiss.dashboard.api.model.MemoryDate;
+import cloud.heiss.dashboard.api.model.MemoryDay;
 import cloud.heiss.dashboard.api.model.Moment;
 import cloud.heiss.dashboard.sync.Change;
 import cloud.heiss.dashboard.sync.DashboardChanges;
@@ -57,6 +59,21 @@ public class DashboardApi {
     @Query
     public List<Moment> moments(@Name("referenceDate") String referenceDate) {
         return reads.moments(referenceDate);
+    }
+
+    @Query
+    public List<MemoryDate> memoryDates(@Name("month") Integer month, @Name("photoYear") Integer photoYear) {
+        return reads.memoryDates(month, photoYear);
+    }
+
+    @Query
+    public List<Integer> memoryYears() {
+        return reads.memoryYears();
+    }
+
+    @Query
+    public MemoryDay memoryDay(@Name("month") int month, @Name("day") int day) {
+        return reads.memoryDay(month, day);
     }
 
     @Query

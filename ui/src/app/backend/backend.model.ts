@@ -43,6 +43,18 @@ export interface BackendMoment {
   images: BackendImage[];
 }
 
+export interface BackendMemoryDate {
+  month: number;
+  day: number;
+  photoYearCount: number;
+}
+
+export interface BackendMemoryDay {
+  month: number;
+  day: number;
+  images: BackendImage[];
+}
+
 export interface DashboardChange {
   dataset: string;
   revision: number;
@@ -59,8 +71,8 @@ export const IMAGE_FIELDS = 'id name takenAt modifiedAt thumbnailUrl originalUrl
 export const CALENDAR_FIELDS = 'id subject startsAt endsAt isAllDay calendar { id name theme }';
 
 export const CALENDAR_THEMES: Record<string, string> = {
-  emerald: 'border-emerald-600 bg-emerald-300',
-  rose: 'border-rose-600 bg-rose-300',
-  sky: 'border-sky-600 bg-sky-200',
-  amber: 'border-amber-600 bg-amber-200',
+  emerald: 'calendar-color-emerald',
+  rose: 'calendar-color-rose',
+  sky: 'calendar-color-sky',
+  amber: 'calendar-color-amber',
 };

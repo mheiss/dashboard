@@ -3,17 +3,20 @@ import { Component, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LucidePlus, LucideRefreshCw, LucideTrash2, LucideLogOut } from '@lucide/angular';
-import { debounceTime } from 'rxjs';
+import { LucideCalendarDays, LucideImages, LucideLogOut, LucidePlus, LucideRefreshCw, LucideTrash2 } from '@lucide/angular';
+import { debounceTime, interval } from 'rxjs';
 import { AccountView } from '../backend/generated/models/account-view';
 import { SourceView } from '../backend/generated/models/source-view';
 import { AccountsService } from '../backend/generated/services/accounts.service';
 import { BackendService } from '../backend/backend.service';
 import { SessionService } from '../backend/session.service';
+import { PopupService } from '../popup/popup.service';
+import { CalendarBrowserComponent } from './calendar-browser/calendar-browser';
+import { FolderBrowserComponent } from './folder-browser/folder-browser';
 
 @Component({
   selector: 'app-setup',
-  imports: [FormsModule, DatePipe, LucidePlus, LucideRefreshCw, LucideTrash2, LucideLogOut],
+  imports: [FormsModule, DatePipe, LucideCalendarDays, LucideImages, LucidePlus, LucideRefreshCw, LucideTrash2, LucideLogOut],
   templateUrl: './setup.html',
   host: { class: 'block h-full' },
 })
@@ -22,14 +25,19 @@ export class Setup {
   private readonly backend = inject(BackendService);
   private readonly session = inject(SessionService);
   private readonly router = inject(Router);
+  private readonly popup = inject(PopupService);
   readonly accounts = signal<AccountView[]>([]);
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly pendingDisconnect = signal<string | null>(null);
-  readonly folderPaths: Record<string, string> = {};
 
   constructor() {
     this.backend.changed.pipe(debounceTime(300), takeUntilDestroyed()).subscribe(() => void this.reload());
+    interval(5000)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => {
+        if (this.accounts().some((account) => account.status === 'SYNCING')) void this.reload();
+      });
     void this.completeConnection();
   }
 
@@ -60,24 +68,37 @@ export class Setup {
     });
   }
 
-  async discover(account: AccountView) {
-    await this.run(async () => {
-      this.accounts.set(await this.accountsApi.discoverAccountSources({ accountId: account.id }));
-    });
-  }
-
   async select(source: SourceView, selected: boolean, theme = source.theme) {
     await this.run(async () => {
       this.accounts.set(await this.accountsApi.selectAccountSource({ sourceId: source.id, body: { selected, theme } }));
     });
   }
 
-  async addFolder(account: AccountView) {
-    const path = this.folderPaths[account.id]?.trim();
-    if (!path) return;
-    await this.run(async () => {
-      this.accounts.set(await this.accountsApi.addAccountFolder({ accountId: account.id, body: { path } }));
-      this.folderPaths[account.id] = '';
+  async removeSource(source: SourceView) {
+    await this.select(source, false);
+  }
+
+  openCalendarPicker(account: AccountView) {
+    this.popup.open(CalendarBrowserComponent, {
+      data: {
+        account,
+        onUpdated: (accounts: AccountView[]) => this.accounts.set(accounts),
+      },
+      disableClose: false,
+      width: 'min(640px, calc(100vw - 32px))',
+      height: 'min(620px, calc(100dvh - 32px))',
+    });
+  }
+
+  openFolderPicker(account: AccountView) {
+    this.popup.open(FolderBrowserComponent, {
+      data: {
+        account,
+        onAdded: (accounts: AccountView[]) => this.accounts.set(accounts),
+      },
+      disableClose: false,
+      width: 'min(640px, calc(100vw - 32px))',
+      height: 'min(620px, calc(100dvh - 32px))',
     });
   }
 
@@ -99,6 +120,27 @@ export class Setup {
   async logout() {
     await this.session.logout();
     await this.router.navigate(['/home']);
+  }
+
+  sourcesOf(account: AccountView, kind: 'CALENDAR' | 'PHOTOS') {
+    return account.sources.filter((source) => source.kind === kind);
+  }
+
+  selectedSourcesOf(account: AccountView, kind: 'CALENDAR' | 'PHOTOS') {
+    return this.sourcesOf(account, kind).filter((source) => source.selected);
+  }
+
+  sourceStatus(source: SourceView) {
+    switch (source.syncStatus) {
+      case 'SYNCING':
+        return 'Wird synchronisiert';
+      case 'SYNCED':
+        return 'Synchronisiert';
+      case 'ERROR':
+        return 'Fehler';
+      default:
+        return 'Noch nicht synchronisiert';
+    }
   }
 
   private async run(operation: () => Promise<void>) {
