@@ -22,4 +22,5 @@ export interface ImageViewerData {
   images: Signal<ViewerImage[]>;
   imageCount: number;
   loadMore: () => void;
+  loadError?: Signal<{ message: string; retryable: boolean } | null>;
 }

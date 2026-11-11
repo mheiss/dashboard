@@ -1,7 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, debounceTime, defer, filter, of, ReplaySubject, share } from 'rxjs';
-import { BackendImage, BackendMemoryDate, BackendMemoryDay, IMAGE_FIELDS, ImagePage } from '../../backend/backend.model';
+import { BackendImage, BackendMemoryDate, IMAGE_FIELDS, ImagePage } from '../../backend/backend.model';
 import { BackendService } from '../../backend/backend.service';
 import { MediaService } from '../../backend/generated/services/media.service';
 import { MemoryDay } from './gallery.model';
@@ -58,10 +58,10 @@ export class ImageService {
         after = page.endCursor;
       } while (collected.length < desired && page.hasNextPage);
       const memoryIndex = await this.backend.query<{ memoryDates: BackendMemoryDate[]; memoryYears: number[] }>(
-        'query MemoryIndex { memoryDates { month day photoYearCount } memoryYears }',
+        'query MemoryIndex { memoryDates { month day photoYearCount photoCount } memoryYears }',
       );
       if (version !== this.version) return;
-      const previousMemoryImages = this.selectedMemory()?.images ?? [];
+      const previousMemoryImages = this.selectedMemory()?.days.flatMap((day) => day.images) ?? [];
       const existing = new Map([...previousMemoryImages, ...this.images()].map((image) => [image.id, image]));
       this.images.set(collected.map((image) => this.adapt(image, existing.get(image.id))));
       this.memoryDates.set(memoryIndex.memoryDates);
@@ -112,7 +112,7 @@ export class ImageService {
 
   async loadMemoryDay(date: BackendMemoryDate, previousDates: BackendMemoryDate[]) {
     const version = ++this.memoryVersion;
-    const existingMemoryImages = this.selectedMemory()?.images ?? [];
+    const existingMemoryImages = this.selectedMemory()?.days.flatMap((day) => day.images) ?? [];
     this.selectedMemory.set(null);
     this.memoryLoading.set(true);
     this.memoryError.set(null);
@@ -122,32 +122,40 @@ export class ImageService {
       const selections = dates.map((memoryDate, index) => {
         variables[`month${index}`] = memoryDate.month;
         variables[`day${index}`] = memoryDate.day;
-        return `memory${index}: memoryDay(month: $month${index}, day: $day${index}) {
-          month day images { ${IMAGE_FIELDS} }
+        return `memory${index}: memoryImages(month: $month${index}, day: $day${index}) {
+          totalCount endCursor hasNextPage items { ${IMAGE_FIELDS} }
         }`;
       });
       const declarations = dates.map((_, index) => `$month${index}: Int!, $day${index}: Int!`).join(', ');
-      const result = await this.backend.query<Record<string, BackendMemoryDay | null>>(
+      const result = await this.backend.query<Record<string, ImagePage>>(
         `query MemoryDays(${declarations}) { ${selections.join('\n')} }`,
         variables,
       );
       if (version !== this.memoryVersion) return;
       const existingImages = [...existingMemoryImages, ...this.images()];
       const existing = new Map(existingImages.map((image) => [image.id, image]));
-      const sameDayImages = (result['memory0']?.images ?? []).map((image) => this.adapt(image, existing.get(image.id)));
-      const previousMemories = dates.slice(1).flatMap((memoryDate, index) => {
-        const image = result[`memory${index + 1}`]?.images[0];
-        return image ? [{ image: this.adapt(image, existing.get(image.id)), count: memoryDate.photoYearCount }] : [];
+      const days = dates.flatMap((memoryDate, index) => {
+        const page = result[`memory${index}`];
+        const images = page.items.map((image) => this.adapt(image, existing.get(image.id)));
+        return images.length
+          ? [
+              {
+                month: memoryDate.month,
+                day: memoryDate.day,
+                images,
+                count: page.totalCount,
+                endCursor: page.endCursor,
+                hasNextPage: page.hasNextPage,
+              },
+            ]
+          : [];
       });
-      const images = [...sameDayImages.slice(0, 1), ...previousMemories.map((memory) => memory.image)];
       this.selectedMemory.set(
-        images.length
+        days.length
           ? {
               month: date.month,
               day: date.day,
-              images,
-              sameDayImages,
-              memoryCounts: [date.photoYearCount, ...previousMemories.map((memory) => memory.count)],
+              days,
             }
           : null,
       );
@@ -158,6 +166,18 @@ export class ImageService {
     }
   }
 
+  async loadMoreMemoryImages(month: number, day: number, after: string | null) {
+    const result = await this.backend.query<{ memoryImages: ImagePage }>(
+      `query MemoryImages($month: Int!, $day: Int!, $after: String) {
+        memoryImages(month: $month, day: $day, after: $after) {
+          totalCount endCursor hasNextPage items { ${IMAGE_FIELDS} }
+        }
+      }`,
+      { month, day, after },
+    );
+    return { ...result.memoryImages, items: result.memoryImages.items.map((image) => this.adapt(image)) };
+  }
+
   async loadArchiveDates(month: number | null, photoYear: number | null) {
     const version = ++this.archiveVersion;
     this.archiveLoading.set(true);
@@ -165,7 +185,7 @@ export class ImageService {
     try {
       const result = await this.backend.query<{ memoryDates: BackendMemoryDate[] }>(
         `query MemoryDates($month: Int, $photoYear: Int) {
-          memoryDates(month: $month, photoYear: $photoYear) { month day photoYearCount }
+          memoryDates(month: $month, photoYear: $photoYear) { month day photoYearCount photoCount }
         }`,
         { month, photoYear },
       );

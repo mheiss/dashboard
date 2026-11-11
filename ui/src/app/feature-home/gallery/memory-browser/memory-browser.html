@@ -55,13 +55,13 @@
               [class.has-memory]="hasMemory(day)"
               [class.is-selected]="isSelected(day)"
               [disabled]="!hasMemory(day)"
-              [attr.aria-label]="day + '. ' + monthNames[calendarMonth() - 1] + ', ' + photoYearCount(day) + ' Fotojahre'"
+              [attr.aria-label]="day + '. ' + monthNames[calendarMonth() - 1] + ', ' + photoCount(day) + ' Fotos'"
               [attr.aria-pressed]="isSelected(day)"
               (click)="selectCalendarDay(day)"
             >
               {{ day }}
               @if (hasMemory(day)) {
-                <span class="sr-only">{{ photoYearCount(day) }} Fotojahre</span>
+                <span class="sr-only">{{ photoCount(day) }} Fotos</span>
               }
             </button>
           }
@@ -84,7 +84,7 @@
           @for (date of service.archiveDates(); track date.month + '-' + date.day) {
             <button type="button" class="memory-archive-day" (click)="selectDate(date)">
               <span class="memory-archive-date">{{ dateLabel(date) }}</span>
-              <span class="memory-archive-count">{{ date.photoYearCount }} Fotojahre</span>
+              <span class="memory-archive-count">{{ date.photoCount }} Fotos</span>
               <svg lucideChevronRight aria-hidden="true"></svg>
             </button>
           }

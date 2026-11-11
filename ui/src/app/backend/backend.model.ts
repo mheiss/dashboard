@@ -47,6 +47,7 @@ export interface BackendMemoryDate {
   month: number;
   day: number;
   photoYearCount: number;
+  photoCount: number;
 }
 
 export interface BackendMemoryDay {

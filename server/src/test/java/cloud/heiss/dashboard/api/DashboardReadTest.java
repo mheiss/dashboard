@@ -1,5 +1,7 @@
 package cloud.heiss.dashboard.api;
 
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -93,8 +95,14 @@ class DashboardReadTest {
             assertTrue(first.hasNextPage());
             assertFalse(second.hasNextPage());
             assertFalse(first.items().stream().anyMatch(photo -> photo.id().equals(second.items().getFirst().id())));
+            var memoryFirst = reads.memoryImages(10, 8, 2, null);
+            var memorySecond = reads.memoryImages(10, 8, 2, memoryFirst.endCursor());
+            assertEquals(3, memoryFirst.totalCount());
+            assertEquals(1, memorySecond.items().size());
+            assertFalse(memoryFirst.items().stream().anyMatch(photo -> photo.id().equals(memorySecond.items().getFirst().id())));
             store.inTransaction(DashboardStore::advanceRevision);
             assertThrows(BadRequestException.class, () -> reads.images(2, first.endCursor()));
+            assertThrows(BadRequestException.class, () -> reads.memoryImages(10, 8, 2, memoryFirst.endCursor()));
         } finally {
             store.update("delete from MicrosoftAccount where id=?1", account);
             store.update("delete from Photo p where not exists (select 1 from PhotoMembership m where m.photoId=p.id)");
@@ -110,7 +118,7 @@ class DashboardReadTest {
     }
 
     @Test
-    void memoryQueriesGroupOnePhotoPerPastYearAndHonorFilters() {
+    void memoryQueriesCountAndPageAllPhotosFromPastYears() {
         UUID accountId = UUID.randomUUID();
         UUID sourceId = UUID.randomUUID();
         int currentYear = LocalDate.now(ZoneId.of(config.zone())).getYear();
@@ -118,7 +126,9 @@ class DashboardReadTest {
         for (int index = 0; index < 101; index++) {
             years.add(currentYear - 1);
         }
-        years.addAll(List.of(currentYear - 2, currentYear - 3, currentYear - 4));
+        years.addAll(List.of(currentYear - 2, currentYear - 3, currentYear - 4, currentYear - 5, currentYear - 6, currentYear - 7,
+                currentYear - 8));
+        years.addAll(List.of(currentYear, currentYear + 1, 1899));
         var account = new MicrosoftAccount();
         account.id = accountId;
         account.microsoftId = accountId.toString();
@@ -166,10 +176,35 @@ class DashboardReadTest {
             assertEquals(List.of(currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4),
                     day.images().stream().map(image -> Integer.parseInt(image.takenAt().substring(0, 4))).toList());
             var date = reads.memoryDates(10, null).stream().filter(item -> item.day() == 8).findFirst().orElseThrow();
-            assertEquals(4, date.photoYearCount());
+            assertEquals(8, date.photoYearCount());
+            assertEquals(108, date.photoCount());
             var filteredDate = reads.memoryDates(10, currentYear - 2).getFirst();
             assertEquals(8, filteredDate.day());
             assertEquals(1, filteredDate.photoYearCount());
+            assertEquals(1, filteredDate.photoCount());
+            var firstYear = reads.memoryDates(10, currentYear - 1).getFirst();
+            assertEquals(101, firstYear.photoCount());
+            var ids = new java.util.HashSet<String>();
+            String cursor = null;
+            boolean hasMore;
+            do {
+                var page = reads.memoryImages(10, 8, 25, cursor);
+                assertEquals(108, page.totalCount());
+                page.items().forEach(image -> assertTrue(ids.add(image.id())));
+                cursor = page.endCursor();
+                hasMore = page.hasNextPage();
+            } while (hasMore);
+            assertEquals(108, ids.size());
+            given().contentType("application/json")
+                    .body(java.util.Map.of("query",
+                            "{ memoryDates(month:10) { day photoCount } "
+                                    + "memoryImages(month:10, day:8) { totalCount hasNextPage items { id } } }"))
+                    .post("/api/graphql").then().statusCode(200).body("errors", equalTo(null))
+                    .body("data.memoryDates[0].photoCount", equalTo(108)).body("data.memoryImages.totalCount", equalTo(108))
+                    .body("data.memoryImages.items.size()", equalTo(25)).body("data.memoryImages.hasNextPage", equalTo(true));
+            assertTrue(reads.memoryImages(10, 9, 25, null).items().isEmpty());
+            assertThrows(BadRequestException.class, () -> reads.memoryImages(2, 30, 25, null));
+            assertThrows(BadRequestException.class, () -> reads.memoryImages(10, 8, 101, null));
             assertTrue(reads.memoryYears().contains(currentYear - 4));
             assertThrows(BadRequestException.class, () -> reads.memoryDates(13, null));
             assertThrows(BadRequestException.class, () -> reads.memoryDates(10, currentYear));

@@ -88,8 +88,8 @@ export class MemoryBrowserComponent {
     return this.data.month === this.calendarMonth() && this.data.day === day;
   }
 
-  photoYearCount(day: number): number {
-    return this.service.archiveDates().find((date) => date.month === this.calendarMonth() && date.day === day)?.photoYearCount ?? 0;
+  photoCount(day: number): number {
+    return this.service.archiveDates().find((date) => date.month === this.calendarMonth() && date.day === day)?.photoCount ?? 0;
   }
 
   dateLabel(date: BackendMemoryDate): string {

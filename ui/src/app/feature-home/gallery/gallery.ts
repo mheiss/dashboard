@@ -50,9 +50,7 @@ export class GalleryComponent {
   readonly memoryImages = computed(() => {
     const memory = this.service.selectedMemory();
     if (!memory) return [];
-    if (!memory.sameDayImages.length) return memory.images;
-    const offset = this.memoryCycleOffset() % memory.sameDayImages.length;
-    return [memory.sameDayImages[offset], ...memory.images.slice(1)];
+    return memory.days.map((day, index) => day.images[index === 0 ? this.memoryCycleOffset() % day.images.length : 0]);
   });
   readonly orderedMemoryDates = computed(() => {
     const now = new Date();
@@ -203,8 +201,9 @@ export class GalleryComponent {
 
   private cycleMemoryImages(): void {
     const memory = this.service.selectedMemory();
-    if (this.service.memoryLoading() || !memory || memory.sameDayImages.length < 2) return;
-    this.memoryCycleOffset.update((offset) => (offset + 1) % memory.sameDayImages.length);
+    const images = memory?.days[0]?.images;
+    if (this.service.memoryLoading() || !images || images.length < 2) return;
+    this.memoryCycleOffset.update((offset) => (offset + 1) % images.length);
   }
 
   selectMemoryDate(date: BackendMemoryDate): void {
@@ -230,15 +229,41 @@ export class GalleryComponent {
     });
   }
 
-  openMomentView(image: ViewerImage): void {
-    const images = this.memoryImages();
-    if (!images.length) return;
+  openMomentView(image: ViewerImage, index: number): void {
+    const day = this.service.selectedMemory()?.days[index];
+    if (!day?.images.length) return;
+    const images = signal(day.images);
+    const loadError = signal<{ message: string; retryable: boolean } | null>(null);
+    let cursor = day.endCursor;
+    let hasMore = day.hasNextPage;
+    let loading = false;
+    const loadMore = async () => {
+      if (loading || !hasMore) return;
+      loading = true;
+      loadError.set(null);
+      try {
+        const page = await this.service.loadMoreMemoryImages(day.month, day.day, cursor);
+        images.update((current) => [...current, ...page.items]);
+        cursor = page.endCursor;
+        hasMore = page.hasNextPage;
+      } catch (error) {
+        const expired = error instanceof Error && error.message.includes('IMAGE_CURSOR_EXPIRED');
+        if (expired) hasMore = false;
+        loadError.set({
+          message: expired ? 'Die Fotos wurden geändert. Bitte die Seite neu laden.' : 'Weitere Fotos konnten nicht geladen werden.',
+          retryable: !expired,
+        });
+      } finally {
+        loading = false;
+      }
+    };
     this.dialog.open(ImageViewerComponent, {
       data: {
         image,
-        imageCount: images.length,
-        images: signal(images),
-        loadMore: () => {},
+        imageCount: day.count,
+        images,
+        loadMore: () => void loadMore(),
+        loadError,
       } satisfies ImageViewerData,
       disableClose: false,
       fullScreen: true,

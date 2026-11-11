@@ -30,7 +30,7 @@ Open a photo from the gallery to browse originals in the full-screen viewer. The
 
 ![Memory archive with month and photo-year filters](docs/images/dashboard-memory-browser.png)
 
-Use **Alle Tage** to browse the memory archive by month and photo year.
+The memory strip counts photos taken on each date in past years. Open a memory to browse those photos. Use **Alle Tage** to browse the memory archive by month and photo year.
 
 ## Running The Dashboard
 

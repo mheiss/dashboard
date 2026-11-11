@@ -39,10 +39,18 @@
       </button>
     }
   </div>
+  @if (data.loadError?.(); as error) {
+    <div role="alert" class="px-3 py-2 text-sm text-red-300">
+      {{ error.message }}
+      @if (error.retryable) {
+        <button type="button" class="underline" (click)="data.loadMore()">Erneut versuchen</button>
+      }
+    </div>
+  }
   <cdk-virtual-scroll-viewport
     #gallery
     orientation="horizontal"
-    class="h-20 w-full shrink-0 border-t border-white/15 whitespace-nowrap"
+    class="h-24 w-full shrink-0 border-t border-white/15 whitespace-nowrap"
     style="overflow-x: auto; overflow-y: hidden"
     [itemSize]="88"
   >

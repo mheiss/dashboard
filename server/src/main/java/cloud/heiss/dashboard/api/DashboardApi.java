@@ -77,6 +77,12 @@ public class DashboardApi {
     }
 
     @Query
+    public ImagePage memoryImages(@Name("month") int month, @Name("day") int day, @Name("first") @DefaultValue("25") int first,
+            @Name("after") String after) {
+        return reads.memoryImages(month, day, first, after);
+    }
+
+    @Query
     public List<AccountStatus> syncStatus() {
         return reads.status();
     }

@@ -72,7 +72,10 @@ function memoryDates(variables = {}) {
   return fixture.memories
     .filter((memory) => !variables.month || variables.month === memory.month)
     .filter((memory) => !variables.photoYear || memory.photos.some((photo) => photo.year === variables.photoYear))
-    .map(({ month, day, photos }) => ({ month, day, photoYearCount: photos.length }));
+    .map(({ month, day, photos }) => {
+      const filtered = variables.photoYear ? photos.filter((photo) => photo.year === variables.photoYear) : photos;
+      return { month, day, photoYearCount: new Set(filtered.map((photo) => photo.year)).size, photoCount: filtered.length };
+    });
 }
 
 function memoryDay(month, day) {
@@ -81,6 +84,19 @@ function memoryDay(month, day) {
     month,
     day,
     images: (memory?.photos ?? []).map((photo) => imageRecord(photo.id, photo.year, month, day)),
+  };
+}
+
+function memoryImages(month, day, after = null) {
+  const images = memoryDay(month, day).images;
+  const start = after ? Number(after) : 0;
+  const items = images.slice(start, start + 25);
+  return {
+    revision: fixture.revision,
+    totalCount: images.length,
+    endCursor: items.length ? String(start + items.length) : null,
+    hasNextPage: start + items.length < images.length,
+    items,
   };
 }
 
@@ -105,11 +121,14 @@ function graphQLResponse(query, variables = {}) {
   }
   if (query.includes('MemoryDays')) {
     const data = {};
-    for (const match of query.matchAll(/memory(\d+):\s*memoryDay/g)) {
+    for (const match of query.matchAll(/memory(\d+):\s*memoryImages/g)) {
       const index = Number(match[1]);
-      data[`memory${index}`] = memoryDay(variables[`month${index}`], variables[`day${index}`]);
+      data[`memory${index}`] = memoryImages(variables[`month${index}`], variables[`day${index}`]);
     }
     return data;
+  }
+  if (query.includes('MemoryImages')) {
+    return { memoryImages: memoryImages(variables.month, variables.day, variables.after) };
   }
   if (query.includes('images(first:')) {
     return {

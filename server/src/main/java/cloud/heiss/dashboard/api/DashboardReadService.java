@@ -100,6 +100,15 @@ public class DashboardReadService {
     }
 
     public ImagePage images(int first, String after) {
+        return imagePage(first, after, null, null);
+    }
+
+    public ImagePage memoryImages(int month, int day, int first, String after) {
+        validateMemoryDay(month, day);
+        return imagePage(first, after, month, day);
+    }
+
+    private ImagePage imagePage(int first, String after, Integer month, Integer day) {
         if (first < 1 || first > 100) {
             throw new BadRequestException("Image page size must be between 1 and 100");
         }
@@ -108,20 +117,26 @@ public class DashboardReadService {
         if (cursor != null && cursor.revision() != revision) {
             throw new CursorExpired();
         }
-        String order = " order by coalesce(p.takenAt,p.modifiedAt) desc,p.id desc";
-        List<PhotoSnapshot> photos;
-        if (cursor == null) {
-            photos = store.page("select p" + VISIBLE_PHOTOS + order, Photo.class, first + 1).stream().map(DashboardStore::photo)
-                    .toList();
-        } else {
-            Instant timestamp = Instant.parse(cursor.timestamp());
-            photos = store
-                    .page("select p" + VISIBLE_PHOTOS
-                            + "and (coalesce(p.takenAt,p.modifiedAt)<?1 or (coalesce(p.takenAt,p.modifiedAt)=?1 and p.id<?2))"
-                            + order, Photo.class, first + 1, timestamp, UUID.fromString(cursor.id()))
-                    .stream().map(DashboardStore::photo).toList();
+        var filters = new StringBuilder(VISIBLE_PHOTOS);
+        var parameters = new ArrayList<Object>();
+        if (month != null) {
+            filters.append("and p.takenMonth=?1 and p.takenDay=?2 and p.takenYear>=1900 and p.takenYear<?3 ");
+            parameters.add(month);
+            parameters.add(day);
+            parameters.add(LocalDate.now(ZoneId.of(config.zone())).getYear());
         }
-        int totalCount = Math.toIntExact(store.list("select count(p)" + VISIBLE_PHOTOS, Long.class).getFirst());
+        int totalCount = Math.toIntExact(store.list("select count(p)" + filters, Long.class, parameters.toArray()).getFirst());
+        if (cursor != null) {
+            int timestampParameter = parameters.size() + 1;
+            int idParameter = timestampParameter + 1;
+            filters.append("and (coalesce(p.takenAt,p.modifiedAt)<?").append(timestampParameter)
+                    .append(" or (coalesce(p.takenAt,p.modifiedAt)=?").append(timestampParameter).append(" and p.id<?")
+                    .append(idParameter).append("))");
+            parameters.add(Instant.parse(cursor.timestamp()));
+            parameters.add(UUID.fromString(cursor.id()));
+        }
+        var photos = store.page("select p" + filters + " order by coalesce(p.takenAt,p.modifiedAt) desc,p.id desc", Photo.class,
+                first + 1, parameters.toArray()).stream().map(DashboardStore::photo).toList();
         var page = photos.subList(0, Math.min(first, photos.size()));
         String endCursor = null;
         if (!page.isEmpty()) {
@@ -172,8 +187,8 @@ public class DashboardReadService {
     public List<MemoryDate> memoryDates(Integer month, Integer photoYear) {
         int currentYear = LocalDate.now(ZoneId.of(config.zone())).getYear();
         validateMemoryFilters(month, photoYear, currentYear);
-        var query = new StringBuilder("select p.takenMonth,p.takenDay,count(distinct p.takenYear)").append(VISIBLE_PHOTOS)
-                .append("and p.takenYear>=1900 and p.takenYear<?1");
+        var query = new StringBuilder("select p.takenMonth,p.takenDay,count(distinct p.takenYear),count(p)")
+                .append(VISIBLE_PHOTOS).append("and p.takenYear>=1900 and p.takenYear<?1");
         var parameters = new ArrayList<Object>();
         parameters.add(currentYear);
         if (month != null) {
@@ -185,8 +200,9 @@ public class DashboardReadService {
             parameters.add(photoYear);
         }
         query.append(" group by p.takenMonth,p.takenDay order by p.takenMonth desc,p.takenDay desc");
-        return store.list(query.toString(), Object[].class, parameters.toArray()).stream().map(
-                row -> new MemoryDate(((Number) row[0]).intValue(), ((Number) row[1]).intValue(), ((Number) row[2]).intValue()))
+        return store.list(query.toString(), Object[].class, parameters.toArray()).stream()
+                .map(row -> new MemoryDate(((Number) row[0]).intValue(), ((Number) row[1]).intValue(),
+                        ((Number) row[2]).intValue(), Math.toIntExact(((Number) row[3]).longValue())))
                 .toList();
     }
 
