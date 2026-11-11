@@ -1,0 +1,298 @@
+{
+  "revision": 1,
+  "timezone": "Europe/Berlin",
+  "imageSize": {
+    "width": 1280,
+    "height": 840
+  },
+  "imageLicense": "Unsplash License (https://unsplash.com/license)",
+  "security": {
+    "armed": true,
+    "pinAccepted": true
+  },
+  "configuration": {
+    "sitemapUrl": "/mock/openhab",
+    "evccUrl": "/mock/evcc",
+    "cameras": {
+      "sample-garden": "Garten",
+      "sample-driveway": "Einfahrt"
+    },
+    "keycloak": {
+      "url": "",
+      "realm": "",
+      "clientId": ""
+    }
+  },
+  "agenda": [
+    {
+      "offset": 0,
+      "allDay": [
+        {
+          "id": "birthday",
+          "subject": "Mias Geburtstag",
+          "calendar": "Familie",
+          "theme": "rose"
+        }
+      ],
+      "events": [
+        {
+          "id": "market",
+          "subject": "Marktbesuch & Frühstück",
+          "calendar": "Familie",
+          "theme": "emerald",
+          "start": "09:00",
+          "end": "11:00"
+        },
+        {
+          "id": "hike",
+          "subject": "Herbstwanderung",
+          "calendar": "Freizeit",
+          "theme": "sky",
+          "start": "13:00",
+          "end": "16:00"
+        },
+        {
+          "id": "dinner",
+          "subject": "Pizzaabend mit Freunden",
+          "calendar": "Familie",
+          "theme": "rose",
+          "start": "18:00",
+          "end": "20:00"
+        }
+      ]
+    },
+    {
+      "offset": 1,
+      "allDay": [],
+      "events": [
+        {
+          "id": "school",
+          "subject": "Schulprojekt",
+          "calendar": "Familie",
+          "theme": "amber",
+          "start": "10:00",
+          "end": "12:00"
+        }
+      ]
+    },
+    {
+      "offset": 2,
+      "allDay": [],
+      "events": [
+        {
+          "id": "brunch",
+          "subject": "Brunch bei Oma & Opa",
+          "calendar": "Familie",
+          "theme": "emerald",
+          "start": "10:00",
+          "end": "12:00"
+        }
+      ]
+    }
+  ],
+  "photos": [
+    {
+      "id": "sample-01",
+      "name": "Bergsee im Morgenlicht",
+      "file": "sample-01.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1501785888041-af3ef285b470"
+    },
+    {
+      "id": "sample-02",
+      "name": "Waldspaziergang",
+      "file": "sample-02.jpg",
+      "takenAt": "2026-09-03T10:15:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1470770841072-f978cf4d019e"
+    },
+    {
+      "id": "sample-03",
+      "name": "Küste bei Sonnenuntergang",
+      "file": "sample-03.jpg",
+      "takenAt": "2026-06-18T18:45:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee"
+    },
+    {
+      "id": "sample-04",
+      "name": "Bergpfad",
+      "file": "sample-04.jpg",
+      "takenAt": "2026-04-07T08:20:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1472396961693-142e6e269027"
+    },
+    {
+      "id": "sample-05",
+      "name": "Alpenpanorama",
+      "file": "sample-05.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b"
+    },
+    {
+      "id": "sample-06",
+      "name": "Sommer am See",
+      "file": "sample-06.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1500534623283-312aade485b7"
+    },
+    {
+      "id": "sample-07",
+      "name": "Wüste im Abendlicht",
+      "file": "sample-07.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8"
+    },
+    {
+      "id": "sample-08",
+      "name": "Waldlichtung",
+      "file": "sample-08.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1518837695005-2083093ee35b"
+    },
+    {
+      "id": "sample-09",
+      "name": "Küstenmorgen",
+      "file": "sample-09.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1473116763249-2faaef81ccda"
+    },
+    {
+      "id": "sample-10",
+      "name": "Bergsee am Abend",
+      "file": "sample-10.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429"
+    },
+    {
+      "id": "sample-11",
+      "name": "Wanderpause",
+      "file": "sample-11.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1472214103451-9374bd1c798e"
+    },
+    {
+      "id": "sample-12",
+      "name": "Abendstimmung am Wasser",
+      "file": "sample-12.jpg",
+      "takenAt": "2026-11-11T09:30:00Z",
+      "sourceUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb"
+    }
+  ],
+  "memories": [
+    {
+      "month": 11,
+      "day": 11,
+      "photos": [
+        { "id": "sample-01", "year": 2026 },
+        { "id": "sample-03", "year": 2025 },
+        { "id": "sample-05", "year": 2024 },
+        { "id": "sample-07", "year": 2023 }
+      ]
+    },
+    {
+      "month": 9,
+      "day": 3,
+      "photos": [
+        { "id": "sample-02", "year": 2026 },
+        { "id": "sample-04", "year": 2025 }
+      ]
+    },
+    {
+      "month": 6,
+      "day": 18,
+      "photos": [
+        { "id": "sample-03", "year": 2026 },
+        { "id": "sample-06", "year": 2025 },
+        { "id": "sample-09", "year": 2024 }
+      ]
+    },
+    {
+      "month": 4,
+      "day": 7,
+      "photos": [
+        { "id": "sample-04", "year": 2026 },
+        { "id": "sample-08", "year": 2025 }
+      ]
+    },
+    {
+      "month": 1,
+      "day": 2,
+      "photos": [{ "id": "sample-01", "year": 2026 }]
+    },
+    {
+      "month": 12,
+      "day": 24,
+      "photos": [
+        { "id": "sample-10", "year": 2026 },
+        { "id": "sample-12", "year": 2025 }
+      ]
+    }
+  ],
+  "openhab": {
+    "title": "Zuhause",
+    "subtitle": "Mock Smart Home",
+    "status": "Alle Systeme verbunden",
+    "items": [
+      { "label": "Wohnzimmer", "value": "21,5", "unit": "°C", "detail": "Temperatur", "icon": "🌡️" },
+      { "label": "Luftfeuchte", "value": "48", "unit": "%", "detail": "Wohnzimmer", "icon": "💧" },
+      { "label": "Lichter", "value": "2", "unit": "an", "detail": "von 8 Räumen", "icon": "💡" },
+      { "label": "Haustür", "value": "Verriegelt", "unit": "", "detail": "Sicherheitsstatus", "icon": "🔒" },
+      { "label": "Garten", "value": "Aus", "unit": "", "detail": "Bewässerung", "icon": "🌱" },
+      { "label": "Strom heute", "value": "8,4", "unit": "kWh", "detail": "Hausverbrauch", "icon": "⚡" }
+    ]
+  },
+  "evcc": {
+    "title": "Laden",
+    "subtitle": "Mock Wallbox",
+    "status": "Mock-Lademanagement",
+    "vehicle": "Familienauto",
+    "vehicleDetail": "Elektro · 64 kWh",
+    "state": "Lädt",
+    "power": "7,2",
+    "powerUnit": "kW",
+    "soc": 68,
+    "range": "284",
+    "rangeUnit": "km",
+    "target": "80",
+    "targetUnit": "%",
+    "remaining": "1 h 12 min",
+    "charger": "Garage",
+    "dailyEnergy": "12,6",
+    "dailyEnergyUnit": "kWh"
+  },
+  "cameras": [
+    { "id": "sample-garden", "label": "Garten", "photoId": "sample-02" },
+    { "id": "sample-driveway", "label": "Einfahrt", "photoId": "sample-04" }
+  ],
+  "motionGroups": [
+    {
+      "id": "motion-garden",
+      "snapshots": [
+        {
+          "id": "snapshot-garden-1",
+          "camera": "sample-garden",
+          "timestamp": 1794390600000,
+          "type": "smart",
+          "photoId": "sample-02"
+        },
+        {
+          "id": "snapshot-garden-2",
+          "camera": "sample-garden",
+          "timestamp": 1794390605000,
+          "type": "motion",
+          "photoId": "sample-03"
+        }
+      ]
+    },
+    {
+      "id": "motion-driveway",
+      "snapshots": [
+        {
+          "id": "snapshot-driveway-1",
+          "camera": "sample-driveway",
+          "timestamp": 1794383400000,
+          "type": "motion",
+          "photoId": "sample-04"
+        }
+      ]
+    }
+  ]
+}

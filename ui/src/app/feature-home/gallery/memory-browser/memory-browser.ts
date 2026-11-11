@@ -23,7 +23,20 @@ export class MemoryBrowserComponent {
   readonly data = (inject(DIALOG_DATA) as DialogOptions).data as MemoryBrowserData;
   readonly dialog = inject<DialogRef<unknown>>(DialogRef);
   readonly service = inject(ImageService);
-  readonly monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  readonly monthNames = [
+    'Januar',
+    'Februar',
+    'März',
+    'April',
+    'Mai',
+    'Juni',
+    'Juli',
+    'August',
+    'September',
+    'Oktober',
+    'November',
+    'Dezember',
+  ];
   readonly weekdays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   readonly monthFilter = signal<number | null>(this.data.mode === 'date' ? this.data.month : null);
   readonly photoYearFilter = signal<number | null>(null);

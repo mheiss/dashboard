@@ -7,7 +7,7 @@ See the [project overview](../README.md) for features and screenshots, and the [
 ## Responsibilities
 
 - **Microsoft integration**: Account linking, calendar and OneDrive synchronization, source selection, and encrypted token storage.
-- **Household data**: Cached agenda grouping, photo paging, and memories from previous years. Metadata reads use local data rather than live Microsoft requests.
+- **Household data**: Cached agenda grouping, photo paging, and a memory archive grouped by month/day and photo year. Archive filters use synchronized metadata rather than live Microsoft requests.
 - **Media storage**: On-demand original downloads, thumbnail caching, and persistent camera-motion snapshots.
 - **Smart-home coordination**: A shared openHAB item connection, doorbell and motion handling, and openHAB/go2rtc forwarding with server-held credentials.
 - **Client updates**: GraphQL queries and subscriptions for shared data, change notifications, and camera-selection actions; REST for account management and binary media.

@@ -10,13 +10,16 @@ export class AppConfigService {
    * The application configuration loaded at startup.
    */
   public readonly config = signal<UiConfiguration>({
-    sitemapUrl: '', evccUrl: '', cameras: {}, keycloak: { url: '', realm: '', clientId: '' },
+    sitemapUrl: '',
+    evccUrl: '',
+    cameras: {},
+    keycloak: { url: '', realm: '', clientId: '' },
   });
 
   load() {
-    return this.loaded ??= this.api.getConfiguration().then(config => {
+    return (this.loaded ??= this.api.getConfiguration().then((config) => {
       this.config.set(config);
       return config;
-    });
+    }));
   }
 }

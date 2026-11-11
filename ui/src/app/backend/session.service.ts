@@ -46,10 +46,14 @@ export class SessionService {
   }
 
   private updateSession() {
-    this.session.set(this.keycloak.authenticated ? {
-      username: this.keycloak.tokenParsed?.['preferred_username'] ?? '',
-      admin: this.keycloak.hasResourceRole('admin', this.config.config().keycloak.clientId),
-    } : null);
+    this.session.set(
+      this.keycloak.authenticated
+        ? {
+            username: this.keycloak.tokenParsed?.['preferred_username'] ?? '',
+            admin: this.keycloak.hasResourceRole('admin', this.config.config().keycloak.clientId),
+          }
+        : null,
+    );
   }
 
   async load() {
@@ -91,7 +95,7 @@ export const bearerInterceptor: HttpInterceptorFn = (request, next) => {
   if (target.origin !== window.location.origin || !/^\/api\/(accounts|graphql)(\/|$)/.test(target.pathname)) {
     return next(request);
   }
-  return from(inject(SessionService).accessToken()).pipe(switchMap(token => next(token
-    ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
-    : request)));
+  return from(inject(SessionService).accessToken()).pipe(
+    switchMap((token) => next(token ? request.clone({ setHeaders: { Authorization: `Bearer ${token}` } }) : request)),
+  );
 };

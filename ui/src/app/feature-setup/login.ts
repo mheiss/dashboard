@@ -11,17 +11,26 @@ import { PopupService } from '../popup/popup.service';
   imports: [LucideLogIn, Popup],
   template: `
     <app-popup title="Einstellungen">
-        <div class="grid gap-3 p-6 max-sm:p-4">
-          <p>Dieser Bereich erfordert eine Anmeldung mit Administratorberechtigung. Zur Anmeldung wirst du zu Keycloak weitergeleitet und kehrst danach zum Dashboard zurück.</p>
-          @if (session.session() && !session.session()?.admin) {
-            <p role="alert">Keine Administratorberechtigung.</p>
-          }
-          @if (error()) { <p role="alert" class="text-sm text-[#a52b3d] wrap-anywhere">{{ error() }}</p> }
-          <button type="button" (click)="login()" [disabled]="busy()"
-            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white disabled:cursor-default disabled:opacity-50">
-            <svg lucideLogIn aria-hidden="true" class="size-5 shrink-0"></svg> Mit Keycloak anmelden
-          </button>
-        </div>
+      <div class="grid gap-3 p-6 max-sm:p-4">
+        <p>
+          Dieser Bereich erfordert eine Anmeldung mit Administratorberechtigung. Zur Anmeldung wirst du zu Keycloak weitergeleitet und
+          kehrst danach zum Dashboard zurück.
+        </p>
+        @if (session.session() && !session.session()?.admin) {
+          <p role="alert">Keine Administratorberechtigung.</p>
+        }
+        @if (error()) {
+          <p role="alert" class="text-sm wrap-anywhere text-[#a52b3d]">{{ error() }}</p>
+        }
+        <button
+          type="button"
+          (click)="login()"
+          [disabled]="busy()"
+          class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white disabled:cursor-default disabled:opacity-50"
+        >
+          <svg lucideLogIn aria-hidden="true" class="size-5 shrink-0"></svg> Mit Keycloak anmelden
+        </button>
+      </div>
     </app-popup>
   `,
 })
@@ -50,13 +59,17 @@ export class LoginPromptService {
   private pending?: Promise<boolean>;
 
   async requireAdmin(): Promise<boolean> {
-    if (await this.session.load() && this.session.session()?.admin) return true;
-    this.pending ??= firstValueFrom(this.popup.open(Login, {
-      disableClose: false,
-      width: 'min(420px, calc(100vw - 32px))',
-    }).closed).then(() => this.session.session()?.admin ?? false).finally(() => {
-      this.pending = undefined;
-    });
+    if ((await this.session.load()) && this.session.session()?.admin) return true;
+    this.pending ??= firstValueFrom(
+      this.popup.open(Login, {
+        disableClose: false,
+        width: 'min(420px, calc(100vw - 32px))',
+      }).closed,
+    )
+      .then(() => this.session.session()?.admin ?? false)
+      .finally(() => {
+        this.pending = undefined;
+      });
     return this.pending;
   }
 }
@@ -64,5 +77,5 @@ export class LoginPromptService {
 export const adminGuard: CanActivateFn = async () => {
   const login = inject(LoginPromptService);
   const router = inject(Router);
-  return await login.requireAdmin() || router.createUrlTree(['/home']);
+  return (await login.requireAdmin()) || router.createUrlTree(['/home']);
 };

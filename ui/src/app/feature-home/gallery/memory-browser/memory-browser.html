@@ -70,7 +70,9 @@
       <p class="memory-calendar-note">Punkte markieren Tage mit Erinnerungen.</p>
     </section>
     <section class="memory-archive-panel" aria-label="Erinnerungstage">
-      <h3 class="memory-list-head">{{ monthFilter() === null ? 'Alle Erinnerungstage' : 'Erinnerungen im ' + monthNames[monthFilter()! - 1] }}</h3>
+      <h3 class="memory-list-head">
+        {{ monthFilter() === null ? 'Alle Erinnerungstage' : 'Erinnerungen im ' + monthNames[monthFilter()! - 1] }}
+      </h3>
       @if (service.archiveLoading()) {
         <p class="memory-empty" role="status">Tage werden geladen …</p>
       } @else if (service.archiveError()) {

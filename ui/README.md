@@ -7,9 +7,11 @@ See the [project overview](../README.md) for features and screenshots, and the [
 ## Interface And Behavior
 
 - **Responsive home view**: Calendar and gallery appear side by side on larger screens; below 640px, mobile navigation separates them into dedicated views.
+- **Photo memories**: A this-day memory strip opens a day archive that can be filtered by month and photo year.
 - **Shared photo viewer**: OneDrive photos, memories, and camera snapshots use a common full-screen viewer with navigation and zoom.
 - **Integration views**: openHAB and EVCC are embedded pages; cameras use WebRTC with camera selection and recent motion galleries. Navigation shows only configured integrations.
-- **Protected setup**: Administrators connect Microsoft accounts and select calendar and photo sources. Everyday views do not prompt for sign-in.
+- **Protected setup**: Administrators connect Microsoft accounts, add calendars from a picker, browse OneDrive folders, and remove selected sources. Everyday views do not prompt for sign-in.
+- **Theme switch**: Choose light or dark appearance from navigation.
 - **Kiosk lifecycle**: Camera streams and gallery work react to screen visibility. Fully Kiosk Browser integration supports waking the tablet for backend camera actions.
 
 ## Camera Diagnostics
@@ -67,7 +69,11 @@ npm run prettier
 
 The production build is written to `dist/Dashboard/browser`. REST services and models are generated from the shared [OpenAPI contract](../openapi.yaml); generation runs automatically before start and build, or independently with `gen:api`. Edit the contract rather than generated files. GraphQL and WebRTC transports are separate from this generation.
 
-`prettier` formats TypeScript, JavaScript, CSS, and HTML using the Tailwind plugin. There is currently no frontend test runner configured.
+`prettier` formats TypeScript, JavaScript, CSS, and HTML using the Tailwind plugin. Playwright captures the documentation screenshots; there is no component or unit test suite.
+
+## Documentation Screenshots
+
+Run `npm run screenshots` to start the fictional-data preview and recapture the home, memory archive, and photo viewer images in `../docs/images`. Install the Playwright browser once on a new machine with `npx playwright install chromium`.
 
 ## Hosting
 

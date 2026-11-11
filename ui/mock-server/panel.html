@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mock Smart Home</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: system-ui, sans-serif;
+        color: #24283a;
+        background: #f3f4f8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 28px;
+      }
+      header {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(24px, 3vw, 36px);
+      }
+      p {
+        margin: 5px 0 0;
+        color: #6d7284;
+      }
+      .badge {
+        padding: 7px 12px;
+        border-radius: 999px;
+        color: #5034b3;
+        background: #eee9ff;
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 14px;
+      }
+      .card {
+        min-height: 150px;
+        padding: 20px;
+        border: 1px solid #e0e2eb;
+        border-radius: 14px;
+        background: white;
+        box-shadow: 0 4px 16px #2222;
+      }
+      .icon {
+        font-size: 25px;
+      }
+      .label {
+        margin-top: 16px;
+        color: #6d7284;
+        font-size: 14px;
+      }
+      .value {
+        margin-top: 4px;
+        font-size: 26px;
+        font-weight: 700;
+      }
+      .detail {
+        margin-top: 3px;
+        color: #6d7284;
+        font-size: 13px;
+      }
+      .vehicle {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        padding: 26px;
+        border: 1px solid #e0e2eb;
+        border-radius: 16px;
+        background: white;
+        box-shadow: 0 4px 16px #2222;
+      }
+      .state {
+        color: #12764c;
+        font-weight: 700;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+      }
+      .stat {
+        padding: 16px;
+        border-radius: 12px;
+        background: white;
+      }
+      .stat strong {
+        display: block;
+        font-size: 22px;
+      }
+      .stat span {
+        color: #6d7284;
+        font-size: 13px;
+      }
+      .bar {
+        height: 12px;
+        margin-top: 18px;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #e8e8ee;
+      }
+      .bar span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: #7e57e8;
+      }
+      @media (max-width: 520px) {
+        body {
+          padding: 18px;
+        }
+        header {
+          align-items: start;
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="panel" aria-live="polite"></main>
+    <script>
+      const esc = (value) =>
+        String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+      const panel = document.querySelector('#panel');
+      fetch('/mock-data.json')
+        .then((response) => response.json())
+        .then((data) => {
+          if (location.pathname.endsWith('/openhab')) {
+            panel.innerHTML = `<header><div><h1>${esc(data.openhab.title)}</h1><p>${esc(data.openhab.subtitle)}</p></div><span class="badge">${esc(data.openhab.status)}</span></header><section class="grid">${data.openhab.items.map((item) => `<article class="card"><div class="icon">${esc(item.icon)}</div><div class="label">${esc(item.label)}</div><div class="value">${esc(item.value)} ${esc(item.unit)}</div><div class="detail">${esc(item.detail)}</div></article>`).join('')}</section>`;
+            document.title = data.openhab.title;
+            return;
+          }
+          panel.innerHTML = `<header><div><h1>${esc(data.evcc.title)}</h1><p>${esc(data.evcc.subtitle)}</p></div><span class="badge">${esc(data.evcc.status)}</span></header><section class="vehicle"><div><h2>${esc(data.evcc.vehicle)}</h2><p>${esc(data.evcc.vehicleDetail)}</p><p class="state">${esc(data.evcc.state)} · ${esc(data.evcc.charger)}</p></div><div><strong>${esc(data.evcc.power)} ${esc(data.evcc.powerUnit)}</strong><p>Aktuelle Ladeleistung</p></div></section><div class="bar" aria-label="Ladestand ${esc(data.evcc.soc)} Prozent"><span style="width:${Number(data.evcc.soc)}%"></span></div><section class="stats"><div class="stat"><strong>${esc(data.evcc.soc)} %</strong><span>Ladestand</span></div><div class="stat"><strong>${esc(data.evcc.range)} km</strong><span>Reichweite</span></div><div class="stat"><strong>${esc(data.evcc.target)} %</strong><span>Ladeziel</span></div><div class="stat"><strong>${esc(data.evcc.remaining)}</strong><span>Bis Ladeziel</span></div><div class="stat"><strong>${esc(data.evcc.dailyEnergy)} ${esc(data.evcc.dailyEnergyUnit)}</strong><span>Heute geladen</span></div></section>`;
+          document.title = data.evcc.title;
+        })
+        .catch(() => {
+          panel.textContent = 'Mock-Daten konnten nicht geladen werden.';
+        });
+    </script>
+  </body>
+</html>

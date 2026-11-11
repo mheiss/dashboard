@@ -17,6 +17,8 @@ bin/
 **/generated/*
 node_modules/
 dist/
+ui/test-results/
+ui/playwright-report/
 
 # Quarkus Backend
 .quinoa/

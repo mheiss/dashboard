@@ -9,9 +9,9 @@ A dashboard for your household calendars, photos, and smart-home controls.
 
 Smart Home Dashboard brings Microsoft calendars and OneDrive photos together with openHAB, EVCC, and UniFi Protect. Designed for a wall-mounted tablet and just as useful in a browser, it gives the household a common view. A protected admin area handles account connections and source selection.
 
-![Dashboard home screen with a color-coded family agenda, photos from this day in past years, and a travel-photo gallery](docs/images/dashboard-home.png)
+![Dashboard photo gallery with this-day memories, recent photos, and archive controls](docs/images/dashboard-home.png)
 
-*Shared calendar on the left, a look back at this day in past years along with a gallery showing the latest photos on the right. Screenshots show the real app with fictional calendar entries and sample photography, not private household data. The current interface is in German.*
+*Screenshots use fictional calendar entries and sample photographs, not private household data. The interface is shown in German.*
 
 **[Download a release](https://github.com/mheiss/dashboard/releases)** | **[Setup guide](#setup-guide)** | **[Frontend](ui/README.md)** | **[Backend](server/README.md)**
 
@@ -20,13 +20,17 @@ Smart Home Dashboard brings Microsoft calendars and OneDrive photos together wit
 | Everyday View | What It Brings Together |
 | --- | --- |
 | Calendar | A color-coded household agenda from selected Microsoft calendars. |
-| Photos | OneDrive galleries, a look back at this day in past years, and a full-screen photo viewer. |
+| Photos | OneDrive galleries, a this-day memory strip, a searchable day archive, and a full-screen photo viewer. |
 | Home controls | openHAB views, EVCC charging information, and UniFi Protect cameras through your existing integrations. |
-| Account setup | Admin-only Microsoft account connection and calendar/photo source selection. |
+| Account setup | Admin-only Microsoft account connection, calendar/photo source management, and light/dark themes. |
 
 ![Full-screen photo viewer displaying a mountain lake with navigation controls and a thumbnail filmstrip](docs/images/dashboard-photo-viewer.png)
 
 Open a photo from the gallery to browse originals in the full-screen viewer. The filmstrip keeps the rest of the collection close at hand.
+
+![Memory archive with month and photo-year filters](docs/images/dashboard-memory-browser.png)
+
+Use **Alle Tage** to browse the memory archive by month and photo year.
 
 ## Running The Dashboard
 
@@ -194,7 +198,7 @@ The first startup initializes the database schema. In another terminal, check `h
 1. Open `https://dashboard.home.arpa/home` without certificate warnings.
 2. Open settings and sign in with your Keycloak administrator user.
 3. Open Setup and connect each household member's Microsoft account.
-4. Select the calendars and enable OneDrive folders to display, using drive-relative paths such as `Pictures/Camera Roll`.
+4. Add calendars from the calendar picker. Browse OneDrive folders and add each desired folder from the folder picker; use the dedicated remove button to stop displaying a selected calendar or folder. The selected-source count appears below each list.
 5. Allow time for the first synchronization; subsequent synchronization normally runs every five minutes. Open the same dashboard URL on your tablet or other viewing devices.
 
 Stop the foreground application with `Ctrl+C`. For continuous use, configure a service manager such as systemd on Linux or a Windows service wrapper to run the same Java command. Use a dedicated non-administrator account with read access to the application and configuration and write access to the media directory. The service should start after PostgreSQL and restart after failures.
