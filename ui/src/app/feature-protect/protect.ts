@@ -15,6 +15,7 @@ import { PopupService } from '../popup/popup.service';
 import { ImageViewerComponent } from '../image-viewer/image-viewer';
 import { BlobSrcDirective } from '../image-viewer/blob.directive';
 import { ImageViewerData, ViewerImage } from '../image-viewer/image-viewer.model';
+import { CameraPreferencesService } from './camera-preferences.service';
 
 @Component({
   selector: 'app-protect',
@@ -30,20 +31,29 @@ export class Protect implements OnDestroy {
   readonly motion = inject(MotionService);
   private readonly popup = inject(PopupService);
   private readonly media = inject(MediaService);
+  private readonly preferences = inject(CameraPreferencesService);
   private readonly snapshotBlobs = new Map<string, Observable<Blob | null>>();
   private snapshotDialog?: DialogRef<string>;
 
   private readonly cameraOrder: Camera[] = Object.keys(this.config.config().cameras);
   readonly cameras = signal<PlayableCamera[]>(this.cameraOrder.map((camera) => ({ camera, play: false })));
-  readonly pinned = signal<Camera>(this.cameraOrder[0] ?? '');
+  readonly visibleCameras = computed(() => this.cameras().filter(({ camera }) => !this.preferences.hiddenCameras().includes(camera)));
+  readonly pinned = signal<Camera>(this.visibleCameras()[0]?.camera ?? '');
   readonly mobileCameras = computed(() => {
-    const cameras = this.cameras();
+    const cameras = this.visibleCameras();
     const pinned = this.pinned();
     return [...cameras.filter((camera) => camera.camera === pinned), ...cameras.filter((camera) => camera.camera !== pinned)];
   });
   private playTimers: number[] = [];
 
   constructor() {
+    effect(() => {
+      const cameras = this.visibleCameras();
+      if (!cameras.some((camera) => camera.camera === this.pinned())) {
+        this.pinned.set(cameras[0]?.camera ?? '');
+      }
+    });
+
     effect(() => {
       const retained = new Set(this.motion.groups().flatMap((group) => group.snapshots.map((snapshot) => snapshot.id)));
       for (const id of this.snapshotBlobs.keys()) {
@@ -54,14 +64,14 @@ export class Protect implements OnDestroy {
     effect(() => {
       this.router.navigate([], {
         queryParams: {
-          camera: this.pinned(),
+          camera: this.pinned() || null,
         },
       });
     });
 
     this.activatedRoute.queryParamMap.pipe(takeUntilDestroyed()).subscribe((map) => {
       const param = map.get('camera');
-      if (isCamera(param, this.cameraOrder)) {
+      if (isCamera(param, this.cameraOrder) && !this.preferences.hiddenCameras().includes(param)) {
         this.pinned.set(param);
       }
     });

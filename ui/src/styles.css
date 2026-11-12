@@ -178,11 +178,6 @@ body {
     color: var(--accent);
     background: var(--accent-soft);
   }
-  .navigation-theme {
-    border: 0;
-    background: transparent;
-    font: inherit;
-  }
   @media (min-width: 640px) {
     .app-shell {
       flex-direction: row;
@@ -223,9 +218,6 @@ body {
       height: 22px;
     }
     .navigation-settings {
-      margin-top: 0;
-    }
-    .navigation-theme {
       width: 100%;
       margin-top: auto;
     }

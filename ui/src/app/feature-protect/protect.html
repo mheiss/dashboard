@@ -4,9 +4,11 @@
       <span class="section-kicker">Sicherheit</span>
       <h1>Kameras</h1>
     </div>
-    <span class="quiet-count">{{ cameras().length }} Kameras</span>
+    <span class="quiet-count">{{ visibleCameras().length }} Kameras</span>
   </header>
-  @if (layout.mobile$()) {
+  @if (!visibleCameras().length) {
+    <p class="mx-4 mb-4 flex-1 text-sm text-(--muted)">Auf diesem Gerät werden keine Kameras angezeigt.</p>
+  } @else if (layout.mobile$()) {
     <div class="flex w-full shrink-0 flex-col items-center px-4 pb-4">
       <div class="w-full space-y-3">
         @for (camera of mobileCameras(); track camera.camera) {
@@ -25,7 +27,7 @@
     <div class="flex min-h-0 flex-1 flex-row gap-4 px-4 pb-4">
       <div class="h-full w-48 shrink-0 overflow-y-auto">
         <div class="flex flex-col gap-3">
-          @for (camera of cameras(); track camera.camera) {
+          @for (camera of visibleCameras(); track camera.camera) {
             <div
               class="relative block w-full shrink-0 overflow-hidden rounded-md border-2 border-transparent"
               [class.border-violet-500]="pinned() === camera.camera"
@@ -99,7 +101,7 @@
         }
       </div>
     } @else {
-      <p class="min-w-0 flex-1 text-sm text-[color:var(--muted)]">Noch keine Bewegung erkannt.</p>
+      <p class="min-w-0 flex-1 text-sm text-(--muted)">Noch keine Bewegung erkannt.</p>
     }
   </section>
 </div>

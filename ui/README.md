@@ -10,8 +10,9 @@ See the [project overview](../README.md) for features and screenshots, and the [
 - **Photo memories**: A this-day memory strip opens a day archive that can be filtered by month and photo year.
 - **Shared photo viewer**: OneDrive photos, memories, and camera snapshots use a common full-screen viewer with navigation and zoom.
 - **Integration views**: openHAB and EVCC are embedded pages; cameras use WebRTC with camera selection and recent motion galleries. Navigation shows only configured integrations.
+- **Per-device cameras**: Use **Einstellungen** to choose which live views appear in that browser. The selection is stored locally, applies after reload, and does not change motion history or other devices.
 - **Protected setup**: Administrators connect Microsoft accounts, add calendars from a picker, browse OneDrive folders, and remove selected sources. Everyday views do not prompt for sign-in.
-- **Theme switch**: Choose light or dark appearance from navigation.
+- **Theme switch**: Choose light or dark appearance in settings.
 - **Kiosk lifecycle**: Camera streams and gallery work react to screen visibility. Fully Kiosk Browser integration supports waking the tablet for backend camera actions.
 
 ## Camera Diagnostics

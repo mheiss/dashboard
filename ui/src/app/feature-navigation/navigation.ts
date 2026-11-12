@@ -11,10 +11,10 @@ import {
   LucideZap,
   LucideCctv,
   LucideSettings,
-  LucideSun,
-  LucideMoon,
 } from '@lucide/angular';
 import { ThemeService } from '../utils/theme.service';
+import { PopupService } from '../popup/popup.service';
+import { Settings } from '../feature-setup/settings';
 
 @Component({
   selector: 'app-navigation',
@@ -29,14 +29,13 @@ import { ThemeService } from '../utils/theme.service';
     LucideZap,
     LucideCctv,
     LucideSettings,
-    LucideSun,
-    LucideMoon,
   ],
 })
 export class Navigation {
   readonly router = inject(Router);
   readonly layout = inject(LayoutService);
   readonly theme = inject(ThemeService);
+  private readonly popup = inject(PopupService);
 
   readonly elements = entries();
   readonly activePath = signal('');
@@ -68,5 +67,9 @@ export class Navigation {
     const primary = tree.root.children['primary'];
     const segments = primary?.segments.map((s) => s.path);
     this.activePath.set(segments?.length ? '/' + segments[0] : '');
+  }
+
+  openSettings(): void {
+    this.popup.open(Settings, { disableClose: false, width: 'min(480px, calc(100vw - 32px))' });
   }
 }

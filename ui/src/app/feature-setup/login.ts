@@ -10,7 +10,7 @@ import { PopupService } from '../popup/popup.service';
   selector: 'app-login',
   imports: [LucideLogIn, Popup],
   template: `
-    <app-popup title="Einstellungen">
+    <app-popup title="Konten">
       <div class="grid gap-3 p-6 max-sm:p-4">
         <p>
           Dieser Bereich erfordert eine Anmeldung mit Administratorberechtigung. Zur Anmeldung wirst du zu Keycloak weitergeleitet und
