@@ -85,6 +85,11 @@ public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleMan
                     } else if (request.path().equals("/api/disconnect")) {
                         request.connection().close();
                     } else if (request.path().equals("/api/frame.jpeg")) {
+                        if ("unifi_tablet".equals(request.getParam("src"))) {
+                            request.response().putHeader("Content-Type", "image/jpeg")
+                                    .end(Buffer.buffer(new byte[] { (byte) 255, (byte) 216, (byte) 255, 1 }));
+                            return;
+                        }
                         if ("upstream-error".equals(request.getParam("src"))) {
                             request.response().setStatusCode(418).putHeader("Content-Type", "application/json")
                                     .putHeader("Set-Cookie", "upstream-session=secret")
@@ -132,7 +137,9 @@ public class IntegrationProxyUpstream implements QuarkusTestResourceLifecycleMan
                 Map.entry("dashboard.openhab.items.doorbell", "Bell"), Map.entry("dashboard.openhab.doorbell-camera", "front"),
                 Map.entry("dashboard.evcc.url", "http://evcc.fixture"), Map.entry("dashboard.protect.cameras[0].id", "front"),
                 Map.entry("dashboard.protect.cameras[0].label", "Front"), Map.entry("dashboard.protect.cameras[1].id", "back"),
-                Map.entry("dashboard.protect.cameras[1].label", "Back"));
+                Map.entry("dashboard.protect.cameras[1].label", "Back"), Map.entry("dashboard.protect.cameras[2].id", "tablet"),
+                Map.entry("dashboard.protect.cameras[2].label", "Tablet"),
+                Map.entry("dashboard.protect.cameras[2].snapshot", "true"));
     }
 
     private void websocket(ServerWebSocket socket) {

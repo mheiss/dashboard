@@ -6,6 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AppConfigService } from '../feature-config/config.service';
 import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
+import { Snapshot } from './snapshot-camera/snapshot-camera';
 import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 import { MotionService, MotionSnapshot } from './motion.service';
 import { catchError, defer, Observable, of, shareReplay } from 'rxjs';
@@ -19,7 +20,7 @@ import { ImageViewerData, ViewerImage } from '../image-viewer/image-viewer.model
   selector: 'app-protect',
   templateUrl: './protect.html',
   changeDetection: ChangeDetectionStrategy.Eager,
-  imports: [Video, DatePipe, AsyncPipe, BlobSrcDirective],
+  imports: [Video, Snapshot, DatePipe, AsyncPipe, BlobSrcDirective],
 })
 export class Protect implements OnDestroy {
   readonly config = inject(AppConfigService);
@@ -75,6 +76,10 @@ export class Protect implements OnDestroy {
 
   cameraLabel(camera: Camera): string {
     return this.config.config().cameras[camera] ?? camera;
+  }
+
+  isSnapshotCamera(camera: Camera): boolean {
+    return this.config.config().snapshotCameraIds.includes(camera);
   }
 
   snapshotBlob(snapshot: MotionSnapshot): Observable<Blob | null> {

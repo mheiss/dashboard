@@ -18,6 +18,7 @@
       "sample-garden": "Garten",
       "sample-driveway": "Einfahrt"
     },
+    "snapshotCameraIds": [],
     "keycloak": {
       "url": "",
       "realm": "",

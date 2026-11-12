@@ -13,6 +13,7 @@ export class AppConfigService {
     sitemapUrl: '',
     evccUrl: '',
     cameras: {},
+    snapshotCameraIds: [],
     keycloak: { url: '', realm: '', clientId: '' },
   });
 

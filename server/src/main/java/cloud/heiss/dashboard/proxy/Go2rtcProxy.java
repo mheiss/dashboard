@@ -7,6 +7,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 
 import cloud.heiss.dashboard.api.CameraApi;
+import cloud.heiss.dashboard.config.DashboardConfig;
 import io.quarkus.vertx.web.RouteFilter;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.MultiMap;
@@ -27,6 +28,10 @@ public class Go2rtcProxy extends HttpProxy implements CameraApi {
     Go2rtcWebSocketProxy socket;
     @Inject
     RoutingContext requestContext;
+    @Inject
+    DashboardConfig dashboard;
+    @Inject
+    SnapshotCameraFrames snapshotFrames;
 
     private HttpClient frames;
 
@@ -46,6 +51,10 @@ public class Go2rtcProxy extends HttpProxy implements CameraApi {
     public Response getCameraFrame(String src) {
         if (src == null || src.isBlank() || "websocket".equalsIgnoreCase(requestContext.request().getHeader("Upgrade"))) {
             return Response.status(400).build();
+        }
+        if (dashboard.protect().cameras().stream()
+                .anyMatch(camera -> camera.snapshot() && ("unifi_" + camera.id()).equals(src))) {
+            return snapshotFrames.get(src);
         }
         var upstream = config.go2rtcUrl().orElse(null);
         if (upstream == null) {
@@ -76,7 +85,7 @@ public class Go2rtcProxy extends HttpProxy implements CameraApi {
     @RouteFilter(0)
     void forward(RoutingContext context) {
         String path = context.request().path();
-        if (path.equals("/api/webrtc/frame.jpeg") && context.request().method() == HttpMethod.GET) {
+        if (path.equals("/api/webrtc/snapshot") && context.request().method() == HttpMethod.GET) {
             context.next();
         } else if (matches(path, "/api/webrtc")) {
             forward(context, config.go2rtcUrl().orElse(null), "/api" + path.substring("/api/webrtc".length()), null);

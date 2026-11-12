@@ -11,7 +11,11 @@
       <div class="w-full space-y-3">
         @for (camera of mobileCameras(); track camera.camera) {
           <div class="relative overflow-hidden rounded-md">
-            <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" />
+            @if (isSnapshotCamera(camera.camera)) {
+              <app-snapshot class="block w-full" [camera]="camera.camera" [play]="camera.play" />
+            } @else {
+              <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" />
+            }
             <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{ cameraLabel(camera.camera) }}</span>
           </div>
         }
@@ -26,7 +30,11 @@
               class="relative block w-full shrink-0 overflow-hidden rounded-md border-2 border-transparent"
               [class.border-violet-500]="pinned() === camera.camera"
             >
-              <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" />
+              @if (isSnapshotCamera(camera.camera)) {
+                <app-snapshot class="block w-full" [camera]="camera.camera" [play]="camera.play" [zoom]="false" />
+              } @else {
+                <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" />
+              }
               <button
                 type="button"
                 class="absolute inset-0 text-left focus-visible:outline-2 focus-visible:outline-violet-500"
@@ -44,7 +52,11 @@
       </div>
       <div class="h-full min-w-0 flex-1 overflow-hidden rounded-md bg-black">
         @if (pinned(); as pinnedCamera) {
-          <app-video class="block h-full w-full" [camera]="pinnedCamera" [fit]="true" />
+          @if (isSnapshotCamera(pinnedCamera)) {
+            <app-snapshot class="block h-full w-full" [camera]="pinnedCamera" [fit]="true" />
+          } @else {
+            <app-video class="block h-full w-full" [camera]="pinnedCamera" [fit]="true" />
+          }
         }
       </div>
     </div>

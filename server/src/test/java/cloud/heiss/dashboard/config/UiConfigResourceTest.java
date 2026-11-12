@@ -65,7 +65,7 @@ class UiConfigResourceTest {
         try (var response = resource.getConfiguration()) {
             assertEquals(mapper.readTree("""
                     {"sitemapUrl":"https://openhab.home.arpa/basicui/app","evccUrl":"https://evcc.home.arpa",
-                     "cameras":{"garden":"Garden","entry":"Entrance"},
+                     "cameras":{"garden":"Garden","entry":"Entrance"},"snapshotCameraIds":[],
                      "keycloak":{"url":"https://login.home.arpa","realm":"dashboard","clientId":"dashboard"}}
                         """), mapper.valueToTree(response.getEntity()));
             assertEquals("no-store", response.getHeaderString("Cache-Control"));
@@ -79,7 +79,7 @@ class UiConfigResourceTest {
     void missingSettingsHaveFrontendCompatibleDefaults() throws Exception {
         try (var response = resource.getConfiguration()) {
             assertEquals(mapper.readTree("""
-                    {"sitemapUrl":"","evccUrl":"","cameras":{},
+                    {"sitemapUrl":"","evccUrl":"","cameras":{},"snapshotCameraIds":[],
                      "keycloak":{"url":"https://login.home.arpa","realm":"dashboard","clientId":"dashboard"}}
                     """), mapper.valueToTree(response.getEntity()));
         }
@@ -116,5 +116,15 @@ class UiConfigResourceTest {
     void cameraPropertiesRequireBothIdAndLabel() {
         assertThrows(io.smallrye.config.ConfigValidationException.class,
                 () -> settings(Map.of("dashboard.protect.cameras[0].id", "entry")));
+    }
+
+    @Test
+    void exposesSnapshotCameraType() throws Exception {
+        settings(Map.of("dashboard.protect.cameras[0].id", "tablet", "dashboard.protect.cameras[0].label", "Tablet",
+                "dashboard.protect.cameras[0].snapshot", "true"));
+        try (var response = resource.getConfiguration()) {
+            var json = mapper.valueToTree(response.getEntity());
+            assertEquals(mapper.readTree("[\"tablet\"]"), json.get("snapshotCameraIds"));
+        }
     }
 }

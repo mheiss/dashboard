@@ -205,7 +205,7 @@ Stop the foreground application with `Ctrl+C`. For continuous use, configure a s
 
 ### 9. Add Optional Integrations
 
-Once calendars and photos work, edit the optional sections in your private properties file for openHAB, EVCC, and cameras. These services are not included in the release. Set backend-reachable openHAB/go2rtc addresses and keep the openHAB token on the server. Camera streams in go2rtc must match the configured IDs, using `unifi_<cameraId>` and `unifi_<cameraId>_medium`.
+Once calendars and photos work, edit the optional sections in your private properties file for openHAB, EVCC, and cameras. These services are not included in the release. Set backend-reachable openHAB/go2rtc addresses and keep the openHAB token on the server. For WebRTC cameras, go2rtc streams must match the configured IDs, using `unifi_<cameraId>` and `unifi_<cameraId>_medium`. Snapshot cameras use the go2rtc frame API; see the [backend instructions](server/README.md).
 
 Embedded openHAB and EVCC pages must be reachable from viewing devices over HTTPS and allow iframe embedding. WebRTC media connectivity is required in addition to camera signaling. Restart the dashboard and reload the browser after configuration changes; navigation automatically includes configured integrations.
 

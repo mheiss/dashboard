@@ -4,7 +4,7 @@ info:
   title: Dashboard HTTP API
   version: 1.0.0
 paths:
-  /api/webrtc/frame.jpeg:
+  /api/webrtc/snapshot:
     get:
       operationId: getCameraFrame
       summary: Load a camera poster frame through go2rtc
@@ -558,6 +558,7 @@ components:
       - evccUrl
       - cameras
       - keycloak
+      - snapshotCameraIds
       properties:
         sitemapUrl:
           type: string
@@ -566,6 +567,10 @@ components:
         cameras:
           type: object
           additionalProperties:
+            type: string
+        snapshotCameraIds:
+          type: array
+          items:
             type: string
         keycloak:
           $ref: "#/components/schemas/KeycloakConfiguration"

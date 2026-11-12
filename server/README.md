@@ -66,6 +66,9 @@ Photo-cache budgets default to 10 GiB for originals and 1 GiB for thumbnails. Cl
 
 openHAB and go2rtc run separately. Configure their backend-reachable origins and the private openHAB token in backend settings. Camera IDs and labels determine display order and integration mappings; go2rtc streams use `unifi_<cameraId>` and `unifi_<cameraId>_medium`. Motion capture continues without an open browser. Camera signaling passes through Quarkus, but WebRTC media still requires direct connectivity to go2rtc's advertised candidates. Embedded openHAB and EVCC views must be reachable by the browser and allow iframe embedding.
 
+Set a camera's `snapshot=true` to take snapshots every second instead of displaying a live video stream. Ideal for wall-mounted tablets that cannot deliver a video stream. 
+ Configure its `unifi_<cameraId>` source in go2rtc; a medium stream is not needed. The dashboard requests and shares go2rtc frames at most once per second while viewed. For Fully Kiosk, configure the camshot URL and password only in go2rtc and enable Remote Administration, visual motion detection, and camshots.
+
 ## Build And Quality Checks
 
 ```powershell

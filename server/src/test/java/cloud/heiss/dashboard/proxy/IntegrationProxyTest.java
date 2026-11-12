@@ -52,7 +52,7 @@ class IntegrationProxyTest {
                 .post("/api/webrtc/streams?src=front").then().statusCode(200).body("uri", equalTo("/api/streams?src=front"))
                 .body("method", equalTo("POST")).body("body", equalTo("ON")).body("cookie", nullValue())
                 .body("authorization", nullValue()).body("origin", nullValue());
-        assertArrayEquals(new byte[] { 0, 1, 2, (byte) 255 }, given().when().get("/api/webrtc/frame.jpeg?src=front").then()
+        assertArrayEquals(new byte[] { 0, 1, 2, (byte) 255 }, given().when().get("/api/webrtc/snapshot?src=front").then()
                 .statusCode(200).contentType("image/jpeg").extract().asByteArray());
         assertEquals("a".repeat(131072) + "b".repeat(131072),
                 given().when().get("/api/webrtc/chunked").then().statusCode(200).extract().asString());
@@ -68,18 +68,27 @@ class IntegrationProxyTest {
 
     @Test
     void cameraApiValidatesParametersAndForwardsUpstreamErrorsWithoutCredentials() {
-        given().get("/api/webrtc/frame.jpeg").then().statusCode(400);
-        given().queryParam("src", " ").get("/api/webrtc/frame.jpeg").then().statusCode(400);
+        given().get("/api/webrtc/snapshot").then().statusCode(400);
+        given().queryParam("src", " ").get("/api/webrtc/snapshot").then().statusCode(400);
         given().header("Connection", "Upgrade").header("Upgrade", "websocket").queryParam("src", "front")
-                .get("/api/webrtc/frame.jpeg").then().statusCode(400);
-        given().header("Origin", "https://attacker.example").queryParam("src", "front").get("/api/webrtc/frame.jpeg").then()
+                .get("/api/webrtc/snapshot").then().statusCode(400);
+        given().header("Origin", "https://attacker.example").queryParam("src", "front").get("/api/webrtc/snapshot").then()
                 .statusCode(403);
         given().header("Origin", base.toString().replaceFirst("/$", "")).header("Cookie", "dashboard=private")
                 .header("Authorization", "browser-token").queryParam("src", "upstream-error").queryParam("extra", "a b&c")
-                .get("/api/webrtc/frame.jpeg").then().statusCode(418).contentType("application/json")
+                .get("/api/webrtc/snapshot").then().statusCode(418).contentType("application/json")
                 .header("Set-Cookie", nullValue()).header("X-Upstream-Private", nullValue())
                 .body("uri", equalTo("/api/frame.jpeg?src=upstream-error&extra=a%20b%26c")).body("cookie", nullValue())
                 .body("authorization", nullValue()).body("origin", nullValue());
+    }
+
+    @Test
+    void servesConfiguredSnapshotCamerasThroughTheExistingCameraApi() {
+        assertArrayEquals(new byte[] { (byte) 255, (byte) 216, (byte) 255, 1 },
+                given().queryParam("src", "unifi_tablet").when().get("/api/webrtc/snapshot").then().statusCode(200)
+                        .contentType("image/jpeg").header("Cache-Control", "no-store").extract().asByteArray());
+        given().header("Origin", "https://attacker.example").queryParam("src", "unifi_tablet").when().get("/api/webrtc/snapshot")
+                .then().statusCode(403);
     }
 
     @Test

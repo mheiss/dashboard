@@ -1,6 +1,7 @@
 package cloud.heiss.dashboard.config;
 
 import java.util.LinkedHashMap;
+import java.util.ArrayList;
 
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
@@ -34,13 +35,17 @@ public class UiConfigResource implements ConfigurationApi {
     @Override
     public Response getConfiguration() {
         var cameras = new LinkedHashMap<String, String>();
+        var snapshotCameraIds = new ArrayList<String>();
         for (var camera : config.protect().cameras()) {
             if (cameras.putIfAbsent(camera.id(), camera.label()) != null) {
                 throw new ServiceUnavailableException("Camera IDs must be unique");
             }
+            if (camera.snapshot()) {
+                snapshotCameraIds.add(camera.id());
+            }
         }
         var publicSettings = new UiConfiguration(config.openhab().sitemap().orElse(""), config.evcc().url().orElse(""), cameras,
-                keycloakConfiguration());
+                snapshotCameraIds, keycloakConfiguration());
         return Response.ok(publicSettings).header("Cache-Control", "no-store").build();
     }
 

@@ -212,8 +212,8 @@ class SessionApiTest {
                         equalTo("binary"))
                 .body("paths.'/api/media/images/{id}/original'.get.responses.'304'.headers.ETag", notNullValue())
                 .body("paths.'/api/media/protect/{id}'.get.responses.'200'.content.'image/jpeg'.schema.format", equalTo("binary"))
-                .body("paths.'/api/webrtc/frame.jpeg'.get.operationId", equalTo("getCameraFrame"))
-                .body("paths.'/api/webrtc/frame.jpeg'.get.parameters[0].required", equalTo(true))
+                .body("paths.'/api/webrtc/snapshot'.get.operationId", equalTo("getCameraFrame"))
+                .body("paths.'/api/webrtc/snapshot'.get.parameters[0].required", equalTo(true))
                 .body("components.securitySchemes.bearerAuth.scheme", equalTo("bearer"));
     }
 

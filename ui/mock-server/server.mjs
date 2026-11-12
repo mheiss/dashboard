@@ -224,7 +224,7 @@ async function handle(request, response) {
     if (snapshot && (await sendImage(response, snapshot.photoId))) return;
   }
 
-  if (url.pathname === '/api/webrtc/frame.jpeg' && request.method === 'GET') {
+  if (url.pathname === '/api/webrtc/snapshot' && request.method === 'GET') {
     const streamName = url.searchParams.get('src') ?? '';
     const cameraId = streamName.replace(/^unifi_/, '').replace(/_(?:high|medium)$/, '');
     const camera = cameraById.get(cameraId);

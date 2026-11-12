@@ -46,6 +46,12 @@ quarkus.oidc.token.audience=dashboard
 # dashboard.protect.cameras[2].id=patio
 # dashboard.protect.cameras[2].label=Terrasse
 
+# Cameras of type 'Snapshot' do not stream but take images once per second
+# Ideal for all wall-mounted tablets that cannot deliver a video stream
+# dashboard.protect.cameras[3].id=tablet
+# dashboard.protect.cameras[3].label=Tablet
+# dashboard.protect.cameras[3].snapshot=true
+
 # (Optional) Logging configuration
 # quarkus.log.file.enabled=true
 # quarkus.log.console.enabled=false
