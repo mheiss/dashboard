@@ -234,7 +234,7 @@ body {
     display: grid;
     height: 100%;
     min-height: 0;
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
     background: var(--surface);
   }
   .home-calendar,
@@ -408,7 +408,6 @@ body {
     display: grid;
     height: 168px;
     min-height: 0;
-    flex: 0 0 168px;
     grid-template-columns: 36px repeat(4, minmax(0, 1fr)) 36px;
     grid-template-rows: minmax(0, 1fr);
     gap: 8px;
@@ -806,6 +805,9 @@ body {
     position: relative;
     width: 100%;
   }
+  .gallery-scroll-header {
+    display: flow-root;
+  }
   .photo-grid {
     position: absolute;
     top: 0;
@@ -1052,7 +1054,7 @@ body {
   }
   @media (min-width: 640px) and (max-width: 1023px) {
     .home-layout {
-      grid-template-columns: minmax(0, 1fr) minmax(260px, 290px);
+      grid-template-columns: minmax(0, 1fr) minmax(208px, 232px);
     }
     .home-calendar {
       padding: 16px 16px 0;
@@ -1140,7 +1142,6 @@ body {
     }
     .moment-strip {
       height: 130px;
-      flex-basis: 130px;
       grid-template-columns: 28px repeat(4, minmax(0, 1fr)) 28px;
       grid-template-rows: minmax(0, 1fr);
       gap: 5px;

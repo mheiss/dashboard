@@ -42,6 +42,7 @@ export class GalleryComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly gallery = viewChild<ElementRef<HTMLElement>>('gallery');
+  readonly galleryHeader = viewChild<ElementRef<HTMLElement>>('galleryHeader');
   readonly columns = computed(() => (this.layout.desktop$() ? Math.max(4, Math.floor((this.viewportWidth() + 10) / 230)) : 3));
   readonly virtualItems = signal<VirtualItem[]>([]);
   readonly totalHeight = signal(0);
@@ -66,6 +67,7 @@ export class GalleryComponent {
   );
   readonly canBrowseNewer = computed(() => this.selectedMemoryIndex() > 0);
   private readonly viewportWidth = signal(0);
+  private readonly galleryHeaderHeight = signal(0);
   private readonly measuredRatios = new WeakMap<ViewerImage, number>();
   private readonly virtualizer = new Virtualizer<HTMLElement, HTMLElement>({
     count: 0,
@@ -102,12 +104,17 @@ export class GalleryComponent {
     afterNextRender(() => {
       const cleanup = this.virtualizer._didMount();
       const element = this.gallery()!.nativeElement;
+      const header = this.galleryHeader()!.nativeElement;
       const observer = new ResizeObserver(() => this.viewportWidth.set(element.clientWidth));
+      const headerObserver = new ResizeObserver(() => this.galleryHeaderHeight.set(header.offsetHeight));
       observer.observe(element);
+      headerObserver.observe(header);
       this.viewportWidth.set(element.clientWidth);
+      this.galleryHeaderHeight.set(header.offsetHeight);
       this.virtualizer._willUpdate();
       this.destroyRef.onDestroy(() => {
         observer.disconnect();
+        headerObserver.disconnect();
         cleanup();
       });
     });
@@ -120,9 +127,11 @@ export class GalleryComponent {
       const images = this.images();
       const columns = this.columns();
       const width = this.viewportWidth();
+      const headerHeight = this.galleryHeaderHeight();
       this.virtualizer.setOptions({
         ...this.virtualizer.options,
         count: Math.ceil(images.length / columns),
+        paddingStart: headerHeight,
         getItemKey: (index) => `${columns}:${images[index * columns]?.id ?? index}`,
       });
       if (columns !== previousColumns || width !== previousWidth || images !== previousImages) {

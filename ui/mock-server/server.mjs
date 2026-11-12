@@ -9,6 +9,22 @@ const imagesDirectory = join(directory, 'images');
 const fixture = JSON.parse(await readFile(join(directory, 'fixtures.json'), 'utf8'));
 const panelPage = await readFile(join(directory, 'panel.html'));
 const port = Number(process.env.MOCK_PORT ?? 8081);
+const originalPhotos = [...fixture.photos];
+if (!originalPhotos.length || !Number.isSafeInteger(fixture.samplePhotoCount) || fixture.samplePhotoCount < originalPhotos.length) {
+  throw new Error('The mock sample photo count must be at least the number of source photos.');
+}
+const oldestPhotoTime = Math.min(...originalPhotos.map((photo) => Date.parse(photo.takenAt)));
+if (!Number.isFinite(oldestPhotoTime)) throw new Error('Mock photo dates must be valid.');
+for (let index = originalPhotos.length; index < fixture.samplePhotoCount; index++) {
+  const source = originalPhotos[index % originalPhotos.length];
+  fixture.photos.push({
+    ...source,
+    id: `sample-${String(index + 1).padStart(2, '0')}`,
+    name: `${source.name} (${index + 1})`,
+    takenAt: new Date(oldestPhotoTime - (index - originalPhotos.length + 1) * 86_400_000).toISOString(),
+  });
+}
+fixture.photos.sort((left, right) => Date.parse(right.takenAt) - Date.parse(left.takenAt));
 const photoById = new Map(fixture.photos.map((photo) => [photo.id, photo]));
 const cameraById = new Map(fixture.cameras.map((camera) => [camera.id, camera]));
 const snapshotById = new Map(fixture.motionGroups.flatMap((group) => group.snapshots.map((snapshot) => [snapshot.id, snapshot])));
@@ -131,13 +147,19 @@ function graphQLResponse(query, variables = {}) {
     return { memoryImages: memoryImages(variables.month, variables.day, variables.after) };
   }
   if (query.includes('images(first:')) {
+    const first = variables.first;
+    const start = variables.after == null ? 0 : Number(variables.after);
+    if (!Number.isSafeInteger(first) || first < 1 || !Number.isSafeInteger(start) || start < 0 || start > fixture.photos.length) {
+      throw new Error('Invalid mock image page request.');
+    }
+    const photos = fixture.photos.slice(start, start + first);
     return {
       images: {
         revision: fixture.revision,
         totalCount: fixture.photos.length,
-        endCursor: null,
-        hasNextPage: false,
-        items: fixture.photos.map((photo) => imageRecord(photo.id)),
+        endCursor: photos.length ? String(start + photos.length) : null,
+        hasNextPage: start + photos.length < fixture.photos.length,
+        items: photos.map((photo) => imageRecord(photo.id)),
       },
     };
   }
@@ -298,5 +320,5 @@ server.on('upgrade', (request, socket) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`Fictional dashboard API listening on http://127.0.0.1:${port}`);
+  console.log(`Fictional dashboard API listening on http://127.0.0.1:${server.address().port}`);
 });

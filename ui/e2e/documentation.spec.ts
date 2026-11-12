@@ -6,7 +6,7 @@ const screenshotPath = (name: string) => resolve(process.cwd(), '..', 'docs', 'i
 async function openHome(page: Page) {
   await page.goto('/home');
   await expect(page.getByRole('heading', { name: 'Galerie' })).toBeVisible();
-  await expect(page.getByRole('status').filter({ hasText: '12 Fotos' })).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: '50 Fotos' })).toBeVisible();
   await expect
     .poll(
       () =>
@@ -41,7 +41,7 @@ test('captures the photo viewer', async ({ page }) => {
   await page.locator('.photo-viewport .photo-tile').first().click();
 
   const viewer = page.getByRole('dialog');
-  await expect(viewer).toContainText('Bild 1 / 12');
+  await expect(viewer).toContainText('Bild 1 / 50');
   await expect(viewer.locator('header h2')).not.toHaveClass(/italic/);
   await expect(viewer.locator('img[alt="Bergsee im Morgenlicht"]').first()).toBeVisible();
   await expect

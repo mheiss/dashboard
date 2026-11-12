@@ -7,7 +7,7 @@ test('keeps the filmstrip thumbnails clear of the scrollbar and scrollable', asy
 
   const viewer = page.getByRole('dialog');
   const filmstrip = viewer.locator('cdk-virtual-scroll-viewport');
-  await expect(viewer).toContainText('Bild 1 / 12');
+  await expect(viewer).toContainText('Bild 1 / 50');
   const spacing = await filmstrip.evaluate((viewport) => {
     const thumbnail = viewport.querySelector('button')!.getBoundingClientRect();
     const bounds = viewport.getBoundingClientRect();
@@ -23,8 +23,10 @@ test('keeps the filmstrip thumbnails clear of the scrollbar and scrollable', asy
 
   await filmstrip.evaluate((viewport) => (viewport.scrollLeft = viewport.scrollWidth));
   await expect.poll(() => filmstrip.evaluate((viewport) => viewport.scrollLeft)).toBeGreaterThan(0);
-  const lastThumbnail = filmstrip.getByRole('button', { name: 'Abendstimmung am Wasser' });
+  const lastThumbnail = filmstrip.getByRole('button').last();
   await expect(lastThumbnail).toBeVisible();
+  const imageName = await lastThumbnail.getAttribute('title');
+  expect(imageName).toBeTruthy();
   await lastThumbnail.click();
-  await expect(viewer.locator('header h2')).toContainText('Abendstimmung am Wasser');
+  await expect(viewer.locator('header h2')).toHaveText(imageName!);
 });

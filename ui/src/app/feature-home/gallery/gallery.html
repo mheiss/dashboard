@@ -17,75 +17,83 @@
       </div>
     </div>
   </header>
-  @if (memoryDate()) {
-    <div class="moment-strip">
-      @if (service.memoryLoading() && !memoryImages().length) {
-        @for (placeholder of [1, 2, 3, 4]; track placeholder) {
-          <div class="moment-placeholder" aria-hidden="true"></div>
-        }
-      } @else {
-        @for (image of memoryImages(); track image.id; let index = $index) {
-          <div class="moment-card">
-            <button type="button" class="moment-tile" (click)="openMomentView(image, index)" [title]="image.name" aria-haspopup="dialog">
-              <img [alt]="image.name" [blobSrc]="image.thumbnail$ | async" />
-              <div class="moment-caption">
-                <span class="moment-day">{{ image.takenAt | date: 'd' }}</span>
-                <span class="moment-month">{{ image.takenAt | date: 'MMMM yyyy' }}</span>
-              </div>
-            </button>
-            @if (service.selectedMemory()?.days?.[index]?.count; as count) {
-              <span class="moment-count" [attr.aria-label]="count + ' Fotos an diesem Tag'">
-                {{ count }}
-              </span>
-            }
-          </div>
-        }
-      }
-      <button
-        type="button"
-        class="moment-step moment-step-older"
-        (click)="browseOlderMemory()"
-        [disabled]="!canBrowseOlder()"
-        title="Älterer Erinnerungstag"
-        aria-label="Älterer Erinnerungstag"
-      >
-        <svg lucideChevronRight aria-hidden="true"></svg>
-      </button>
-      <button
-        type="button"
-        class="moment-step moment-step-newer"
-        (click)="browseNewerMemory()"
-        [disabled]="!canBrowseNewer()"
-        title="Neuerer Erinnerungstag"
-        aria-label="Neuerer Erinnerungstag"
-      >
-        <svg lucideChevronLeft aria-hidden="true"></svg>
-      </button>
-      @if (service.memoryError()) {
-        <p class="memory-error" role="status">{{ service.memoryError() }}</p>
-      }
-    </div>
-  }
   <div class="gallery-body">
-    @if (service.error()) {
-      <p class="agenda-empty" role="status">{{ service.error() }}</p>
-    }
-    @if (!images().length) {
-      @if (service.loading()) {
-        <div class="gallery-placeholder" aria-hidden="true">
-          @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
-            <div class="photo-placeholder"></div>
-          }
-        </div>
-      } @else {
-        <div class="gallery-empty">
-          <svg lucideImages aria-hidden="true"></svg>
-          <p>Noch keine Fotos.</p>
-        </div>
-      }
-    }
     <div #gallery class="photo-viewport">
       <div class="photo-canvas" [style.height.px]="totalHeight()">
+        <div #galleryHeader class="gallery-scroll-header">
+          @if (memoryDate()) {
+            <div class="moment-strip">
+              @if (service.memoryLoading() && !memoryImages().length) {
+                @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+                  <div class="moment-placeholder" aria-hidden="true"></div>
+                }
+              } @else {
+                @for (image of memoryImages(); track image.id; let index = $index) {
+                  <div class="moment-card">
+                    <button
+                      type="button"
+                      class="moment-tile"
+                      (click)="openMomentView(image, index)"
+                      [title]="image.name"
+                      aria-haspopup="dialog"
+                    >
+                      <img [alt]="image.name" [blobSrc]="image.thumbnail$ | async" />
+                      <div class="moment-caption">
+                        <span class="moment-day">{{ image.takenAt | date: 'd' }}</span>
+                        <span class="moment-month">{{ image.takenAt | date: 'MMMM yyyy' }}</span>
+                      </div>
+                    </button>
+                    @if (service.selectedMemory()?.days?.[index]?.count; as count) {
+                      <span class="moment-count" [attr.aria-label]="count + ' Fotos an diesem Tag'">
+                        {{ count }}
+                      </span>
+                    }
+                  </div>
+                }
+              }
+              <button
+                type="button"
+                class="moment-step moment-step-older"
+                (click)="browseOlderMemory()"
+                [disabled]="!canBrowseOlder()"
+                title="Älterer Erinnerungstag"
+                aria-label="Älterer Erinnerungstag"
+              >
+                <svg lucideChevronRight aria-hidden="true"></svg>
+              </button>
+              <button
+                type="button"
+                class="moment-step moment-step-newer"
+                (click)="browseNewerMemory()"
+                [disabled]="!canBrowseNewer()"
+                title="Neuerer Erinnerungstag"
+                aria-label="Neuerer Erinnerungstag"
+              >
+                <svg lucideChevronLeft aria-hidden="true"></svg>
+              </button>
+              @if (service.memoryError()) {
+                <p class="memory-error" role="status">{{ service.memoryError() }}</p>
+              }
+            </div>
+          }
+          @if (service.error()) {
+            <p class="agenda-empty" role="status">{{ service.error() }}</p>
+          }
+          @if (!images().length) {
+            @if (service.loading()) {
+              <div class="gallery-placeholder" aria-hidden="true">
+                @for (placeholder of [1, 2, 3, 4, 5, 6]; track placeholder) {
+                  <div class="photo-placeholder"></div>
+                }
+              </div>
+            } @else {
+              <div class="gallery-empty">
+                <svg lucideImages aria-hidden="true"></svg>
+                <p>Noch keine Fotos.</p>
+              </div>
+            }
+          }
+        </div>
         @for (row of virtualItems(); track row.key) {
           <div
             class="photo-grid"

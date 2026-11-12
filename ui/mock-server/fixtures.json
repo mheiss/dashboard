@@ -5,6 +5,7 @@
     "width": 1280,
     "height": 840
   },
+  "samplePhotoCount": 50,
   "imageLicense": "Unsplash License (https://unsplash.com/license)",
   "security": {
     "armed": true,
