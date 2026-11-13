@@ -2,9 +2,13 @@ plugins {
     id 'java'
     id 'eclipse'
     id 'io.quarkus'
-    id 'com.diffplug.spotless' version '8.10.3'
-    id 'org.openapi.generator' version '7.17.0'
+    id 'com.diffplug.spotless'
+    id 'org.openapi.generator'
 }
+
+def versions = new Properties()
+file('versions.properties').withInputStream { versions.load(it) }
+versions.each { name, value -> project.ext.set(name, value) }
 
 repositories {
     mavenCentral()
@@ -15,7 +19,7 @@ dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-rest'
     implementation 'io.quarkus:quarkus-rest-jackson'
-    implementation 'io.quarkiverse.quinoa:quarkus-quinoa:2.9.2'
+    implementation "io.quarkiverse.quinoa:quarkus-quinoa:${quinoaVersion}"
     implementation 'io.quarkus:quarkus-smallrye-graphql'
     implementation 'io.quarkus:quarkus-smallrye-openapi'
     implementation 'io.quarkus:quarkus-arc'
@@ -27,7 +31,7 @@ dependencies {
     implementation 'io.quarkus:quarkus-oidc'
     implementation 'io.quarkus:quarkus-smallrye-health'
     implementation 'io.quarkus:quarkus-reactive-routes'
-    implementation 'com.microsoft.azure:msal4j:1.19.1'
+    implementation "com.microsoft.azure:msal4j:${msal4jVersion}"
     testImplementation 'io.quarkus:quarkus-junit'
     testImplementation 'io.rest-assured:rest-assured'
     testImplementation 'io.quarkus:quarkus-junit-mockito'
@@ -35,18 +39,18 @@ dependencies {
 }
 
 group = 'cloud.heiss'
-version = providers.gradleProperty('releaseVersion').getOrElse('1.0.0-SNAPSHOT')
+version = providers.gradleProperty('releaseVersion').getOrElse(releaseVersion)
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
+    sourceCompatibility = JavaVersion.toVersion(javaVersion)
+    targetCompatibility = JavaVersion.toVersion(javaVersion)
 }
 
 spotless {
     java {
         lineEndings = 'UNIX'
         target 'src/*/java/**/*.java'
-        eclipse('4.37').configFile('etc/java_code_format.xml')
+        eclipse(eclipseFormatterVersion).configFile('etc/java_code_format.xml')
     }
 }
 
