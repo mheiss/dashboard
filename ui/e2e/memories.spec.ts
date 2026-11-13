@@ -52,7 +52,8 @@ test('opens and pages through every photo belonging to each memory tile', async 
 
   await page.goto('/home');
   const cards = page.locator('.moment-card');
-  await expect(cards).toHaveCount(4);
+  await expect(cards).toHaveCount(5);
+  await expect(cards.nth(2)).toHaveClass(/moment-card-current/);
   await expect(cards.first().locator('.moment-count')).toHaveAttribute('aria-label', '30 Fotos an diesem Tag');
 
   await cards.first().locator('button').click();

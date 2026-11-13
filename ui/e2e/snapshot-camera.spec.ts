@@ -82,9 +82,7 @@ test('exposes device settings without sign-in and protects account management', 
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('button', { name: 'Einstellungen' }).click();
-  await page.getByRole('button', { name: 'Konten verwalten' }).click();
-  await expect(page.getByRole('dialog').getByText(/Administratorberechtigung/)).toBeVisible();
-  await expect(page).not.toHaveURL(/\/setup/);
+  await expect(page.getByRole('button', { name: 'Mit Keycloak anmelden' })).toBeVisible();
 });
 
 test('refreshes a snapshot camera, reports errors, and stops when leaving the camera view', async ({ page }) => {

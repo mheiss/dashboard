@@ -1,52 +1,18 @@
 import { DialogRef } from '@angular/cdk/dialog';
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { LucideLogIn, LucideLogOut, LucideUser } from '@lucide/angular';
 import { AppConfigService } from '../feature-config/config.service';
 import { CameraPreferencesService } from '../feature-protect/camera-preferences.service';
 import { Popup } from '../popup/popup';
 import { ThemeService } from '../utils/theme.service';
+import { SessionService } from '../backend/session.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [Popup],
+  imports: [Popup, LucideLogIn, LucideLogOut, LucideUser],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <app-popup title="Einstellungen">
-      <div class="grid gap-6 p-6 max-sm:p-4">
-        <section>
-          <h3 class="mb-2 font-semibold">Design</h3>
-          <button type="button" class="rounded-md border border-(--line) px-3 py-2" (click)="theme.toggle()">
-            {{ theme.isDark() ? 'Zum hellen Design wechseln' : 'Zum dunklen Design wechseln' }}
-          </button>
-        </section>
-        @if (cameraIds.length) {
-          <fieldset>
-            <legend class="mb-2 font-semibold">Kameras auf diesem Gerät anzeigen</legend>
-            <div class="grid gap-2">
-              @for (camera of cameraIds; track camera) {
-                <label class="flex items-center gap-2">
-                  <input
-                    #cameraVisibility
-                    type="checkbox"
-                    [checked]="!preferences.hiddenCameras().includes(camera)"
-                    (change)="preferences.setVisible(camera, cameraVisibility.checked)"
-                  />
-                  {{ config.config().cameras[camera] }}
-                </label>
-              }
-            </div>
-          </fieldset>
-        }
-        @if (preferences.storageError(); as error) {
-          <p role="alert" class="text-sm text-[#a52b3d]">{{ error }}</p>
-        }
-        <section>
-          <h3 class="mb-2 font-semibold">Konten</h3>
-          <button type="button" class="rounded-md border border-(--line) px-3 py-2" (click)="openAccounts()">Konten verwalten</button>
-        </section>
-      </div>
-    </app-popup>
-  `,
+  templateUrl: './settings.html',
 })
 export class Settings {
   readonly config = inject(AppConfigService);
@@ -56,8 +22,48 @@ export class Settings {
   private readonly dialog = inject(DialogRef);
   private readonly router = inject(Router);
 
+  readonly session = inject(SessionService);
+  readonly busy = signal(false);
+  readonly error = signal<string | null>(this.session.error());
+
+  async login() {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      await this.session.login();
+    } catch {
+      this.error.set('Anmeldung fehlgeschlagen.');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  async logout() {
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      await this.session.logout();
+    } catch {
+      this.error.set('Abmeldung fehlgeschlagen.');
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   openAccounts(): void {
     this.dialog.close();
     void this.router.navigate(['/setup']);
+  }
+
+  isAdmin(): boolean {
+    return this.session.session()?.admin ?? false;
+  }
+
+  isUser(): boolean {
+    return !this.isAdmin();
+  }
+
+  isAuthenticated(): boolean {
+    return this.session.session() != null;
   }
 }

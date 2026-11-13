@@ -1,0 +1,64 @@
+<app-popup title="Einstellungen">
+  <div class="grid gap-6 p-6 max-sm:p-4">
+    <section>
+      <h3 class="mb-2 font-semibold">Design</h3>
+      <button type="button" class="rounded-md border border-(--line) px-3 py-2" (click)="theme.toggle()">
+        {{ theme.isDark() ? 'Zum hellen Design wechseln' : 'Zum dunklen Design wechseln' }}
+      </button>
+    </section>
+    @if (cameraIds.length) {
+    <fieldset>
+      <legend class="mb-2 font-semibold">Kameras auf diesem Gerät anzeigen</legend>
+      <div class="grid gap-2">
+        @for (camera of cameraIds; track camera) {
+        <label class="flex items-center gap-2">
+          <input #cameraVisibility type="checkbox" [checked]="!preferences.hiddenCameras().includes(camera)"
+            (change)="preferences.setVisible(camera, cameraVisibility.checked)" />
+          {{ config.config().cameras[camera] }}
+        </label>
+        }
+      </div>
+    </fieldset>
+    }
+    @if (preferences.storageError(); as error) {
+    <p role="alert" class="text-sm text-[#a52b3d]">{{ error }}</p>
+    }
+
+    <section>
+      <h3 class="mb-2 font-semibold">Konten</h3>
+      @if (!isAuthenticated()) {
+      <p class="mb-2">
+        Dieser Bereich erfordert eine Anmeldung mit Administratorberechtigung. Zur Anmeldung wirst du zu Keycloak
+        weitergeleitet und kehrst danach zum Dashboard zurück.
+      </p>
+      }
+      @if (error(); as error) {
+      <p role="alert" class="mb-2 text-sm text-[#a52b3d]">{{ error }}</p>
+      }
+
+      @if (isAuthenticated() && isAdmin()) {
+      <button type="button" (click)="openAccounts()"
+        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white">
+        <svg lucideUser aria-hidden="true" class="size-5 shrink-0"></svg>
+        Konten verwalten
+      </button>
+      }
+
+      @if(isAuthenticated()) {
+      <button type="button" (click)="logout()" [disabled]="busy()"
+        class="ml-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--line) px-3.5 py-2.5 font-bold text-(--ink) disabled:cursor-default disabled:opacity-50">
+        <svg lucideLogOut aria-hidden="true" class="size-5 shrink-0"></svg>
+        Abmelden
+      </button>
+      }
+
+      @if(!isAuthenticated()) {
+      <button type="button" (click)="login()" [disabled]="busy()"
+        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-md border border-(--accent) bg-(--accent) px-3.5 py-2.5 font-bold text-white disabled:cursor-default disabled:opacity-50">
+        <svg lucideLogIn aria-hidden="true" class="size-5 shrink-0"></svg>
+        Mit Keycloak anmelden
+      </button>
+      }
+    </section>
+  </div>
+</app-popup>

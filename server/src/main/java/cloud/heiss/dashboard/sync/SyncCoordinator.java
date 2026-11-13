@@ -62,7 +62,7 @@ public class SyncCoordinator {
     }
 
     public void requestSync() {
-        int queued = store.update("update MicrosoftAccount set requested=true where status<>'RECONNECT_REQUIRED'");
+        int queued = store.update("update MicrosoftAccount set requested=true,retryAfter=null where status<>'RECONNECT_REQUIRED'");
         LOG.infof("Manual synchronization requested for %d account(s)", queued);
     }
 
@@ -155,7 +155,7 @@ public class SyncCoordinator {
                     : Instant.now().plusSeconds(Math.min(3600, 30L << Math.min(attempt, 7)));
             store.update("update MicrosoftAccount set status=case when status='RECONNECT_REQUIRED' then status else 'ERROR' end,"
                     + "error=case when status='RECONNECT_REQUIRED' then error else ?1 end,leaseUntil=null,retryAfter=?2 where id=?3",
-                    "Synchronization failed; retry scheduled", retry, account);
+                    "Synchronization failed; retry scheduled (" + exception.getClass().getSimpleName() + ")", retry, account);
             LOG.errorf(exception, "Account synchronization failed accountName=\"%s\" attempt=%d retryAt=%s durationMs=%d",
                     accountName, attempt, retry, elapsedMillis(startedAt));
         } finally {

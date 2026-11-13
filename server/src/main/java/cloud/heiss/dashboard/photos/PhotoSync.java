@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -219,22 +220,17 @@ public class PhotoSync {
         }
 
         var missingKeys = desiredPhotos.keySet().stream().filter(key -> !existingPhotos.containsKey(key)).toList();
-        for (int offset = 0; offset < missingKeys.size(); offset += 250) {
-            var batch = missingKeys.subList(offset, Math.min(offset + 250, missingKeys.size()));
-            var predicate = new StringBuilder();
-            for (int index = 0; index < batch.size(); index++) {
-                if (index > 0) {
-                    predicate.append(" or ");
-                }
-                predicate.append("(p.driveId=?").append(index * 2 + 1).append(" and p.upstreamId=?").append(index * 2 + 2)
-                        .append(')');
+        // Large OR chains time out on H2; an indexed drive equality plus IN list stays fast.
+        var missingByDrive = new HashMap<String, List<String>>();
+        missingKeys.forEach(key -> missingByDrive.computeIfAbsent(key.driveId(), _ -> new ArrayList<>()).add(key.upstreamId()));
+        for (var drive : missingByDrive.entrySet()) {
+            var ids = drive.getValue();
+            for (int offset = 0; offset < ids.size(); offset += 500) {
+                var batch = ids.subList(offset, Math.min(offset + 500, ids.size()));
+                manager.createQuery("from Photo p where p.driveId=?1 and p.upstreamId in ?2", Photo.class)
+                        .setParameter(1, drive.getKey()).setParameter(2, batch).getResultList()
+                        .forEach(photo -> existingPhotos.put(new PhotoKey(photo.driveId, photo.upstreamId), photo));
             }
-            var query = manager.createQuery("from Photo p where " + predicate, Photo.class);
-            for (int index = 0; index < batch.size(); index++) {
-                query.setParameter(index * 2 + 1, batch.get(index).driveId());
-                query.setParameter(index * 2 + 2, batch.get(index).upstreamId());
-            }
-            query.getResultList().forEach(photo -> existingPhotos.put(new PhotoKey(photo.driveId, photo.upstreamId), photo));
         }
 
         var next = new HashSet<String>();

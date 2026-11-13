@@ -24,12 +24,18 @@
           @if (memoryDate()) {
             <div class="moment-strip">
               @if (service.memoryLoading() && !memoryImages().length) {
-                @for (placeholder of [1, 2, 3, 4]; track placeholder) {
+                @for (placeholder of [1, 2, 3, 4, 5]; track placeholder) {
                   <div class="moment-placeholder" aria-hidden="true"></div>
                 }
               } @else {
                 @for (image of memoryImages(); track image.id; let index = $index) {
-                  <div class="moment-card">
+                  <div
+                    class="moment-card"
+                    [class.moment-card-current]="index === memoryCenterIndex()"
+                    [class.moment-card-near]="isNearMoment(index)"
+                    [class.moment-card-right]="index > memoryCenterIndex()"
+                    [style.grid-column]="index - memoryCenterIndex() + 3"
+                  >
                     <button
                       type="button"
                       class="moment-tile"

@@ -1,10 +1,10 @@
 import { Routes } from '@angular/router';
-import { adminGuard } from './feature-setup/login';
 import { Setup } from './feature-setup/setup';
 import { Evcc } from './feature-evcc/evcc';
 import { Home } from './feature-home/home';
 import { Openhab } from './feature-openhab/openhab';
 import { Protect } from './feature-protect/protect';
+import { adminGuard } from './feature-setup/login.service';
 
 export const routes: Routes = [
   { path: 'login', redirectTo: '/setup', pathMatch: 'full' },

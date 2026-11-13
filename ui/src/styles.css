@@ -398,11 +398,11 @@ body {
   .moment-strip {
     position: relative;
     display: grid;
-    height: 168px;
+    height: clamp(180px, 28vh, 280px);
     min-height: 0;
-    grid-template-columns: 36px repeat(4, minmax(0, 1fr)) 36px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: minmax(0, 1fr);
-    gap: 8px;
+    gap: 0;
     margin-bottom: 24px;
   }
   .memory-all-days {
@@ -436,15 +436,64 @@ body {
     height: 100%;
     min-width: 0;
     overflow: hidden;
-    border-radius: 7px;
+    border: 1px solid #ffffff20;
+    border-radius: 20px;
     isolation: isolate;
     background: var(--line);
+    box-shadow: 0 12px 30px #0005;
     text-align: left;
   }
   .moment-card {
     position: relative;
     grid-row: 1;
+    z-index: 1;
+    display: flex;
+    width: 155%;
     min-width: 0;
+    height: 76%;
+    align-self: center;
+    justify-self: center;
+    transform: rotate(-4deg);
+  }
+  .moment-card-near {
+    z-index: 2;
+    width: 170%;
+    height: 88%;
+    transform: rotate(-2deg);
+  }
+  .moment-card-current {
+    z-index: 4;
+    width: 185%;
+    height: 100%;
+    transform: translateY(-0px);
+  }
+  .moment-card:nth-of-type(4) {
+    transform: rotate(4deg);
+  }
+  .moment-card-near:nth-of-type(4) {
+    transform: rotate(2deg);
+  }
+  .moment-card:first-of-type {
+    transform: rotate(4deg);
+  }
+  .moment-card:nth-of-type(5) {
+    transform: rotate(-4deg);
+  }
+  .moment-card:first-of-type,
+  .moment-card:nth-of-type(5) {
+    translate: 0 -8px;
+  }
+  .moment-card:nth-of-type(2),
+  .moment-card:nth-of-type(3) {
+    translate: 0 -6px;
+  }
+  .moment-card-current .moment-tile {
+    border-color: #ffffff55;
+    box-shadow: 0 18px 42px #0008;
+  }
+  .moment-card-right .moment-caption {
+    align-items: flex-end;
+    text-align: right;
   }
   .moment-count {
     position: absolute;
@@ -466,20 +515,20 @@ body {
     font-variant-numeric: tabular-nums;
   }
   .moment-step {
-    position: relative;
+    position: absolute;
     z-index: 2;
     display: grid;
     width: 36px;
     height: 36px;
     flex: 0 0 36px;
-    grid-row: 1;
-    align-self: center;
+    top: 50%;
     place-items: center;
     border: 1px solid var(--surface);
     border-radius: 50%;
     color: var(--ink);
     background: var(--surface);
     box-shadow: 0 2px 8px #0006;
+    transform: translateY(-50%);
   }
   .moment-step svg {
     width: 19px;
@@ -491,17 +540,19 @@ body {
     opacity: 0.4;
   }
   .moment-step-older {
-    grid-column: 6;
-    justify-self: center;
+    right: 8px;
   }
   .moment-step-newer {
-    grid-column: 1;
-    justify-self: center;
+    left: 8px;
   }
   .moment-placeholder {
     grid-row: 1;
+    width: 155%;
+    height: 76%;
+    align-self: center;
+    justify-self: center;
     min-width: 0;
-    border-radius: 7px;
+    border-radius: 20px;
     background: linear-gradient(110deg, var(--line) 30%, var(--surface) 45%, var(--line) 60%);
     background-size: 250% 100%;
     animation: photo-loading 1.5s ease-in-out infinite;
@@ -1064,29 +1115,13 @@ body {
       grid-template-columns: repeat(var(--gallery-columns, 3), minmax(0, 1fr));
     }
     .moment-strip {
-      grid-template-columns: 32px repeat(4, minmax(0, 1fr)) 32px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       grid-template-rows: minmax(0, 1fr);
-      gap: 6px;
-    }
-    .moment-tile {
-      grid-row: 1;
-    }
-    .moment-card {
-      grid-row: 1;
     }
     .moment-step {
       width: 32px;
       height: 32px;
       flex-basis: 32px;
-      grid-row: 1;
-    }
-    .moment-step-older {
-      grid-column: 6;
-      justify-self: center;
-    }
-    .moment-step-newer {
-      grid-column: 1;
-      justify-self: center;
     }
   }
   @media (max-width: 639px) {
@@ -1134,28 +1169,34 @@ body {
     }
     .moment-strip {
       height: 130px;
-      grid-template-columns: 28px repeat(4, minmax(0, 1fr)) 28px;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       grid-template-rows: minmax(0, 1fr);
-      gap: 5px;
       overflow: visible;
     }
     .moment-tile {
       grid-row: 1;
       height: 100%;
+      border-radius: 13px;
+    }
+    .moment-card {
+      width: 155%;
+      height: 76%;
+    }
+    .moment-card-near {
+      width: 170%;
+      height: 88%;
+    }
+    .moment-card-current {
+      width: 185%;
+      height: 100%;
+    }
+    .moment-placeholder {
+      border-radius: 13px;
     }
     .moment-step {
       width: 28px;
       height: 28px;
       flex-basis: 28px;
-      grid-row: 1;
-    }
-    .moment-step-older {
-      grid-column: 6;
-      justify-self: center;
-    }
-    .moment-step-newer {
-      grid-column: 1;
-      justify-self: center;
     }
     .memory-browser-head {
       min-height: 56px;

@@ -110,14 +110,13 @@ export class ImageService {
     return response.images;
   }
 
-  async loadMemoryDay(date: BackendMemoryDate, previousDates: BackendMemoryDate[]) {
+  async loadMemoryDay(date: BackendMemoryDate, dates: BackendMemoryDate[]) {
     const version = ++this.memoryVersion;
     const existingMemoryImages = this.selectedMemory()?.days.flatMap((day) => day.images) ?? [];
     this.selectedMemory.set(null);
     this.memoryLoading.set(true);
     this.memoryError.set(null);
     try {
-      const dates = [date, ...previousDates];
       const variables: Record<string, number> = {};
       const selections = dates.map((memoryDate, index) => {
         variables[`month${index}`] = memoryDate.month;

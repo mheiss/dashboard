@@ -51,7 +51,15 @@ export class GalleryComponent {
   readonly memoryImages = computed(() => {
     const memory = this.service.selectedMemory();
     if (!memory) return [];
-    return memory.days.map((day, index) => day.images[index === 0 ? this.memoryCycleOffset() % day.images.length : 0]);
+    return memory.days.map((day, index) =>
+      day.images[index === this.memoryCenterIndex() ? this.memoryCycleOffset() % day.images.length : 0],
+    );
+  });
+  readonly memoryCenterIndex = computed(() => {
+    const selected = this.memoryDate();
+    return selected
+      ? (this.service.selectedMemory()?.days.findIndex((day) => day.month === selected.month && day.day === selected.day) ?? -1)
+      : -1;
   });
   readonly orderedMemoryDates = computed(() => {
     const now = new Date();
@@ -165,6 +173,11 @@ export class GalleryComponent {
     return this.images().slice(index * this.columns(), (index + 1) * this.columns());
   }
 
+  isNearMoment(index: number): boolean {
+    const center = this.memoryCenterIndex();
+    return index === center - 1 || index === center + 1;
+  }
+
   aspectRatio(image: ViewerImage): number {
     if (image.width && image.height && image.width > 0 && image.height > 0) return image.width / image.height;
     return this.measuredRatios.get(image) ?? 1.5;
@@ -210,7 +223,7 @@ export class GalleryComponent {
 
   private cycleMemoryImages(): void {
     const memory = this.service.selectedMemory();
-    const images = memory?.days[0]?.images;
+    const images = memory?.days[this.memoryCenterIndex()]?.images;
     if (this.service.memoryLoading() || !images || images.length < 2) return;
     this.memoryCycleOffset.update((offset) => (offset + 1) % images.length);
   }
@@ -218,7 +231,7 @@ export class GalleryComponent {
   selectMemoryDate(date: BackendMemoryDate): void {
     this.memoryCycleOffset.set(0);
     this.memoryDate.set(date);
-    void this.service.loadMemoryDay(date, this.previousMemoryDates(date));
+    void this.service.loadMemoryDay(date, this.adjacentMemoryDates(date));
   }
 
   openMemoryBrowser(mode: MemoryBrowserData['mode']): void {
@@ -283,16 +296,16 @@ export class GalleryComponent {
     return Date.UTC(2000, month - 1, day) / 86_400_000;
   }
 
-  private previousMemoryDates(date: BackendMemoryDate): BackendMemoryDate[] {
+  private adjacentMemoryDates(date: BackendMemoryDate): BackendMemoryDate[] {
     const dates = this.orderedMemoryDates();
     const selectedIndex = dates.findIndex((item) => item.month === date.month && item.day === date.day);
     if (selectedIndex < 0) return [];
 
-    const previousDates: BackendMemoryDate[] = [];
-    for (let offset = 1; offset < dates.length && previousDates.length < 3; offset++) {
-      previousDates.push(dates[(selectedIndex + offset) % dates.length]);
-    }
-    return previousDates;
+    const leftCount = Math.min(2, Math.floor((dates.length - 1) / 2));
+    const rightCount = Math.min(2, dates.length - 1 - leftCount);
+    const newerDates = Array.from({ length: leftCount }, (_, index) => dates[(selectedIndex - leftCount + index + dates.length) % dates.length]);
+    const olderDates = Array.from({ length: rightCount }, (_, index) => dates[(selectedIndex + index + 1) % dates.length]);
+    return [...newerDates, date, ...olderDates];
   }
 
   private daysAgo(date: BackendMemoryDate, todayOrdinal: number): number {
