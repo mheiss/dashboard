@@ -36,7 +36,6 @@ import jakarta.ws.rs.core.UriBuilder;
 /**
  * Admin endpoints for connecting Microsoft accounts and discovering, selecting, or removing their sources.
  */
-@Path("/")
 @RolesAllowed("admin")
 public class AccountsResource implements AccountsApi {
 

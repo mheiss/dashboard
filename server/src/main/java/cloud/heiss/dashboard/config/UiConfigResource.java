@@ -11,7 +11,6 @@ import cloud.heiss.dashboard.api.model.UiConfiguration;
 import jakarta.annotation.security.PermitAll;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.ServiceUnavailableException;
 import jakarta.ws.rs.core.Response;
 
@@ -19,7 +18,6 @@ import jakarta.ws.rs.core.Response;
  * Projects public UI settings from backend runtime properties before sign-in.
  */
 @ApplicationScoped
-@Path("/")
 @PermitAll
 public class UiConfigResource implements ConfigurationApi {
 

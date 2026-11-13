@@ -17,11 +17,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.Response;
 
 @ApplicationScoped
-@Path("/")
 public class Go2rtcProxy extends HttpProxy implements CameraApi {
 
     @Inject

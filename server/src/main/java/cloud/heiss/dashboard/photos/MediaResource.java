@@ -7,7 +7,6 @@ import cloud.heiss.dashboard.persistence.DashboardStore;
 import cloud.heiss.dashboard.protect.MotionSnapshots;
 import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.Path;
 import jakarta.ws.rs.core.CacheControl;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.EntityTag;
@@ -18,7 +17,6 @@ import jakarta.ws.rs.core.Response;
  * Serves public photo thumbnails and originals with private, version-aware HTTP
  * caching.
  */
-@Path("/")
 @PermitAll
 public class MediaResource implements MediaApi {
 
