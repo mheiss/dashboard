@@ -82,6 +82,7 @@ tasks.register('genApi', org.openapitools.generator.gradle.plugin.tasks.Generate
         useBeanValidation: 'false',
         useTags: 'true',
         returnResponse: 'true',
+        openApiNullable: 'false',
         dateLibrary: 'java8',
         hideGenerationTimestamp: 'true'
     ]
