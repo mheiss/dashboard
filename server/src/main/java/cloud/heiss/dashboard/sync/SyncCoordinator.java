@@ -62,7 +62,8 @@ public class SyncCoordinator {
     }
 
     public void requestSync() {
-        int queued = store.update("update MicrosoftAccount set requested=true,retryAfter=null where status<>'RECONNECT_REQUIRED'");
+        int queued = store
+                .update("update MicrosoftAccount set requested=true,retryAfter=null where status<>'RECONNECT_REQUIRED'");
         LOG.infof("Manual synchronization requested for %d account(s)", queued);
     }
 
