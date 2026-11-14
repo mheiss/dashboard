@@ -1,5 +1,5 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { ChangeDetectionStrategy, Component, ElementRef, inject, OnDestroy, OnInit, Signal, viewChild } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, inject, OnDestroy, Signal, viewChild } from '@angular/core';
 import { LucideX } from '@lucide/angular';
 import { PanzoomObject } from '@panzoom/panzoom';
 import { cameraZoom } from '../camera-zoom';
@@ -24,7 +24,7 @@ type ViewerData =
   host: { class: 'block h-full min-h-0 w-full' },
   imports: [LucideX],
 })
-export class VideoViewer implements OnInit, OnDestroy {
+export class VideoViewer implements AfterViewInit, OnDestroy {
   readonly dialogRef = inject(DialogRef);
   readonly data: ViewerData = inject<{ data: ViewerData }>(DIALOG_DATA).data;
   private readonly zoomElement = viewChild.required<ElementRef<HTMLElement>>('zoomElement');
@@ -35,7 +35,7 @@ export class VideoViewer implements OnInit, OnDestroy {
     this.panzoom?.zoomWithWheel(event);
   };
 
-  ngOnInit(): void {
+  ngAfterViewInit(): void {
     const element = this.zoomElement().nativeElement;
     this.panzoom = cameraZoom(element, { pan: true, touchAction: 'none' });
     element.addEventListener('wheel', this.onWheel, { passive: false });

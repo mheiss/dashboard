@@ -35,7 +35,14 @@
               @if (isSnapshotCamera(camera.camera)) {
                 <app-snapshot class="block w-full" [camera]="camera.camera" [play]="camera.play" [zoom]="false" />
               } @else {
-                <app-video class="block w-full" [camera]="camera.camera" [play]="camera.play" [quality]="'medium'" [zoom]="false" />
+                <app-video
+                  class="block w-full"
+                  [camera]="camera.camera"
+                  [play]="camera.play"
+                  [quality]="'medium'"
+                  [zoom]="false"
+                  [label]="cameraLabel(camera.camera)"
+                />
               }
               <button
                 type="button"
@@ -44,9 +51,11 @@
                 [attr.aria-pressed]="pinned() === camera.camera"
                 (click)="pinned.set(camera.camera)"
               >
-                <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{
-                  cameraLabel(camera.camera)
-                }}</span>
+                @if (isSnapshotCamera(camera.camera)) {
+                  <span class="absolute right-0 bottom-0 left-0 bg-black/65 px-2 py-1 text-xs text-white">{{
+                    cameraLabel(camera.camera)
+                  }}</span>
+                }
               </button>
             </div>
           }

@@ -1,9 +1,8 @@
-import { CameraService } from '../../backend/generated/services/camera.service';
 import { WebSocket } from 'partysocket';
-import { BehaviorSubject, interval } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
 import { DebugService } from '../../utils/debug.service';
 import { getWebSocketUrl } from '../../utils/webSocket';
-import { createEmptyReport, createStreamReport, Status, StreamOffer, StreamReport } from './webrtc.model';
+import { createEmptyReport, createStreamReport, Status, StreamReport, StreamTransport, TransportState } from './stream.model';
 
 /**
  * Time that the stream can be buffering.
@@ -18,16 +17,21 @@ const STALE_TIMEOUT = 5_000;
 const STARTUP_TIMEOUT = 30_000;
 const HEALTH_STALL_GRACE = 2_000;
 
-export class WebRTCStream {
+export class WebRTCStream implements StreamTransport {
   private readonly webSocket: WebSocket;
   private peerConnection: RTCPeerConnection | null = null;
 
   private readonly media = new BehaviorSubject<MediaStream | null>(null);
-  private readonly poster = new BehaviorSubject<string | null>(null);
   private readonly status = new BehaviorSubject<Status>('offline');
   private readonly streamReport = new BehaviorSubject<StreamReport>(createEmptyReport());
+  readonly state: TransportState = {
+    media: this.media.asObservable(),
+    status: this.status.asObservable(),
+    report: this.streamReport.asObservable(),
+  };
+  readonly usable = true;
 
-  private stopTimer: number | undefined = undefined;
+  private healthTimer: ReturnType<typeof setInterval> | undefined = undefined;
   private shallStream = false;
   private reconnectPending = false;
   private healthCheckPeer: RTCPeerConnection | null = null;
@@ -42,7 +46,6 @@ export class WebRTCStream {
   private lastDiagnosticAt = 0;
 
   constructor(
-    private cameraApi: CameraService,
     private camera: string,
     private debug: DebugService,
   ) {
@@ -52,42 +55,32 @@ export class WebRTCStream {
     this.webSocket.onmessage = (e) => this.onWebSocketMessage(e);
     this.webSocket.onerror = (e) => this.onWebSocketError(e);
     this.webSocket.binaryType = 'arraybuffer';
-
-    interval(1000).subscribe(() => this.checkHealth());
   }
 
-  /** Starts streaming and returns the observable stream state. */
-  start(): StreamOffer {
-    // Disable any stop attempts
-    clearTimeout(this.stopTimer);
-    this.stopTimer = undefined;
+  /** Latest status and report of the stream. */
+  snapshot() {
+    return { status: this.status.value, report: this.streamReport.value };
+  }
 
+  /** Starts streaming. */
+  start(): void {
     // establish connection if we do not have a connection
-    this.updatePoster();
     this.shallStream = true;
+    this.healthTimer ??= setInterval(() => this.checkHealth(), 1000);
     if (this.shouldReconnectOnStart()) {
       this.requestReconnect('Start requested');
     }
-
-    return {
-      media: this.media.asObservable(),
-      status: this.status.asObservable(),
-      poster: this.poster.asObservable(),
-      report: this.streamReport.asObservable(),
-    };
   }
 
-  /** Schedules the stream to stop after a short idle timeout. */
-  stop() {
-    clearTimeout(this.stopTimer);
-    this.stopTimer = setTimeout(() => {
-      this.stopTimer = undefined;
-      this.shallStream = false;
-      this.reconnectPending = false;
-      this.cleanupPeerConnection();
-      this.markStreamOffline();
-      this.webSocket.close();
-    }, 30_000);
+  /** Stops streaming and releases the connection immediately. */
+  halt() {
+    this.shallStream = false;
+    clearInterval(this.healthTimer);
+    this.healthTimer = undefined;
+    this.reconnectPending = false;
+    this.cleanupPeerConnection();
+    this.markStreamOffline();
+    this.webSocket.close();
   }
 
   /** Checks whether a peer connection exists independently of signaling. */
@@ -155,7 +148,7 @@ export class WebRTCStream {
   private markStreamOffline() {
     this.media.next(null);
     this.resetHealthState();
-    this.status.next('offline');
+    this.setStatus('offline');
   }
 
   /** Starts a single reconnect flow when streaming should continue. */
@@ -170,24 +163,17 @@ export class WebRTCStream {
     this.cleanupPeerConnection();
     this.media.next(null);
     this.resetHealthState();
-    this.status.next('connecting');
+    this.setStatus('connecting');
     this.debug.log('%s: Reconnecting WebRTC stream (%s).', this.camera, reason);
 
     this.webSocket.reconnect(1000, reason);
   }
 
-  /** Fetches and updates the latest poster image for the camera. */
-  private updatePoster() {
-    void this.cameraApi
-      .getCameraFrame({ src: this.camera })
-      .then((blob) => {
-        const oldValue = this.poster.getValue();
-        this.poster.next(URL.createObjectURL(blob));
-        if (oldValue) {
-          URL.revokeObjectURL(oldValue);
-        }
-      })
-      .catch((error) => this.debug.log('%s: Camera poster request failed. %s', this.camera, error));
+  /** Publishes the status only when it changed to avoid redundant emissions every health check. */
+  private setStatus(status: Status) {
+    if (this.status.value !== status) {
+      this.status.next(status);
+    }
   }
 
   /** Creates a fresh peer connection when the signaling socket opens. */
@@ -206,7 +192,7 @@ export class WebRTCStream {
     this.reconnectPending = false;
     this.resetHealthState();
     this.startedAt = Date.now();
-    this.status.next('connecting');
+    this.setStatus('connecting');
 
     // Peer connection with LAN/VPN only, no public STUN/TURN
     this.cleanupPeerConnection();
@@ -334,7 +320,7 @@ export class WebRTCStream {
     this.debug.log('%s: Received new media track.', this.camera);
     this.media.next(ev.streams[0] ?? new MediaStream([ev.track]));
     this.staleSince = null;
-    this.status.next('connected');
+    this.setStatus('connected');
   }
 
   /** Updates the stream status from the latest transport stats. */
@@ -358,12 +344,12 @@ export class WebRTCStream {
       }
       this.staleSince = null;
       this.bufferingSince = null;
-      this.status.next('streaming');
+      this.setStatus('streaming');
       return;
     }
 
     if (!this.hasDecodedFrame) {
-      this.status.next('startup');
+      this.setStatus('startup');
       return;
     }
 
@@ -371,7 +357,7 @@ export class WebRTCStream {
     if (deltaBytes > 0) {
       this.staleSince = null;
       if (now - this.bufferingSince >= HEALTH_STALL_GRACE) {
-        this.status.next('buffering');
+        this.setStatus('buffering');
       }
       if (now - this.bufferingSince > BUFFER_TIMEOUT) {
         this.requestReconnect('Buffering timeout');
@@ -381,7 +367,7 @@ export class WebRTCStream {
 
     this.staleSince ??= now;
     if (now - this.staleSince >= HEALTH_STALL_GRACE) {
-      this.status.next('dead');
+      this.setStatus('dead');
     }
     if (now - this.staleSince > STALE_TIMEOUT) {
       this.requestReconnect('Stream dead');
@@ -458,6 +444,7 @@ export class WebRTCStream {
       iceConnectionState: peerConnection.iceConnectionState,
       reconnectReason: this.reconnectReason,
       roundTripTimeMs: pair?.currentRoundTripTime != null ? pair.currentRoundTripTime * 1000 : null,
+      availableBitrate: pair?.availableIncomingBitrate ?? null,
       transport: localCandidate
         ? [localCandidate.protocol, localCandidate.candidateType, remoteCandidate?.candidateType, localCandidate.relayProtocol]
             .filter(Boolean)
@@ -505,7 +492,6 @@ export class WebRTCStream {
       this.camera,
       reason,
       JSON.stringify({
-        ...this.streamReport.value,
         status: this.status.value,
         connectionState: this.peerConnection?.connectionState ?? null,
         iceConnectionState: this.peerConnection?.iceConnectionState ?? null,

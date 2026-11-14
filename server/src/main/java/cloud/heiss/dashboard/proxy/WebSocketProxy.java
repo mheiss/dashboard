@@ -31,7 +31,17 @@ public abstract class WebSocketProxy {
     @PostConstruct
     void initialize() {
         sockets = vertx.createWebSocketClient(new WebSocketClientOptions().setConnectTimeout(config.connectTimeoutMs())
-                .setMaxFrameSize(65536).setMaxMessageSize(1048576));
+                .setMaxFrameSize(maxFrameSize()).setMaxMessageSize(maxMessageSize()));
+    }
+
+    /** Largest upstream frame that is relayed before the connection is closed. */
+    protected int maxFrameSize() {
+        return 65536;
+    }
+
+    /** Largest upstream message that is relayed before the connection is closed. */
+    protected int maxMessageSize() {
+        return 1048576;
     }
 
     @PreDestroy

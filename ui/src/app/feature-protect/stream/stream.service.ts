@@ -4,18 +4,20 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DebugService } from '../../utils/debug.service';
 import { VisibilityService } from '../../utils/visibility.service';
 import { Camera, PLAY_DELAY, StreamQuality } from '../protect.model';
+import { AdaptiveStream } from './adaptive-stream';
+import { MseStream } from './mse';
 import { WebRTCStream } from './webrtc';
-import { StreamOffer } from './webrtc.model';
+import { StreamOffer } from './stream.model';
 
 /**
- * Manages all WebRTC streams of the dashboard.
+ * Manages all streams of the dashboard.
  */
 @Injectable({ providedIn: 'root' })
-export class WebRTCService {
+export class StreamService {
   private readonly cameraApi = inject(CameraService);
   private readonly debug = inject(DebugService);
   private readonly visibility = inject(VisibilityService);
-  private readonly streams = new Map<string, WebRTCStream>();
+  private readonly streams = new Map<string, AdaptiveStream>();
   private readonly consumers = new Map<string, number>();
   private readonly resumeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private screenOn = true;
@@ -33,7 +35,13 @@ export class WebRTCService {
     const streamName = this.buildStreamName(camera, quality);
     let stream = this.streams.get(streamName);
     if (!stream) {
-      stream = new WebRTCStream(this.cameraApi, streamName, this.debug);
+      stream = new AdaptiveStream({
+        camera: streamName,
+        webrtc: new WebRTCStream(streamName, this.debug),
+        mse: MseStream.isSupported() ? new MseStream(streamName, this.debug) : null,
+        loadPoster: () => this.cameraApi.getCameraFrame({ src: streamName }),
+        debug: this.debug,
+      });
       this.streams.set(streamName, stream);
     }
 

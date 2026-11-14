@@ -226,6 +226,116 @@ test('refreshes a snapshot camera, reports errors, and stops when leaving the ca
   expect(requests).toBe(stoppedAt);
 });
 
+test.describe('mobile fullscreen camera viewer', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  test('shows the poster, status, and live video in the viewer', async ({ page }) => {
+    await page.route('**/api/webrtc/snapshot?*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'image/png',
+        body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1sAAAAASUVORK5CYII=', 'base64'),
+      });
+    });
+    await page.goto('/protect');
+    const camera = page.locator('app-video').first();
+    const preview = camera.locator('video');
+    await expect(preview).toHaveAttribute('poster', /^blob:/);
+    await expect(camera.getByText('MSE', { exact: true })).toBeVisible();
+    await camera.getByRole('button', { name: 'Stream diagnostics' }).tap();
+    await expect(camera.getByText(/FPS:/)).toBeVisible();
+    await camera.getByRole('button', { name: 'Stream diagnostics' }).tap();
+    await expect(camera.getByText(/FPS:/)).toHaveCount(0);
+    await preview.tap();
+
+    const viewer = page.locator('app-video-viewer');
+    const video = viewer.locator('video');
+    await expect(video).toBeVisible();
+    await expect(video).toHaveAttribute('poster', /^blob:/);
+    expect(await video.getAttribute('poster')).toBe(await preview.getAttribute('poster'));
+    expect(
+      await video.evaluate(async (element: HTMLVideoElement) => {
+        const image = new Image();
+        image.src = element.poster;
+        await image.decode();
+        return image.naturalWidth;
+      }),
+    ).toBeGreaterThan(0);
+    const streamStatus = viewer.getByText(/^(Offline|Connecting|Connected|Starting|Buffering|No signal)$/);
+    await expect(streamStatus).toBeVisible();
+    const box = await video.boundingBox();
+    expect(box?.width).toBe(390);
+    expect(box?.height).toBe(844);
+    const close = viewer.getByRole('button', { name: 'Close full-screen stream' });
+    await expect(close).toBeVisible();
+    await expect(close.locator('svg')).toHaveCSS('width', '24px');
+
+    await camera.evaluate((element) => {
+      const ng = (window as unknown as {
+        ng: { getComponent(element: Element): { video: { set(value: MediaStream): void }; statusText: { set(value: null): void } } };
+      }).ng;
+      const canvas = document.createElement('canvas');
+      canvas.width = 32;
+      canvas.height = 24;
+      canvas.getContext('2d')!.fillRect(0, 0, canvas.width, canvas.height);
+      const component = ng.getComponent(element);
+      component.video.set(canvas.captureStream());
+      component.statusText.set(null);
+    });
+    await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.videoWidth)).toBe(32);
+    await expect(streamStatus).toHaveCount(0);
+    expect(
+      await video.evaluate((element: HTMLVideoElement) => element.srcObject === document.querySelector<HTMLVideoElement>('app-video video')?.srcObject),
+    ).toBe(true);
+    await close.tap();
+    await expect(viewer).toHaveCount(0);
+    await preview.tap();
+    await expect.poll(() => viewer.locator('video').evaluate((element: HTMLVideoElement) => element.videoWidth)).toBe(32);
+    await page.mouse.move(195, 422);
+    await page.mouse.wheel(0, -120);
+    await expect.poll(() => video.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a)).toBeGreaterThan(1);
+    await camera.evaluate((element) => {
+      const ng = (window as unknown as {
+        ng: { getComponent(element: Element): { video: { set(value: null): void }; statusText: { set(value: string): void } } };
+      }).ng;
+      const component = ng.getComponent(element);
+      (element.querySelector('video')!.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
+      component.video.set(null);
+      component.statusText.set('No signal');
+    });
+    await expect(viewer.getByText('No signal')).toBeVisible();
+    await expect(video).toHaveAttribute('poster', /^blob:/);
+    await viewer.getByRole('button', { name: 'Close full-screen stream' }).tap();
+  });
+
+  test('shows a snapshot and can close the viewer', async ({ page }) => {
+    await mockTwoSnapshotCameras(page);
+    let fail = false;
+    await page.route('**/api/webrtc/snapshot?*', async (route) => {
+      if (fail) {
+        await route.fulfill({ status: 502 });
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: 'image/png',
+          body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1sAAAAASUVORK5CYII=', 'base64'),
+        });
+      }
+    });
+    await page.goto('/protect');
+    const preview = page.locator('app-snapshot img').first();
+    await expect(preview).toHaveAttribute('src', /^blob:/);
+    await preview.tap();
+    const viewer = page.locator('app-video-viewer');
+    await expect(viewer.locator('img')).toBeVisible();
+    await expect(viewer.locator('img')).toHaveAttribute('src', /^blob:/);
+    fail = true;
+    await expect(viewer.getByText('No signal')).toBeVisible();
+    await viewer.getByRole('button', { name: 'Close full-screen stream' }).tap();
+    await expect(viewer).toHaveCount(0);
+  });
+});
+
 test.describe('mobile camera gestures', () => {
   test.use({ viewport: { width: 390, height: 500 }, hasTouch: true, isMobile: true });
 

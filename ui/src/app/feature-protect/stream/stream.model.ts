@@ -6,6 +6,11 @@ import { Observable } from 'rxjs';
 export type Status = 'offline' | 'connecting' | 'connected' | 'startup' | 'buffering' | 'streaming' | 'dead';
 
 /**
+ * Transport that currently delivers the video.
+ */
+export type TransportMode = 'mse' | 'webrtc';
+
+/**
  * The video stream along with some metadata.
  */
 export interface StreamOffer {
@@ -13,6 +18,30 @@ export interface StreamOffer {
   poster: Observable<string | null>;
   status: Observable<Status>;
   report: Observable<StreamReport>;
+}
+
+/**
+ * Observable state of a single transport (MSE or WebRTC).
+ */
+export interface TransportState {
+  media: Observable<MediaStream | null>;
+  status: Observable<Status>;
+  report: Observable<StreamReport>;
+}
+
+/**
+ * A transport that can deliver the video of a camera.
+ */
+export interface StreamTransport {
+  readonly state: TransportState;
+  /** Whether the transport can currently deliver video. */
+  readonly usable: boolean;
+  /** Starts delivering video; does nothing when already started. */
+  start(): void;
+  /** Immediately releases all resources. */
+  halt(): void;
+  /** Latest status and report. */
+  snapshot(): { status: Status; report: StreamReport };
 }
 
 /**
@@ -37,6 +66,8 @@ export interface StreamReport {
   connectionState: RTCPeerConnectionState | null;
   iceConnectionState: RTCIceConnectionState | null;
   reconnectReason: string | null;
+  availableBitrate: number | null;
+  mode: TransportMode | null;
 }
 
 /**
@@ -72,6 +103,8 @@ export function createStreamReport(frames: number, bytes: number, diagnostics: P
     connectionState: null,
     iceConnectionState: null,
     reconnectReason: null,
+    availableBitrate: null,
+    mode: null,
     ...diagnostics,
   };
 }
