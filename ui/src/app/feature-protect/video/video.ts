@@ -42,7 +42,7 @@ export class Video implements OnInit, OnChanges {
   ngOnInit(): void {
     if (this.zoom()) {
       const videoElement = this.videoElement().nativeElement;
-      this.panzoom = cameraZoom(videoElement);
+      this.panzoom = cameraZoom(videoElement, this.fit() ? { pan: true, touchAction: 'none' } : {});
       videoElement.addEventListener('wheel', this.onWheel, { passive: false });
     }
   }
@@ -75,13 +75,17 @@ export class Video implements OnInit, OnChanges {
   }
 
   openMobileViewer(): void {
-    const stream = this.video();
-    if (!window.matchMedia('(max-width: 767px)').matches || !stream) {
+    if (!window.matchMedia('(max-width: 767px)').matches) {
       return;
     }
 
     this.popup.open(VideoViewer, {
-      data: { stream },
+      data: {
+        kind: 'video',
+        stream: this.video,
+        poster: this.poster,
+        statusText: this.statusText,
+      },
       fullScreen: true,
       disableClose: false,
     });

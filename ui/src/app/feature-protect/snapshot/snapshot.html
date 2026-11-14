@@ -1,4 +1,4 @@
-<div [class]="fit() ? 'relative h-full w-full overflow-hidden' : 'relative w-full'">
+<div [class]="fit() ? 'relative h-full w-full overflow-hidden' : 'relative w-full'" (click)="openMobileViewer()">
   <img
     #image
     [class]="fit() ? 'block h-full w-full bg-black object-contain' : 'block aspect-3/2 w-full rounded-md bg-black object-contain'"

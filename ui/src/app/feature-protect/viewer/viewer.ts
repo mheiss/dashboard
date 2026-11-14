@@ -1,8 +1,21 @@
 import { DIALOG_DATA, DialogRef } from '@angular/cdk/dialog';
-import { ChangeDetectionStrategy, Component, ElementRef, inject, OnDestroy, OnInit, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, inject, OnDestroy, OnInit, Signal, viewChild } from '@angular/core';
 import { LucideX } from '@lucide/angular';
 import { PanzoomObject } from '@panzoom/panzoom';
 import { cameraZoom } from '../camera-zoom';
+
+type ViewerData =
+  | {
+      kind: 'video';
+      stream: Signal<MediaStream | null>;
+      poster: Signal<string | null>;
+      statusText: Signal<string | null>;
+    }
+  | {
+      kind: 'snapshot';
+      imageUrl: Signal<string | null>;
+      statusText: Signal<string | null>;
+    };
 
 @Component({
   selector: 'app-video-viewer',
@@ -13,8 +26,8 @@ import { cameraZoom } from '../camera-zoom';
 })
 export class VideoViewer implements OnInit, OnDestroy {
   readonly dialogRef = inject(DialogRef);
-  readonly stream: MediaStream = inject<{ data: { stream: MediaStream } }>(DIALOG_DATA).data.stream;
-  private readonly videoElement = viewChild.required<ElementRef<HTMLVideoElement>>('videoElement');
+  readonly data: ViewerData = inject<{ data: ViewerData }>(DIALOG_DATA).data;
+  private readonly zoomElement = viewChild.required<ElementRef<HTMLElement>>('zoomElement');
   private panzoom?: PanzoomObject;
 
   private readonly onWheel = (event: WheelEvent) => {
@@ -23,13 +36,13 @@ export class VideoViewer implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    const element = this.videoElement().nativeElement;
-    this.panzoom = cameraZoom(element);
+    const element = this.zoomElement().nativeElement;
+    this.panzoom = cameraZoom(element, { pan: true, touchAction: 'none' });
     element.addEventListener('wheel', this.onWheel, { passive: false });
   }
 
   ngOnDestroy(): void {
-    const element = this.videoElement().nativeElement;
+    const element = this.zoomElement().nativeElement;
     element.removeEventListener('wheel', this.onWheel);
     this.panzoom?.destroy();
   }

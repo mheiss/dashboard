@@ -37,10 +37,17 @@ export class Protect implements OnDestroy {
 
   private readonly cameraOrder: Camera[] = Object.keys(this.config.config().cameras);
   readonly cameras = signal<PlayableCamera[]>(this.cameraOrder.map((camera) => ({ camera, play: false })));
-  readonly visibleCameras = computed(() => this.cameras().filter(({ camera }) => !this.preferences.hiddenCameras().includes(camera)));
+  readonly visibleCameras = computed(() => {
+    const hidden = this.preferences.hiddenCameras();
+    const orderedCameras = this.preferences.orderedCameras(this.cameraOrder);
+    return this.cameras()
+      .filter(({ camera }) => !hidden.includes(camera))
+      .sort((a, b) => orderedCameras.indexOf(a.camera) - orderedCameras.indexOf(b.camera));
+  });
   readonly pinned = signal<Camera>(this.visibleCameras()[0]?.camera ?? '');
   readonly mobileCameras = computed(() => {
     const cameras = this.visibleCameras();
+    if (this.preferences.cameraOrder().length) return cameras;
     const pinned = this.pinned();
     return [...cameras.filter((camera) => camera.camera === pinned), ...cameras.filter((camera) => camera.camera !== pinned)];
   });

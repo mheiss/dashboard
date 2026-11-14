@@ -1,4 +1,21 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function mockTwoSnapshotCameras(page: Page) {
+  await page.route('**/api/config', async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.cameras = { 'sample-garden': 'Garten', 'sample-driveway': 'Einfahrt' };
+    config.snapshotCameraIds = Object.keys(config.cameras);
+    await route.fulfill({ response, json: config });
+  });
+  await page.route('**/api/webrtc/snapshot?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1sAAAAASUVORK5CYII=', 'base64'),
+    });
+  });
+}
 
 for (const viewport of [
   { width: 1600, height: 1000 },
@@ -54,6 +71,79 @@ for (const viewport of [
     }
   });
 }
+
+test('orders cameras in settings and persists the order per browser', async ({ page, browser }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockTwoSnapshotCameras(page);
+  await page.goto('/protect');
+
+  await page.getByRole('button', { name: 'Einstellungen' }).click();
+  await expect(page.getByRole('button', { name: 'Kamera Garten nach oben verschieben' })).toBeDisabled();
+  await page.getByRole('button', { name: 'Kamera Einfahrt nach oben verschieben' }).click();
+  await expect(page.getByRole('button', { name: 'Kamera Einfahrt nach oben verschieben' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Kamera Garten nach oben verschieben' })).toBeEnabled();
+  await page.getByRole('button', { name: 'Schließen' }).click();
+
+  const cameraOrder = async () =>
+    page
+      .locator('.camera-screen app-snapshot')
+      .evaluateAll((cameras) => cameras.map((camera) => camera.parentElement?.querySelector(':scope > span')?.textContent?.trim()));
+  await expect.poll(cameraOrder).toEqual(['Einfahrt', 'Garten']);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('dashboard.cameraOrder')))
+    .toBe(JSON.stringify(['sample-driveway', 'sample-garden']));
+
+  await page.reload();
+  await expect.poll(cameraOrder).toEqual(['Einfahrt', 'Garten']);
+
+  const otherContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  try {
+    const otherPage = await otherContext.newPage();
+    await mockTwoSnapshotCameras(otherPage);
+    await otherPage.goto('/protect');
+    await otherPage.getByRole('button', { name: 'Einstellungen' }).click();
+    await expect(otherPage.getByRole('button', { name: 'Kamera Garten nach oben verschieben' })).toBeDisabled();
+    await expect(otherPage.getByRole('button', { name: 'Kamera Einfahrt nach oben verschieben' })).toBeEnabled();
+  } finally {
+    await otherContext.close();
+  }
+});
+
+test('allows panning and zooming the desktop main camera view', async ({ page }) => {
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.route('**/api/config', async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.snapshotCameraIds = ['sample-garden'];
+    await route.fulfill({ response, json: config });
+  });
+  await page.route('**/api/webrtc/snapshot?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1sAAAAASUVORK5CYII=', 'base64'),
+    });
+  });
+  await page.goto('/protect');
+
+  const camera = page.locator('.camera-screen app-snapshot img').last();
+  await expect(camera).toHaveAttribute('src', /^blob:/);
+  const box = await camera.boundingBox();
+  if (!box) throw new Error('Main camera view is not visible');
+
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.wheel(0, -120);
+  await expect.poll(() => camera.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a)).toBeGreaterThan(1);
+
+  const before = await camera.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41);
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 80, y + 30, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(() => camera.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).m41)).not.toBe(before);
+});
 
 test('reports when camera visibility cannot be saved', async ({ page }) => {
   await page.addInitScript(() => {

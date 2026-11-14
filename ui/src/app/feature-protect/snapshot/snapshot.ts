@@ -7,6 +7,8 @@ import { DebugService } from '../../utils/debug.service';
 import { VisibilityService } from '../../utils/visibility.service';
 import { cameraZoom } from '../camera-zoom';
 import { Camera } from '../protect.model';
+import { PopupService } from '../../popup/popup.service';
+import { VideoViewer } from '../viewer/viewer';
 
 @Component({
   selector: 'app-snapshot',
@@ -24,6 +26,7 @@ export class Snapshot implements OnInit, OnDestroy {
   private readonly api = inject(CameraService);
   private readonly visibility = inject(VisibilityService);
   private readonly debug = inject(DebugService);
+  private readonly popup = inject(PopupService);
   private panzoom?: PanzoomObject;
 
   private readonly onWheel = (event: WheelEvent) => {
@@ -65,7 +68,7 @@ export class Snapshot implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.zoom()) {
       const element = this.image().nativeElement;
-      this.panzoom = cameraZoom(element);
+      this.panzoom = cameraZoom(element, this.fit() ? { pan: true, touchAction: 'none' } : {});
       element.addEventListener('wheel', this.onWheel, { passive: false });
     }
   }
@@ -74,6 +77,22 @@ export class Snapshot implements OnInit, OnDestroy {
     this.image().nativeElement.removeEventListener('wheel', this.onWheel);
     this.panzoom?.destroy();
     this.setImage(null);
+  }
+
+  openMobileViewer(): void {
+    if (!window.matchMedia('(max-width: 767px)').matches) {
+      return;
+    }
+
+    this.popup.open(VideoViewer, {
+      data: {
+        kind: 'snapshot',
+        imageUrl: this.imageUrl,
+        statusText: this.statusText,
+      },
+      fullScreen: true,
+      disableClose: false,
+    });
   }
 
   private setImage(url: string | null): void {

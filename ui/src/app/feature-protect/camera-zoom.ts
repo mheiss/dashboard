@@ -1,11 +1,16 @@
 import Panzoom from '@panzoom/panzoom';
 
-export function cameraZoom(element: HTMLElement) {
+interface CameraZoomOptions {
+  pan?: boolean;
+  touchAction?: 'none' | 'pan-y';
+}
+
+export function cameraZoom(element: HTMLElement, options: CameraZoomOptions = {}) {
   return Panzoom(element, {
-    disablePan: true,
+    disablePan: !options.pan,
     maxScale: 5,
     minScale: 1,
-    touchAction: 'pan-y',
+    touchAction: options.touchAction ?? 'pan-y',
     handleStartEvent: (event) => {
       if (event instanceof MouseEvent && (!('pointerType' in event) || event.pointerType !== 'touch')) {
         event.preventDefault();

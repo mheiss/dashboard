@@ -8,18 +8,40 @@
     </section>
     @if (cameraIds.length) {
       <fieldset>
-        <legend class="mb-2 font-semibold">Kameras auf diesem Gerät anzeigen</legend>
+        <legend class="mb-2 font-semibold">Kameras auf diesem Gerät</legend>
         <div class="grid gap-2">
-          @for (camera of cameraIds; track camera) {
-            <label class="flex items-center gap-2">
-              <input
-                #cameraVisibility
-                type="checkbox"
-                [checked]="!preferences.hiddenCameras().includes(camera)"
-                (change)="preferences.setVisible(camera, cameraVisibility.checked)"
-              />
-              {{ config.config().cameras[camera] }}
-            </label>
+          @for (camera of orderedCameraIds(); let index = $index; track camera) {
+            <div class="flex min-h-11 items-center gap-2">
+              <label class="flex min-w-0 flex-1 items-center gap-2">
+                <input
+                  #cameraVisibility
+                  type="checkbox"
+                  [checked]="!preferences.hiddenCameras().includes(camera)"
+                  (change)="preferences.setVisible(camera, cameraVisibility.checked)"
+                />
+                <span class="truncate">{{ config.config().cameras[camera] }}</span>
+              </label>
+              <button
+                type="button"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-(--line) disabled:opacity-40"
+                [attr.aria-label]="'Kamera ' + config.config().cameras[camera] + ' nach oben verschieben'"
+                title="Nach oben"
+                [disabled]="index === 0"
+                (click)="preferences.moveCamera(camera, -1, cameraIds)"
+              >
+                <svg lucideChevronUp aria-hidden="true" class="size-5"></svg>
+              </button>
+              <button
+                type="button"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-(--line) disabled:opacity-40"
+                [attr.aria-label]="'Kamera ' + config.config().cameras[camera] + ' nach unten verschieben'"
+                title="Nach unten"
+                [disabled]="index === orderedCameraIds().length - 1"
+                (click)="preferences.moveCamera(camera, 1, cameraIds)"
+              >
+                <svg lucideChevronDown aria-hidden="true" class="size-5"></svg>
+              </button>
+            </div>
           }
         </div>
       </fieldset>

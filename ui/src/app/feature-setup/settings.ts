@@ -1,7 +1,7 @@
 import { DialogRef } from '@angular/cdk/dialog';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { LucideLogIn, LucideLogOut, LucideUser } from '@lucide/angular';
+import { LucideChevronDown, LucideChevronUp, LucideLogIn, LucideLogOut, LucideUser } from '@lucide/angular';
 import { AppConfigService } from '../feature-config/config.service';
 import { CameraPreferencesService } from '../feature-protect/camera-preferences.service';
 import { Popup } from '../popup/popup';
@@ -10,7 +10,7 @@ import { SessionService } from '../backend/session.service';
 
 @Component({
   selector: 'app-settings',
-  imports: [Popup, LucideLogIn, LucideLogOut, LucideUser],
+  imports: [Popup, LucideChevronDown, LucideChevronUp, LucideLogIn, LucideLogOut, LucideUser],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings.html',
 })
@@ -19,6 +19,7 @@ export class Settings {
   readonly preferences = inject(CameraPreferencesService);
   readonly theme = inject(ThemeService);
   readonly cameraIds = Object.keys(this.config.config().cameras);
+  readonly orderedCameraIds = computed(() => this.preferences.orderedCameras(this.cameraIds));
   private readonly dialog = inject(DialogRef);
   private readonly router = inject(Router);
 
