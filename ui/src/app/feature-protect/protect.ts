@@ -6,7 +6,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AppConfigService } from '../feature-config/config.service';
 import { LayoutService } from '../utils/layout.service';
 import { Video } from './video/video';
-import { Snapshot } from './snapshot-camera/snapshot-camera';
+import { Snapshot } from './snapshot/snapshot';
 import { Camera, isCamera, PLAY_DELAY, PlayableCamera } from './protect.model';
 import { MotionService, MotionSnapshot } from './motion.service';
 import { catchError, defer, Observable, of, shareReplay } from 'rxjs';

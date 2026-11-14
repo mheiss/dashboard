@@ -1,0 +1,11 @@
+<div [class]="fit() ? 'relative h-full w-full overflow-hidden' : 'relative w-full'">
+  <img
+    #image
+    [class]="fit() ? 'block h-full w-full bg-black object-contain' : 'block aspect-3/2 w-full rounded-md bg-black object-contain'"
+    [attr.src]="imageUrl()"
+    alt=""
+  />
+  @if (statusText(); as text) {
+    <div class="absolute top-2 left-2 rounded bg-black/35 px-1.5 py-0.5 text-[10px] text-white">{{ text }}</div>
+  }
+</div>

@@ -135,3 +135,80 @@ test('refreshes a snapshot camera, reports errors, and stops when leaving the ca
   await page.waitForTimeout(1500);
   expect(requests).toBe(stoppedAt);
 });
+
+test.describe('mobile camera gestures', () => {
+  test.use({ viewport: { width: 390, height: 500 }, hasTouch: true, isMobile: true });
+
+  for (const selector of ['app-snapshot img', 'app-video video']) {
+    test(`scrolls and zooms from ${selector}`, async ({ page, context }) => {
+      await page.route('**/api/config', async (route) => {
+        const response = await route.fetch();
+        const config = await response.json();
+        config.cameras = { ...config.cameras, extra1: 'Extra 1', extra2: 'Extra 2' };
+        config.snapshotCameraIds = ['sample-garden', 'extra1', 'extra2'];
+        await route.fulfill({ response, json: config });
+      });
+
+      await page.goto('/protect');
+      const camera = page.locator(selector).first();
+      const scroll = page.locator('.camera-screen');
+      await expect(camera).toBeVisible();
+      await camera.scrollIntoViewIfNeeded();
+      const box = await camera.boundingBox();
+      if (!box) throw new Error('Camera is not visible');
+
+      const client = await context.newCDPSession(page);
+      const x = box.x + box.width / 2;
+      const y = Math.min(box.y + box.height / 2, 400);
+      const before = await scroll.evaluate((element) => element.scrollTop);
+      await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+      for (let distance = 20; distance <= 100; distance += 20) {
+        await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y - distance }] });
+      }
+      await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(before + 20);
+
+      await camera.scrollIntoViewIfNeeded();
+      const visibleBox = await camera.boundingBox();
+      if (!visibleBox) throw new Error('Camera is not visible');
+      const centerX = visibleBox.x + visibleBox.width / 2;
+      const centerY = Math.max(100, Math.min(visibleBox.y + visibleBox.height / 2, 400));
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [
+          { x: centerX - 25, y: centerY },
+          { x: centerX + 25, y: centerY },
+        ],
+      });
+      await client.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [
+          { x: centerX - 80, y: centerY },
+          { x: centerX + 80, y: centerY },
+        ],
+      });
+      await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect.poll(() => camera.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a)).toBeGreaterThan(1);
+
+      const pinchScale = await camera.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a);
+      await page.mouse.move(centerX, centerY);
+      await page.mouse.wheel(0, -120);
+      await expect
+        .poll(() => camera.evaluate((element) => new DOMMatrix(getComputedStyle(element).transform).a))
+        .toBeGreaterThan(pinchScale);
+
+      await scroll.evaluate((element) => (element.scrollTop = 0));
+      await camera.scrollIntoViewIfNeeded();
+      const zoomedBox = await camera.boundingBox();
+      if (!zoomedBox) throw new Error('Camera is not visible');
+      const zoomedY = Math.max(100, Math.min(zoomedBox.y + zoomedBox.height / 2, 400));
+      const zoomedBefore = await scroll.evaluate((element) => element.scrollTop);
+      await client.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: centerX, y: zoomedY }] });
+      for (let distance = 20; distance <= 100; distance += 20) {
+        await client.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: centerX, y: zoomedY - distance }] });
+      }
+      await client.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBeGreaterThan(zoomedBefore + 20);
+    });
+  }
+});

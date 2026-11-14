@@ -7,6 +7,8 @@
     muted
     autoplay
     playsinline
+    aria-label="Open full-screen stream"
+    (click)="openMobileViewer()"
   ></video>
   @if (statusText(); as text) {
     <div

@@ -51,8 +51,8 @@ export class GalleryComponent {
   readonly memoryImages = computed(() => {
     const memory = this.service.selectedMemory();
     if (!memory) return [];
-    return memory.days.map((day, index) =>
-      day.images[index === this.memoryCenterIndex() ? this.memoryCycleOffset() % day.images.length : 0],
+    return memory.days.map(
+      (day, index) => day.images[index === this.memoryCenterIndex() ? this.memoryCycleOffset() % day.images.length : 0],
     );
   });
   readonly memoryCenterIndex = computed(() => {
@@ -303,7 +303,10 @@ export class GalleryComponent {
 
     const leftCount = Math.min(2, Math.floor((dates.length - 1) / 2));
     const rightCount = Math.min(2, dates.length - 1 - leftCount);
-    const newerDates = Array.from({ length: leftCount }, (_, index) => dates[(selectedIndex - leftCount + index + dates.length) % dates.length]);
+    const newerDates = Array.from(
+      { length: leftCount },
+      (_, index) => dates[(selectedIndex - leftCount + index + dates.length) % dates.length],
+    );
     const olderDates = Array.from({ length: rightCount }, (_, index) => dates[(selectedIndex + index + 1) % dates.length]);
     return [...newerDates, date, ...olderDates];
   }

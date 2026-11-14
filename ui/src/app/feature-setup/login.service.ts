@@ -1,9 +1,9 @@
-import { inject, Injectable } from "@angular/core";
-import { SessionService } from "../backend/session.service";
-import { PopupService } from "../popup/popup.service";
-import { firstValueFrom } from "rxjs";
-import { CanActivateFn, Router } from "@angular/router";
-import { Setup } from "./setup";
+import { inject, Injectable } from '@angular/core';
+import { SessionService } from '../backend/session.service';
+import { PopupService } from '../popup/popup.service';
+import { firstValueFrom } from 'rxjs';
+import { CanActivateFn, Router } from '@angular/router';
+import { Setup } from './setup';
 
 @Injectable({ providedIn: 'root' })
 export class LoginPromptService {

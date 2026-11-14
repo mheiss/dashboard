@@ -2,8 +2,11 @@ import { Component, ElementRef, inject, input, OnChanges, OnInit, signal, viewCh
 import { distinctUntilChanged, Subject, takeUntil } from 'rxjs';
 import { Camera, StreamQuality } from '../protect.model';
 import { WebRTCService } from '../webrtc/webrtc.service';
-import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
+import { PanzoomObject } from '@panzoom/panzoom';
 import { Status, StreamReport } from '../webrtc/webrtc.model';
+import { cameraZoom } from '../camera-zoom';
+import { PopupService } from '../../popup/popup.service';
+import { VideoViewer } from '../viewer/viewer';
 
 @Component({
   selector: 'app-video',
@@ -12,6 +15,7 @@ import { Status, StreamReport } from '../webrtc/webrtc.model';
 })
 export class Video implements OnInit, OnChanges {
   private readonly webRtc = inject(WebRTCService);
+  private readonly popup = inject(PopupService);
   readonly camera = input.required<Camera>();
   readonly play = input<boolean>(true);
   readonly zoom = input<boolean>(true);
@@ -38,11 +42,7 @@ export class Video implements OnInit, OnChanges {
   ngOnInit(): void {
     if (this.zoom()) {
       const videoElement = this.videoElement().nativeElement;
-      this.panzoom = Panzoom(videoElement, {
-        disablePan: true,
-        maxScale: 5,
-        minScale: 1,
-      });
+      this.panzoom = cameraZoom(videoElement);
       videoElement.addEventListener('wheel', this.onWheel, { passive: false });
     }
   }
@@ -71,6 +71,19 @@ export class Video implements OnInit, OnChanges {
     });
     offer.report.pipe(takeUntil(this.streamChanged), distinctUntilChanged()).subscribe((stats) => {
       this.stats.set(this.formatStats(stats));
+    });
+  }
+
+  openMobileViewer(): void {
+    const stream = this.video();
+    if (!window.matchMedia('(max-width: 767px)').matches || !stream) {
+      return;
+    }
+
+    this.popup.open(VideoViewer, {
+      data: { stream },
+      fullScreen: true,
+      disableClose: false,
     });
   }
 

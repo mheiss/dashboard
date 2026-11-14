@@ -1,28 +1,17 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, OnDestroy, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import Panzoom, { PanzoomObject } from '@panzoom/panzoom';
+import { PanzoomObject } from '@panzoom/panzoom';
 import { catchError, combineLatest, exhaustMap, from, of, switchMap, timer } from 'rxjs';
 import { CameraService } from '../../backend/generated/services/camera.service';
 import { DebugService } from '../../utils/debug.service';
 import { VisibilityService } from '../../utils/visibility.service';
+import { cameraZoom } from '../camera-zoom';
 import { Camera } from '../protect.model';
 
 @Component({
   selector: 'app-snapshot',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div [class]="fit() ? 'relative h-full w-full overflow-hidden' : 'relative w-full'">
-      <img
-        #image
-        [class]="fit() ? 'block h-full w-full bg-black object-contain' : 'block aspect-3/2 w-full rounded-md bg-black object-contain'"
-        [attr.src]="imageUrl()"
-        alt=""
-      />
-      @if (statusText(); as text) {
-        <div class="absolute top-2 left-2 rounded bg-black/35 px-1.5 py-0.5 text-[10px] text-white">{{ text }}</div>
-      }
-    </div>
-  `,
+  templateUrl: './snapshot.html',
 })
 export class Snapshot implements OnInit, OnDestroy {
   readonly camera = input.required<Camera>();
@@ -76,7 +65,7 @@ export class Snapshot implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (this.zoom()) {
       const element = this.image().nativeElement;
-      this.panzoom = Panzoom(element, { disablePan: true, maxScale: 5, minScale: 1 });
+      this.panzoom = cameraZoom(element);
       element.addEventListener('wheel', this.onWheel, { passive: false });
     }
   }
